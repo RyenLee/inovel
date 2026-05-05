@@ -76,7 +76,7 @@ export function useGlobalShortcuts() {
   };
 
   // Global keydown handler
-  const handleKeyDown = (event: KeyboardEvent) => {
+  const handleKeyDown = (event: globalThis.KeyboardEvent) => {
     // Skip if user is typing in an input field
     const target = event.target as HTMLElement;
     if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {

@@ -251,7 +251,7 @@ watch(
             >
               <component
                 :is="expandedVolumes.includes(volume.id) ? ChevronDown : ChevronRight"
-                class="w-4 h-4 text-gray-500 flex-shrink-0 cursor-grab volume-handle"
+                class="w-4 h-4 text-gray-500 shrink-0 cursor-grab volume-handle"
               />
 
               <span
@@ -305,9 +305,9 @@ watch(
                     @click="selectChapter(chapter)"
                   >
                     <div class="flex items-center gap-2">
-                      <GripVertical class="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab chapter-handle flex-shrink-0" />
+                      <GripVertical class="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab chapter-handle shrink-0" />
                       
-                      <FileText class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <FileText class="w-4 h-4 text-gray-400 shrink-0" />
 
                       <span
                         class="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200 truncate"
@@ -315,7 +315,7 @@ watch(
                         {{ chapter.title }}
                       </span>
 
-                      <span class="text-xs text-gray-400 flex-shrink-0">
+                      <span class="text-xs text-gray-400 shrink-0">
                         {{ chapter.word_count_cache }}字
                       </span>
                     </div>

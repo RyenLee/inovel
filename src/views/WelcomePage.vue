@@ -399,7 +399,7 @@ const closeModal = () => {
                 <n-gi span="0:24 640:12 1024:1">
                     <n-card hoverable>
                         <div class="flex items-center gap-3">
-                            <div class="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 flex-shrink-0">
+                            <div class="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 shrink-0">
                                 <TrendingUp class="w-5 h-5 text-green-600" />
                             </div>
                             <div class="overflow-hidden">
@@ -416,7 +416,7 @@ const closeModal = () => {
                 <n-gi span="0:24 640:12 1024:1">
                     <n-card hoverable>
                         <div class="flex items-center gap-3">
-                            <div class="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex-shrink-0">
+                            <div class="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 shrink-0">
                                 <BarChart3 class="w-5 h-5 text-purple-600" />
                             </div>
                             <div class="overflow-hidden">
@@ -433,7 +433,7 @@ const closeModal = () => {
                 <n-gi span="0:24 640:12 1024:1">
                     <n-card hoverable>
                         <div class="flex items-center gap-3">
-                            <div class="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
+                            <div class="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30 shrink-0">
                                 <Calendar class="w-5 h-5 text-orange-600" />
                             </div>
                             <div class="overflow-hidden">

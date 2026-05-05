@@ -245,27 +245,60 @@ pub async fn get_chapter_tree(app_handle: AppHandle, project_id: i64) -> Result<
 }
 
 #[tauri::command]
-pub async fn get_chapter_content(app_handle: AppHandle, project_id: String, chapter_id: String) -> Result<String, String> {
+pub async fn get_chapter_content(app_handle: AppHandle, _project_id: String, chapter_id: serde_json::Value) -> Result<String, String> {
+    // 支持字符串或数字类型的 chapter_id
+    let chapter_id: i64 = match chapter_id {
+        serde_json::Value::String(s) => s.parse().map_err(|_| "chapter_id 必须是有效的整数".to_string())?,
+        serde_json::Value::Number(n) => n.as_i64().ok_or("chapter_id 超出有效范围")?,
+        _ => return Err("chapter_id 必须是字符串或数字".to_string()),
+    };
+    
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
-    let (storage_path, project_name): (String, String) = conn
-        .query_row("SELECT path, name FROM projects WHERE id = ?1", [project_id], |row| Ok((row.get(0)?, row.get(1)?)))
-        .map_err(|e| format!("项目不存在: {}", e))?;
-    let full_path = Path::new(&storage_path).join(&project_name).join("chapters").join(format!("{}.md", chapter_id));
-    if !full_path.exists() { return Ok(String::new()); }
-    fs::read_to_string(&full_path).map_err(|e| format!("读取章节失败: {}", e))
+    
+    // 从数据库获取章节的文件路径
+    let file_path: Option<String> = conn
+        .query_row("SELECT file_path FROM chapters WHERE id = ?1", [chapter_id], |row| row.get(0))
+        .ok();
+    
+    if let Some(path) = file_path {
+        let full_path = PathBuf::from(&path);
+        if full_path.exists() {
+            return fs::read_to_string(&full_path).map_err(|e| format!("读取章节失败: {}", e));
+        }
+    }
+    
+    Ok(String::new())
 }
 
 #[tauri::command]
-pub async fn save_chapter_content(app_handle: AppHandle, project_id: String, chapter_id: String, content: String) -> Result<(), String> {
-    let db_path = get_db_path(&app_handle);
+pub async fn save_chapter_content(_app_handle: AppHandle, _project_id: String, chapter_id: serde_json::Value, content: String) -> Result<(), String> {
+    // 支持字符串或数字类型的 chapter_id
+    let chapter_id: i64 = match chapter_id {
+        serde_json::Value::String(s) => s.parse().map_err(|_| "chapter_id 必须是有效的整数".to_string())?,
+        serde_json::Value::Number(n) => n.as_i64().ok_or("chapter_id 超出有效范围")?,
+        _ => return Err("chapter_id 必须是字符串或数字".to_string()),
+    };
+    
+    let db_path = get_db_path(&_app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
-    let (storage_path, project_name): (String, String) = conn
-        .query_row("SELECT path, name FROM projects WHERE id = ?1", [project_id], |row| Ok((row.get(0)?, row.get(1)?)))
-        .map_err(|e| format!("项目不存在: {}", e))?;
-    let chapters_dir = Path::new(&storage_path).join(&project_name).join("chapters");
-    fs::create_dir_all(&chapters_dir).map_err(|e| format!("创建章节目录失败: {}", e))?;
-    let chapter_path = chapters_dir.join(format!("{}.md", chapter_id));
+    
+    // 从数据库获取章节的文件路径
+    let file_path: Option<String> = conn
+        .query_row("SELECT file_path FROM chapters WHERE id = ?1", [chapter_id], |row| row.get(0))
+        .ok();
+    
+    let chapter_path = if let Some(path) = file_path {
+        PathBuf::from(path)
+    } else {
+        return Err(format!("无法找到章节 {} 的文件路径", chapter_id));
+    };
+    
+    // 确保目录存在
+    if let Some(parent) = chapter_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("创建目录失败: {}", e))?;
+    }
+    
     fs::write(&chapter_path, content).map_err(|e| format!("保存章节失败: {}", e))?;
     Ok(())
 }

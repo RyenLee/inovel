@@ -277,7 +277,7 @@ const getSessionTypeColor = (type: string) => {
                 <n-gi span="0:24 640:12 1024:6">
                     <n-card hoverable>
                         <div class="flex items-center gap-3 whitespace-nowrap">
-                            <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
+                            <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 shrink-0">
                                 <TrendingUp class="w-6 h-6 text-blue-600" />
                             </div>
                             <div class="overflow-hidden">
@@ -292,7 +292,7 @@ const getSessionTypeColor = (type: string) => {
                 <n-gi span="0:24 640:12 1024:6">
                     <n-card hoverable>
                         <div class="flex items-center gap-3 whitespace-nowrap">
-                            <div class="p-3 rounded-full bg-green-100 dark:bg-green-900/30 flex-shrink-0">
+                            <div class="p-3 rounded-full bg-green-100 dark:bg-green-900/30 shrink-0">
                                 <Target class="w-6 h-6 text-green-600" />
                             </div>
                             <div class="overflow-hidden">
@@ -307,7 +307,7 @@ const getSessionTypeColor = (type: string) => {
                 <n-gi span="0:24 640:12 1024:6">
                     <n-card hoverable>
                         <div class="flex items-center gap-3 whitespace-nowrap">
-                            <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30 flex-shrink-0">
+                            <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30 shrink-0">
                                 <Clock class="w-6 h-6 text-purple-600" />
                             </div>
                             <div class="overflow-hidden">
@@ -322,7 +322,7 @@ const getSessionTypeColor = (type: string) => {
                 <n-gi span="0:24 640:12 1024:6">
                     <n-card hoverable>
                         <div class="flex items-center gap-3 whitespace-nowrap">
-                            <div class="p-3 rounded-full bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
+                            <div class="p-3 rounded-full bg-orange-100 dark:bg-orange-900/30 shrink-0">
                                 <Calendar class="w-6 h-6 text-orange-600" />
                             </div>
                             <div class="overflow-hidden">
@@ -337,7 +337,7 @@ const getSessionTypeColor = (type: string) => {
                 <n-gi span="0:24 640:12 1024:6">
                     <n-card hoverable>
                         <div class="flex items-center gap-3 whitespace-nowrap">
-                            <div class="p-3 rounded-full bg-red-100 dark:bg-red-900/30 flex-shrink-0">
+                            <div class="p-3 rounded-full bg-red-100 dark:bg-red-900/30 shrink-0">
                                 <Timer class="w-6 h-6 text-red-600" />
                             </div>
                             <div class="overflow-hidden">
@@ -352,7 +352,7 @@ const getSessionTypeColor = (type: string) => {
                 <n-gi span="0:24 640:12 1024:6">
                     <n-card hoverable>
                         <div class="flex items-center gap-3 whitespace-nowrap">
-                            <div class="p-3 rounded-full bg-pink-100 dark:bg-pink-900/30 flex-shrink-0">
+                            <div class="p-3 rounded-full bg-pink-100 dark:bg-pink-900/30 shrink-0">
                                 <Brain class="w-6 h-6 text-pink-600" />
                             </div>
                             <div class="overflow-hidden">

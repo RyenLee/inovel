@@ -292,7 +292,7 @@ function initSortable() {
                   <h4 class="font-medium text-gray-900 dark:text-white truncate">
                     {{ event.title }}
                   </h4>
-                  <div class="flex items-center gap-1 flex-shrink-0">
+                  <div class="flex items-center gap-1 shrink-0">
                     <NButton
                       quaternary
                       size="tiny"

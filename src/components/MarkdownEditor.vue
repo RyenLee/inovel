@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, h } from "vue";
 import { useEditor, EditorContent } from "@tiptap/vue-3";
 import { DecorationSet } from "prosemirror-view";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import { NButton, NIcon, NSpace, NTooltip } from "naive-ui";
+import { NButton, NIcon, NSpace, NTooltip, NDropdown, DropdownOption, NModal, NCard, NSlider, NSwitch, NText, NSpace as NSpaceVertical } from "naive-ui";
+import { createSmartSymbolsExtension } from "./SmartSymbolsExtension";
 import {
   Bold,
   Italic,
@@ -19,6 +20,15 @@ import {
   BookOpen,
   History,
   Camera,
+  FileText,
+  Plus,
+  Replace,
+  Check,
+  AlignLeft,
+  Scissors,
+  Wand2,
+  Settings,
+  Eye,
 } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -62,7 +72,52 @@ const wordCountSaveTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 
 // 模板选择器状态
 const showTemplateSelector = ref(false);
-const templateInsertMode = ref<'replace' | 'insert'>('insert');
+const templateInsertMode = ref<'replace' | 'insert'>('replace'); // 默认使用替换模式
+const isApplyingTemplate = ref(false);
+
+// 文本美化相关状态
+const showSplitDialog = ref(false);  // 段落拆分对话框
+const splitThreshold = ref(200);      // 拆分阈值（字符数）
+const splitPreview = ref<{ original: string; split: string[] }[]>([]);  // 预览数据
+const smartSymbolsEnabled = ref(true);  // 智能符号开关
+const paragraphIndentEnabled = ref(false);  // 首行缩进状态
+
+// 模板下拉菜单选项
+const templateDropdownOptions = computed(() => [
+  { label: '替换内容', key: 'replace', icon: templateInsertMode.value === 'replace' ? () => h(NIcon, null, { component: Check }) : undefined },
+  { label: '插入内容', key: 'insert', icon: templateInsertMode.value === 'insert' ? () => h(NIcon, null, { component: Check }) : undefined },
+  { type: 'divider', key: 'd1' },
+  { label: '打开模板库', key: 'open' },
+]);
+
+// 美化菜单选项
+const beautifyDropdownOptions = computed(() => [
+  { 
+    label: `首行缩进 ${paragraphIndentEnabled.value ? '✓' : ''}`, 
+    key: 'indent' 
+  },
+  { 
+    label: `符号自动补全 ${smartSymbolsEnabled.value ? '✓' : ''}`, 
+    key: 'symbols' 
+  },
+  { type: 'divider', key: 'd1' },
+  { label: '段落拆分...', key: 'split' },
+]);
+
+// 处理美化菜单选择
+const handleBeautifyDropdown = (key: string) => {
+  switch (key) {
+    case 'indent':
+      toggleParagraphIndent();
+      break;
+    case 'symbols':
+      smartSymbolsEnabled.value = !smartSymbolsEnabled.value;
+      break;
+    case 'split':
+      openSplitDialog();
+      break;
+  }
+};
 
 // Update word count cache to backend (with debounce)
 const updateWordCountCache = async () => {
@@ -214,6 +269,9 @@ const editor = useEditor({
     }),
     createMentionExtension(),
     createSensitivePlugin() as any,
+    createSmartSymbolsExtension({
+      enabled: smartSymbolsEnabled.value
+    }),
   ],
   editorProps: {
     attributes: {
@@ -276,12 +334,22 @@ onMounted(() => {
 });
 
 // Sync external content changes (chapter switching)
+// 使用文本比较而非 HTML 比较，避免 Tiptap 规范化导致的差异
+let lastSyncedContent = '';
 watch(
   () => props.modelValue,
   (newValue) => {
-    if (editor.value && editor.value.getHTML() !== newValue) {
-      // 切换章节时，重新计算字数
-      editor.value.commands.setContent(newValue, { emitUpdate: false });
+    if (!editor.value) return;
+    
+    // 获取当前编辑器文本长度，避免 HTML 规范化差异
+    const currentTextLength = editor.value.getText().length;
+    const newTextLength = newValue ? newValue.length : 0;
+    
+    // 只有当内容实际发生变化时才更新
+    if (currentTextLength !== newTextLength || (newValue && lastSyncedContent !== newValue)) {
+      lastSyncedContent = newValue || '';
+      editor.value.commands.setContent(newValue || '', { emitUpdate: false });
+      
       // 立即更新字数统计
       nextTick(() => {
         if (editor.value) {
@@ -294,6 +362,67 @@ watch(
           wordCount.value = chineseChars + englishWords;
         }
       });
+    }
+  }
+);
+
+// Watch for smart symbols toggle
+watch(
+  () => smartSymbolsEnabled.value,
+  (newValue) => {
+    if (editor.value) {
+      // 销毁旧编辑器并重新创建
+      const content = editor.value.getHTML();
+      editor.value.destroy();
+      editor.value = useEditor({
+        content: content,
+        extensions: [
+          StarterKit.configure({
+            heading: {
+              levels: [1, 2, 3],
+            },
+          }),
+          Placeholder.configure({
+            placeholder: "开始编写您的小说...",
+          }),
+          createMentionExtension(),
+          createSensitivePlugin() as any,
+          createSmartSymbolsExtension({
+            enabled: newValue
+          }),
+        ],
+        editorProps: {
+          attributes: {
+            class:
+              "prose prose-sm sm:prose lg:prose-lg dark:prose-invert max-w-none focus:outline-none min-h-full p-4",
+          },
+        },
+        onUpdate: ({ editor }) => {
+          const html = editor.getHTML();
+          emit("update:modelValue", html);
+
+          // Update word count
+          const text = editor.getText();
+          const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+          const englishWords = text
+            .replace(/[\u4e00-\u9fa5]/g, " ")
+            .split(/\s+/)
+            .filter((w) => w.length > 0).length;
+          wordCount.value = chineseChars + englishWords;
+          
+          updateWordCountCache();
+          
+          // Debounced sensitive word scan
+          if (props.projectId) {
+            const scanText = getDocPlainText(editor.state.doc);
+            if (scanText.length > 0) {
+              debouncedScanSensitive(scanText);
+            } else {
+              clearSensitiveDecorations();
+            }
+          }
+        },
+      }).value;
     }
   }
 );
@@ -346,20 +475,512 @@ const isActive = (type: string, attrs?: Record<string, unknown>) => {
   return editor.value?.isActive(type, attrs) ?? false;
 };
 
-// 处理模板选择
-const handleTemplateSelect = (content: string) => {
+// 简单的 Markdown 转 HTML 转换
+const markdownToHtml = (markdown: string): string => {
+  if (!markdown) return '';
+  
+  let html = markdown;
+  
+  // 表格处理（需要先处理，因为表格包含 | 字符）
+  const tableRegex = /^\|(.+)\|\s*\n\|[-:\s|]+\|\s*\n((?:\|.+\|\s*\n?)+)/gm;
+  html = html.replace(tableRegex, (match, headerRow, bodyRows) => {
+    const headers = headerRow.split('|').map((h: string) => h.trim()).filter(Boolean);
+    const rows = bodyRows.trim().split('\n').map((row: string) => 
+      row.split('|').map((cell: string) => cell.trim()).filter(Boolean)
+    );
+    
+    let tableHtml = '<table><thead><tr>';
+    headers.forEach((h: string) => { tableHtml += `<th>${h}</th>`; });
+    tableHtml += '</tr></thead><tbody>';
+    rows.forEach((row: string[]) => {
+      tableHtml += '<tr>';
+      row.forEach((cell: string) => { tableHtml += `<td>${cell}</td>`; });
+      tableHtml += '</tr>';
+    });
+    tableHtml += '</tbody></table>';
+    return tableHtml;
+  });
+  
+  // 分割线
+  html = html.replace(/^---$/gim, '<hr>');
+  
+  // 标题（按顺序处理，从 h3 到 h1 避免嵌套问题）
+  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+  
+  // 粗体
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  
+  // 斜体
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  
+  // 图片
+  html = html.replace(/!\[(.*?)\]\((.*?)\)/g, '<img alt="$1" src="$2">');
+  
+  // 链接
+  html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
+  
+  // 引用块处理（支持多行引用）
+  const quoteBlocks = html.split(/(?:<table>[\s\S]*?<\/table>)/);
+  html = quoteBlocks.map(block => {
+    if (block.includes('<table>')) return block;
+    
+    const lines = block.split('\n');
+    let result = '';
+    let inQuote = false;
+    let quoteContent: string[] = [];
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('>')) {
+        if (!inQuote) {
+          inQuote = true;
+          quoteContent = [];
+        }
+        // 移除 > 符号并添加内容
+        const quoteText = trimmed.replace(/^>\s*/g, '');
+        if (quoteText) {
+          quoteContent.push(quoteText);
+        }
+      } else {
+        if (inQuote) {
+          // 输出引用块
+          result += `<blockquote><p>${quoteContent.join('</p><p>')}</p></blockquote>`;
+          inQuote = false;
+          quoteContent = [];
+        }
+        result += (result ? '\n' : '') + line;
+      }
+    }
+    
+    // 处理末尾的引用块
+    if (inQuote && quoteContent.length > 0) {
+      result += `<blockquote><p>${quoteContent.join('</p><p>')}</p></blockquote>`;
+    }
+    
+    return result;
+  }).join('');
+  
+  // 无序列表处理
+  const ulParts = html.split(/(<blockquote>[\s\S]*?<\/blockquote>)/);
+  html = ulParts.map(part => {
+    if (part.includes('<blockquote>')) return part;
+    
+    const lines = part.split('\n');
+    let inList = false;
+    let listItems: string[] = [];
+    let result = '';
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (/^-\s/.test(trimmed)) {
+        if (!inList) {
+          inList = true;
+          listItems = [];
+        }
+        listItems.push(`<li>${trimmed.replace(/^-\s/, '')}</li>`);
+      } else {
+        if (inList) {
+          result += `<ul>${listItems.join('')}</ul>`;
+          inList = false;
+          listItems = [];
+        }
+        result += (result ? '\n' : '') + line;
+      }
+    }
+    
+    if (inList) {
+      result += `<ul>${listItems.join('')}</ul>`;
+    }
+    
+    return result;
+  }).join('');
+  
+  // 有序列表处理
+  const olParts = html.split(/(<ul>[\s\S]*?<\/ul>)/);
+  html = olParts.map(part => {
+    if (part.includes('<ul>')) return part;
+    
+    const lines = part.split('\n');
+    let inList = false;
+    let listItems: string[] = [];
+    let result = '';
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (/^\d+\.\s/.test(trimmed)) {
+        if (!inList) {
+          inList = true;
+          listItems = [];
+        }
+        listItems.push(`<li>${trimmed.replace(/^\d+\.\s/, '')}</li>`);
+      } else {
+        if (inList) {
+          result += `<ol>${listItems.join('')}</ol>`;
+          inList = false;
+          listItems = [];
+        }
+        result += (result ? '\n' : '') + line;
+      }
+    }
+    
+    if (inList) {
+      result += `<ol>${listItems.join('')}</ol>`;
+    }
+    
+    return result;
+  }).join('');
+  
+  // 段落处理
+  const blockParts = html.split(/(<h[123]>|<\/h[123]>|<ul>[\s\S]*?<\/ul>|<ol>[\s\S]*?<\/ol>|<blockquote>[\s\S]*?<\/blockquote>|<hr>|<table>[\s\S]*?<\/table>)/);
+  html = blockParts.map(part => {
+    // 如果是已知的块级元素，直接返回
+    if (/^<(h[123]>|<\/h[123]>|<ul>|<ol>|<li>|<blockquote>|<\/blockquote>|<hr>|<table>|<\/table>|<thead>|<tbody>|<tr>|<th>|<td>)/.test(part)) {
+      return part;
+    }
+    // 否则作为段落处理
+    const trimmed = part.trim();
+    if (!trimmed) return '';
+    // 保留换行但处理其他情况
+    return `<p>${trimmed.replace(/\n/g, '<br>')}</p>`;
+  }).join('');
+  
+  // 清理残留标签
+  html = html.replace(/<p><\/p>/g, '');
+  html = html.replace(/<p>\s*<\/p>/g, '');
+  html = html.replace(/<p>(<br>)+<\/p>/g, '<br>');
+  
+  return html;
+};
+
+// ============================================
+// 文本美化功能
+// ============================================
+
+// 全角空格缩进字符
+const INDENT_CHAR = '　　';  // 两个全角空格
+
+// 切换首行缩进
+const toggleParagraphIndent = () => {
   if (!editor.value) return;
   
-  if (templateInsertMode.value === 'replace') {
-    editor.value.commands.setContent(content);
-  } else {
-    editor.value.commands.insertContent(content);
+  const { from, to } = editor.value.state.selection;
+  
+  // 检查选区内的段落是否都已缩进
+  let allIndented = true;
+  editor.value.state.doc.nodesBetween(from, to, (node) => {
+    if (node.type.name === 'paragraph') {
+      const firstChild = node.firstChild;
+      if (!firstChild || firstChild.type.name !== 'text' || 
+          !firstChild.text?.startsWith(INDENT_CHAR)) {
+        allIndented = false;
+      }
+    }
+  });
+  
+  // 对选区内的段落添加/移除缩进
+  editor.value.state.doc.nodesBetween(from, to, (node, pos) => {
+    if (node.type.name === 'paragraph') {
+      const firstChild = node.firstChild;
+      const nodeStart = pos;
+      const nodeEnd = pos + node.nodeSize;
+      
+      if (allIndented) {
+        // 移除缩进
+        if (firstChild && firstChild.type.name === 'text' && 
+            firstChild.text?.startsWith(INDENT_CHAR)) {
+          // 删除两个全角空格
+          editor.value?.chain()
+            .focus()
+            .deleteRange({ from: nodeStart + 1, to: nodeStart + 1 + INDENT_CHAR.length })
+            .run();
+        }
+      } else {
+        // 添加缩进（在段落开头插入）
+        if (!firstChild) {
+          // 空段落，插入文本
+          editor.value?.chain()
+            .focus()
+            .insertContentAt(nodeStart, INDENT_CHAR)
+            .run();
+        } else if (firstChild.type.name === 'text') {
+          // 在文本前插入缩进字符
+          editor.value?.chain()
+            .focus()
+            .insertContentAt(nodeStart + 1, INDENT_CHAR)
+            .run();
+        }
+      }
+    }
+  });
+  
+  // 更新缩进状态
+  paragraphIndentEnabled.value = !allIndented;
+  
+  // 触发保存
+  triggerSave();
+};
+
+// 检查当前是否启用首行缩进
+const checkParagraphIndent = () => {
+  if (!editor.value) return false;
+  
+  let hasIndented = false;
+  let hasNonIndented = false;
+  
+  editor.value.state.doc.descendants((node) => {
+    if (node.type.name === 'paragraph') {
+      const firstChild = node.firstChild;
+      if (firstChild && firstChild.type.name === 'text') {
+        if (firstChild.text?.startsWith(INDENT_CHAR)) {
+          hasIndented = true;
+        } else if (node.textContent.length > 0) {
+          hasNonIndented = true;
+        }
+      }
+    }
+  });
+  
+  return hasIndented && !hasNonIndented;
+};
+
+// 智能拆分段落
+const smartSplitText = (text: string, maxLen: number): string[] => {
+  if (text.length <= maxLen) {
+    return [text];
   }
   
-  showTemplateSelector.value = false;
-  nextTick(() => {
-    editor.value?.commands.focus();
+  const sentences: { text: string; end: number }[] = [];
+  const sentenceEndRegex = /[。！？！？；;]/g;
+  let lastEnd = 0;
+  let match;
+  
+  while ((match = sentenceEndRegex.exec(text)) !== null) {
+    sentences.push({
+      text: text.slice(lastEnd, match.index + 1),
+      end: match.index + 1
+    });
+    lastEnd = match.index + 1;
+  }
+  
+  // 处理最后一段
+  if (lastEnd < text.length) {
+    sentences.push({
+      text: text.slice(lastEnd),
+      end: text.length
+    });
+  }
+  
+  // 合并句子，确保每段不超过 maxLen
+  const result: string[] = [];
+  let current = '';
+  
+  for (const sentence of sentences) {
+    if (current.length + sentence.text.length <= maxLen) {
+      current += sentence.text;
+    } else {
+      if (current) {
+        result.push(current);
+      }
+      // 如果单个句子超过阈值，硬拆分
+      if (sentence.text.length > maxLen) {
+        let remaining = sentence.text;
+        while (remaining.length > maxLen) {
+          result.push(remaining.slice(0, maxLen));
+          remaining = remaining.slice(maxLen);
+        }
+        current = remaining;
+      } else {
+        current = sentence.text;
+      }
+    }
+  }
+  
+  if (current) {
+    result.push(current);
+  }
+  
+  return result;
+};
+
+// 预览段落拆分
+const previewSplitParagraphs = () => {
+  if (!editor.value) return;
+  
+  const { from, to } = editor.value.state.selection;
+  const isSelection = from !== to;
+  
+  splitPreview.value = [];
+  
+  editor.value.state.doc.nodesBetween(from, to, (node, pos) => {
+    if (node.type.name === 'paragraph' && node.textContent.length > splitThreshold.value) {
+      const text = node.textContent;
+      const split = smartSplitText(text, splitThreshold.value);
+      
+      if (split.length > 1) {
+        splitPreview.value.push({
+          original: text,
+          split: split
+        });
+      }
+    }
   });
+  
+  if (splitPreview.value.length === 0) {
+    // 如果没有找到需要拆分的段落，检查整个文档
+    editor.value.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'paragraph' && node.textContent.length > splitThreshold.value) {
+        const text = node.textContent;
+        const split = smartSplitText(text, splitThreshold.value);
+        
+        if (split.length > 1 && !splitPreview.value.some(p => p.original === text)) {
+          splitPreview.value.push({
+            original: text,
+            split: split
+          });
+        }
+      }
+    });
+  }
+};
+
+// 执行段落拆分
+const applySplitParagraphs = () => {
+  if (!editor.value || splitPreview.value.length === 0) return;
+  
+  // 获取需要拆分的段落位置
+  const paragraphsToSplit: { pos: number; splits: string[] }[] = [];
+  
+  editor.value.state.doc.descendants((node, pos) => {
+    if (node.type.name === 'paragraph') {
+      const text = node.textContent;
+      const preview = splitPreview.value.find(p => p.original === text);
+      if (preview && preview.split.length > 1) {
+        paragraphsToSplit.push({
+          pos: pos,
+          splits: preview.split
+        });
+      }
+    }
+  });
+  
+  // 从后往前处理，避免位置偏移问题
+  paragraphsToSplit.reverse().forEach(({ pos, splits }) => {
+    const node = editor.value!.state.doc.nodeAt(pos);
+    if (!node) return;
+    
+    const nodeEnd = pos + node.nodeSize;
+    
+    // 删除原段落
+    editor.value!.chain()
+      .focus()
+      .deleteRange({ from: pos, to: nodeEnd })
+      .run();
+    
+    // 在原位置插入拆分后的段落
+    const tr = editor.value!.state.tr;
+    const frag = splits.map(text => 
+      editor.value!.state.schema.nodes.paragraph.create(null, 
+        editor.value!.state.schema.text(text)
+      )
+    );
+    
+    tr.replaceWith(pos, pos, frag);
+    editor.value!.view.dispatch(tr);
+  });
+  
+  showSplitDialog.value = false;
+  triggerSave();
+};
+
+// 打开拆分对话框
+const openSplitDialog = () => {
+  previewSplitParagraphs();
+  showSplitDialog.value = true;
+};
+
+// 触发保存
+const triggerSave = () => {
+  if (editor.value) {
+    const html = editor.value.getHTML();
+    emit('update:modelValue', html);
+    emit('requestSave');
+  }
+};
+
+// 处理模板选择
+const handleTemplateSelect = async (payload: string | { content: string; mode: 'replace' | 'insert' }) => {
+  if (!editor.value) {
+    console.error('编辑器实例未初始化');
+    return;
+  }
+  
+  // 兼容新旧两种调用方式
+  let content: string;
+  let mode: 'replace' | 'insert';
+  
+  if (typeof payload === 'string') {
+    // 旧方式：直接传递内容字符串
+    content = payload;
+    mode = templateInsertMode.value;
+  } else {
+    // 新方式：传递包含内容和模式的对象
+    content = payload.content;
+    mode = payload.mode;
+    // 同步模式到编辑器
+    templateInsertMode.value = mode;
+  }
+  
+  try {
+    isApplyingTemplate.value = true;
+    
+    // 将 Markdown 转换为 HTML
+    const htmlContent = markdownToHtml(content);
+    
+    if (mode === 'replace') {
+      // 替换模式：清空内容并插入新模板
+      editor.value.commands.setContent(htmlContent || content, { emitUpdate: false });
+    } else {
+      // 插入模式：在当前光标位置插入模板内容
+      if (htmlContent) {
+        editor.value.commands.insertContent(htmlContent);
+      } else {
+        editor.value.commands.insertContent(content);
+      }
+    }
+    
+    // 强制触发内容更新，确保父组件状态同步
+    await nextTick();
+    const newHtml = editor.value.getHTML();
+    emit('update:modelValue', newHtml);
+    
+    // 更新字数统计
+    const text = editor.value.getText();
+    const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+    const englishWords = text
+      .replace(/[\u4e00-\u9fa5]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 0).length;
+    wordCount.value = chineseChars + englishWords;
+    
+    // 触发字数保存
+    updateWordCountCache();
+    
+    showTemplateSelector.value = false;
+    
+    nextTick(() => {
+      editor.value?.commands.focus();
+    });
+  } catch (error) {
+    console.error('应用模板失败:', error);
+    // 即使出错，也尝试插入原始内容
+    if (editor.value) {
+      editor.value.commands.insertContent(content);
+    }
+  } finally {
+    isApplyingTemplate.value = false;
+  }
 };
 
 // 处理模板选择器关闭
@@ -370,6 +991,22 @@ const handleTemplateSelectorClose = () => {
 // 显示模板选择器
 const showTemplate = () => {
   showTemplateSelector.value = true;
+};
+
+// 切换模板模式
+const toggleTemplateMode = () => {
+  templateInsertMode.value = templateInsertMode.value === 'replace' ? 'insert' : 'replace';
+};
+
+// 处理模板下拉菜单选择
+const handleTemplateDropdown = (key: string) => {
+  if (key === 'replace') {
+    templateInsertMode.value = 'replace';
+  } else if (key === 'insert') {
+    templateInsertMode.value = 'insert';
+  } else if (key === 'open') {
+    showTemplateSelector.value = true;
+  }
 };
 
 // 图片占位符处理
@@ -626,17 +1263,52 @@ onUnmounted(() => {
           创建快照
         </NTooltip>
 
+
         <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
 
+        <NDropdown
+          trigger="hover"
+          :options="templateDropdownOptions"
+          @select="handleTemplateDropdown"
+        >
+          <NButton size="small" tertiary>
+            <template #icon>
+              <NIcon><FileText /></NIcon>
+            </template>
+          </NButton>
+        </NDropdown>
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton size="small" tertiary @click="showTemplate">
-              <template #icon>
-                <NIcon><FileText /></NIcon>
-              </template>
-            </NButton>
+            <div class="flex items-center">
+              <NButton size="tiny" quaternary class="px-1!" @click="toggleTemplateMode">
+                <template #icon>
+                  <NIcon size="12">
+                    <component :is="templateInsertMode === 'replace' ? Replace : Plus" />
+                  </NIcon>
+                </template>
+              </NButton>
+            </div>
           </template>
-          插入模板
+          {{ templateInsertMode === 'replace' ? '替换模式' : '插入模式' }}（点击切换）
+        </NTooltip>
+
+        <!-- 美化菜单 -->
+        <NDropdown
+          trigger="hover"
+          :options="beautifyDropdownOptions"
+          @select="handleBeautifyDropdown"
+        >
+          <NButton size="small" tertiary>
+            <template #icon>
+              <NIcon><Wand2 /></NIcon>
+            </template>
+          </NButton>
+        </NDropdown>
+        <NTooltip trigger="hover">
+          <template #trigger>
+            <NText depth="3" class="text-xs px-1">美化</NText>
+          </template>
+          文本美化工具
         </NTooltip>
       </NSpace>
     </div>
@@ -673,9 +1345,76 @@ onUnmounted(() => {
     <TemplateSelector
       v-model:show="showTemplateSelector"
       :project-id="projectId || 0"
+      :insert-mode="templateInsertMode"
       @select="handleTemplateSelect"
       @update:show="handleTemplateSelectorClose"
     />
+
+    <!-- 段落拆分对话框 -->
+    <NModal
+      v-model:show="showSplitDialog"
+      preset="card"
+      title="段落拆分"
+      style="width: 600px; max-width: 90vw"
+      :segmented="{ content: true, footer: true }"
+    >
+      <div class="space-y-4">
+        <!-- 阈值设置 -->
+        <div class="flex items-center gap-4">
+          <NText>拆分阈值：</NText>
+          <NSlider
+            v-model:value="splitThreshold"
+            :min="100"
+            :max="500"
+            :step="10"
+            style="width: 200px"
+          />
+          <NText>{{ splitThreshold }} 字符</NText>
+        </div>
+        
+        <!-- 预览按钮 -->
+        <NButton @click="previewSplitParagraphs" secondary>
+          <template #icon>
+            <NIcon><Eye /></NIcon>
+          </template>
+          刷新预览
+        </NButton>
+        
+        <!-- 预览区域 -->
+        <div v-if="splitPreview.length > 0" class="max-h-80 overflow-auto border rounded-lg p-4 space-y-4">
+          <div v-for="(item, index) in splitPreview" :key="index">
+            <NText depth="3" class="text-xs mb-1 block">原文（{{ item.original.length }} 字）：</NText>
+            <div class="bg-gray-100 dark:bg-gray-800 rounded p-2 mb-2 text-sm">
+              {{ item.original.slice(0, 100) }}{{ item.original.length > 100 ? '...' : '' }}
+            </div>
+            
+            <NText depth="3" class="text-xs mb-1 block">拆分后（{{ item.split.length }} 段）：</NText>
+            <div class="bg-blue-50 dark:bg-blue-900/30 rounded p-2 space-y-1">
+              <div v-for="(split, si) in item.split" :key="si" class="text-sm">
+                <span class="text-blue-500 font-medium">[段{{ si + 1 }}]</span>
+                {{ split.slice(0, 50) }}{{ split.length > 50 ? '...' : '' }}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 无需拆分提示 -->
+        <NEmpty v-else description="当前没有超过阈值的段落" />
+      </div>
+      
+      <template #footer>
+        <NSpace justify="end">
+          <NButton @click="showSplitDialog = false">取消</NButton>
+          <NButton
+            type="primary"
+            :disabled="splitPreview.length === 0"
+            @click="applySplitParagraphs"
+          >
+            确认拆分
+          </NButton>
+        </NSpace>
+      </template>
+    </NModal>
   </div>
 </template>
 

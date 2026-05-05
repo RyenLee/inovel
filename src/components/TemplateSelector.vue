@@ -12,6 +12,10 @@ import {
   NText,
   NIcon,
   NEmpty,
+  NRadioGroup,
+  NRadioButton,
+  NTooltip,
+  NSpin,
   useMessage,
 } from "naive-ui";
 import { FileText, X } from "lucide-vue-next";
@@ -22,9 +26,11 @@ const props = withDefaults(
   defineProps<{
     show: boolean;
     projectId?: number;
+    insertMode?: 'replace' | 'insert'; // 来自父组件的模式设置
   }>(),
   {
     projectId: 0,
+    insertMode: 'replace',
   }
 );
 
@@ -33,14 +39,17 @@ const emit = defineEmits<{
   (e: "select", content: string): void;
 }>();
 
+// 本地模式状态（用于预览）
+const localInsertMode = ref<'replace' | 'insert'>('replace');
+
 const message = useMessage();
 const templateStore = useTemplateStore();
 
 const selectedTemplateId = ref<string | null>(null);
 const activeCategory = ref<string>("全部");
 
-// 加载模板
-onMounted(async () => {
+// 加载模板（带重试机制）
+const loadTemplates = async () => {
   try {
     if (props.projectId > 0) {
       await templateStore.loadAllTemplates(props.projectId);
@@ -48,8 +57,20 @@ onMounted(async () => {
       await templateStore.loadBuiltinTemplates();
     }
   } catch (error) {
-    message.error("加载模板失败");
+    console.error("加载模板失败:", error);
+    message.error("加载模板失败，请重试");
+    // 可以添加重试逻辑
+    setTimeout(() => {
+      if (allTemplates.value.length === 0) {
+        loadTemplates();
+      }
+    }, 2000);
   }
+};
+
+// 加载模板
+onMounted(() => {
+  loadTemplates();
 });
 
 // 监听 show 变化，重置选中状态
@@ -58,7 +79,17 @@ watch(
   (newVal) => {
     if (newVal) {
       selectedTemplateId.value = null;
+      // 同步父组件的模式设置
+      localInsertMode.value = props.insertMode;
     }
+  }
+);
+
+// 监听父组件模式变化
+watch(
+  () => props.insertMode,
+  (newVal) => {
+    localInsertMode.value = newVal;
   }
 );
 
@@ -99,7 +130,11 @@ function selectTemplate(template: WritingTemplate | any) {
 // 确认使用模板
 function confirmSelect() {
   if (selectedTemplate.value) {
-    emit("select", selectedTemplate.value.content);
+    // 同时传递内容和当前选择的模式
+    emit("select", {
+      content: selectedTemplate.value.content,
+      mode: localInsertMode.value
+    });
     emit("update:show", false);
   }
 }
@@ -181,18 +216,42 @@ function markdownToHtml(md: string): string {
       </template>
 
       <div class="template-selector-content">
-        <!-- 分类筛选 -->
-        <n-tabs
-          v-model:value="activeCategory"
-          type="line"
-          style="margin-bottom: 16px"
-        >
-          <n-tab-pane name="全部" tab="全部" />
-          <n-tab-pane name="章节" tab="章节" />
-          <n-tab-pane name="图文" tab="图文" />
-          <n-tab-pane name="对话" tab="对话" />
-          <n-tab-pane name="结构化" tab="结构化" />
-        </n-tabs>
+        <!-- 分类筛选和模式选择 -->
+        <div class="flex items-center justify-between mb-4">
+          <n-tabs
+            v-model:value="activeCategory"
+            type="line"
+            style="flex: 1"
+          >
+            <n-tab-pane name="全部" tab="全部" />
+            <n-tab-pane name="章节" tab="章节" />
+            <n-tab-pane name="图文" tab="图文" />
+            <n-tab-pane name="对话" tab="对话" />
+            <n-tab-pane name="结构化" tab="结构化" />
+          </n-tabs>
+          
+          <!-- 插入模式选择 -->
+          <div class="flex items-center gap-2 ml-4">
+            <n-radio-group v-model:value="localInsertMode" name="insertMode" size="small">
+              <n-radio-button value="replace">
+                <n-tooltip trigger="hover">
+                  <template #trigger>
+                    <span>替换内容</span>
+                  </template>
+                  清空当前内容，使用模板
+                </n-tooltip>
+              </n-radio-button>
+              <n-radio-button value="insert">
+                <n-tooltip trigger="hover">
+                  <template #trigger>
+                    <span>插入内容</span>
+                  </template>
+                  在当前光标位置插入模板
+                </n-tooltip>
+              </n-radio-button>
+            </n-radio-group>
+          </div>
+        </div>
 
         <!-- 模板网格 -->
         <div class="template-grid-container">
@@ -249,24 +308,37 @@ function markdownToHtml(md: string): string {
             </n-grid-item>
           </n-grid>
 
+          <!-- 加载状态 -->
+          <div v-else-if="templateStore.isLoading" class="flex flex-col items-center justify-center py-20">
+            <n-spin size="large" />
+            <n-text depth="3" style="margin-top: 12px">加载模板中...</n-text>
+          </div>
+          
           <!-- 空状态 -->
           <n-empty
             v-else
-            description="暂无模板"
+            description="暂无模板，请稍后重试"
             style="padding: 40px 0"
-          />
+          >
+            <template #extra>
+              <n-button size="small" @click="loadTemplates">重新加载</n-button>
+            </template>
+          </n-empty>
         </div>
       </div>
 
       <template #footer>
         <n-space justify="end">
+          <n-text depth="3" style="font-size: 12px; margin-right: auto;">
+            模式：{{ localInsertMode === 'replace' ? '替换内容' : '插入内容' }}
+          </n-text>
           <n-button @click="cancel">取消</n-button>
           <n-button
             type="primary"
             :disabled="!selectedTemplate"
             @click="confirmSelect"
           >
-            使用此模板
+            {{ localInsertMode === 'replace' ? '使用模板替换' : '插入模板内容' }}
           </n-button>
         </n-space>
       </template>

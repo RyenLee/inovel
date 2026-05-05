@@ -28,10 +28,21 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
-            // 初始化配置系统
+            // 初始化配置系统（用户数据目录）
             if let Err(e) = config::init_config(app.handle()) {
                 eprintln!("配置初始化失败: {}", e);
             }
+            
+            // 首次启动时在安装目录创建配置文件
+            match config::init_install_config(app.handle()) {
+                Ok(config_path) => {
+                    println!("[Setup] 安装配置文件路径: {}", config_path.display());
+                }
+                Err(e) => {
+                    eprintln!("[Setup] 安装配置初始化失败: {}", e);
+                }
+            }
+            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -41,6 +52,7 @@ pub fn run() {
             config::update_app_config,
             config::reset_app_config,
             config::get_config_file_path,
+            config::get_install_config_info,
             config::validate_config_paths,
             project::create_project,
             project::get_recent_projects,

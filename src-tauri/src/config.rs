@@ -112,7 +112,7 @@ pub struct BackupConfig {
     pub incremental_threshold_hours: u32,
 }
 
-/// 解析配置文件路径
+/// 解析配置文件路径（用户数据目录）
 fn get_config_path(app_handle: &AppHandle) -> PathBuf {
     let app_dir = app_handle
         .path()
@@ -121,17 +121,46 @@ fn get_config_path(app_handle: &AppHandle) -> PathBuf {
     app_dir.join("config.json")
 }
 
+/// 获取应用程序安装目录
+/// 优先使用资源目录（打包后），回退到 exe 所在目录
+fn get_install_dir(app_handle: &AppHandle) -> PathBuf {
+    // 尝试获取资源目录（打包后的应用目录）
+    if let Ok(resource_path) = app_handle.path().resource_dir() {
+        return resource_path;
+    }
+    
+    // 回退：获取 exe 所在目录
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(parent) = exe_path.parent() {
+            return parent.to_path_buf();
+        }
+    }
+    
+    // 最后回退到当前目录
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+}
+
+/// 获取安装目录下的配置文件路径
+fn get_install_config_path(app_handle: &AppHandle) -> PathBuf {
+    get_install_dir(app_handle).join("config.json")
+}
+
 /// 替换配置字符串中的环境变量
 ///
 /// 支持格式:
 /// - `${VAR_NAME}` - 标准格式
 /// - `$VAR_NAME` - 简写格式（仅大写字母、数字和下划线）
-fn expand_env_vars(path: &str, app_data_dir: &Path) -> String {
+/// - `${APP_INSTALL_DIR}` - 应用安装目录（自动替换）
+fn expand_env_vars(path: &str, app_data_dir: &Path, install_dir: &Path) -> String {
     let mut result = path.to_string();
 
     // 替换 ${APP_DATA} 为实际的 app data 目录
     result = result.replace("${APP_DATA}", &app_data_dir.to_string_lossy());
     result = result.replace("$APP_DATA", &app_data_dir.to_string_lossy());
+
+    // 替换 ${APP_INSTALL_DIR} 为应用安装目录
+    result = result.replace("${APP_INSTALL_DIR}", &install_dir.to_string_lossy());
+    result = result.replace("$APP_INSTALL_DIR", &install_dir.to_string_lossy());
 
     // 替换其他常见环境变量
     if let Ok(home) = std::env::var("HOME") {
@@ -154,6 +183,10 @@ fn expand_env_vars(path: &str, app_data_dir: &Path) -> String {
     result = re_pattern
         .replace_all(&result, |caps: &regex_lite::Captures| {
             let var_name = &caps[1];
+            // 跳过已知变量
+            if var_name == "APP_DATA" || var_name == "APP_INSTALL_DIR" {
+                return caps[0].to_string();
+            }
             std::env::var(var_name).unwrap_or_else(|_| caps[0].to_string())
         })
         .to_string();
@@ -163,8 +196,8 @@ fn expand_env_vars(path: &str, app_data_dir: &Path) -> String {
     result = re_simple
         .replace_all(&result, |caps: &regex_lite::Captures| {
             let var_name = &caps[1];
-            // 跳过已经是 ${VAR} 格式的
-            if caps[0].starts_with("${") {
+            // 跳过已知变量格式
+            if caps[0].starts_with("${") || var_name == "APP_DATA" || var_name == "APP_INSTALL_DIR" {
                 return caps[0].to_string();
             }
             std::env::var(var_name).unwrap_or_else(|_| caps[0].to_string())
@@ -216,6 +249,90 @@ pub fn init_config(app_handle: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// 安装目录配置文件结构（用于生成 config.json）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallConfig {
+    /// 配置版本
+    pub version: String,
+    /// 应用名称
+    pub app_name: String,
+    /// 应用安装目录
+    pub install_dir: String,
+    /// 其他配置项（可扩展）
+    #[serde(default)]
+    pub settings: std::collections::HashMap<String, serde_json::Value>,
+}
+
+impl Default for InstallConfig {
+    fn default() -> Self {
+        Self {
+            version: "1.0".to_string(),
+            app_name: "小说工坊".to_string(),
+            install_dir: String::new(),
+            settings: std::collections::HashMap::new(),
+        }
+    }
+}
+
+/// 初始化安装目录配置文件（首次启动时创建）
+/// 
+/// 在应用程序安装目录下创建 config.json，包含 ${APP_INSTALL_DIR} 变量说明
+pub fn init_install_config(app_handle: &AppHandle) -> Result<PathBuf, String> {
+    let install_dir = get_install_dir(app_handle);
+    let config_path = install_dir.join("config.json");
+
+    // 检查配置文件是否已存在
+    if config_path.exists() {
+        // 配置文件已存在，检查是否需要更新
+        let content = fs::read_to_string(&config_path)
+            .map_err(|e| format!("读取安装配置失败: {}", e))?;
+        
+        match serde_json::from_str::<InstallConfig>(&content) {
+            Ok(mut config) => {
+                // 更新安装目录（如果路径变化）
+                config.install_dir = install_dir.to_string_lossy().to_string();
+                
+                // 重新写入（确保路径是最新的）
+                let new_content = serde_json::to_string_pretty(&config)
+                    .map_err(|e| format!("序列化安装配置失败: {}", e))?;
+                fs::write(&config_path, &new_content)
+                    .map_err(|e| format!("更新安装配置文件失败: {}", e))?;
+            }
+            Err(_) => {
+                // 配置格式错误，重新创建
+                let config = InstallConfig {
+                    version: "1.0".to_string(),
+                    app_name: "小说工坊".to_string(),
+                    install_dir: install_dir.to_string_lossy().to_string(),
+                    settings: std::collections::HashMap::new(),
+                };
+                let new_content = serde_json::to_string_pretty(&config)
+                    .map_err(|e| format!("序列化安装配置失败: {}", e))?;
+                fs::write(&config_path, &new_content)
+                    .map_err(|e| format!("写入安装配置文件失败: {}", e))?;
+            }
+        }
+    } else {
+        // 首次启动，创建配置文件
+        let config = InstallConfig {
+            version: "1.0".to_string(),
+            app_name: "小说工坊".to_string(),
+            install_dir: install_dir.to_string_lossy().to_string(),
+            settings: std::collections::HashMap::new(),
+        };
+        
+        let content = serde_json::to_string_pretty(&config)
+            .map_err(|e| format!("序列化安装配置失败: {}", e))?;
+        
+        fs::write(&config_path, &content)
+            .map_err(|e| format!("创建安装配置文件失败: {}", e))?;
+        
+        println!("[Config] 首次启动，已在安装目录创建配置文件: {}", config_path.display());
+    }
+
+    Ok(config_path)
+}
+
 /// 获取配置（需先调用 init_config）
 pub fn get_config() -> Result<AppConfig, String> {
     let config = APP_CONFIG.read().map_err(|_| "配置锁中毒")?;
@@ -229,29 +346,30 @@ pub fn get_config_with_expanded_paths(app_handle: &AppHandle) -> Result<Expanded
         .path()
         .app_data_dir()
         .map_err(|e| format!("获取应用数据目录失败: {}", e))?;
+    let install_dir = get_install_dir(app_handle);
 
     Ok(ExpandedConfig {
         version: config.version,
         database: ExpandedDatabaseConfig {
-            path: expand_path(&config.database.path, &app_dir),
-            backup_dir: expand_path(&config.database.backup_dir, &app_dir),
+            path: expand_path(&config.database.path, &app_dir, &install_dir),
+            backup_dir: expand_path(&config.database.backup_dir, &app_dir, &install_dir),
             auto_backup: config.database.auto_backup,
             vacuum_on_close: config.database.vacuum_on_close,
         },
         paths: ExpandedPathsConfig {
-            projects_root: expand_path(&config.paths.projects_root, &app_dir),
-            exports_dir: expand_path(&config.paths.exports_dir, &app_dir),
+            projects_root: expand_path(&config.paths.projects_root, &app_dir, &install_dir),
+            exports_dir: expand_path(&config.paths.exports_dir, &app_dir, &install_dir),
         },
         logging: ExpandedLoggingConfig {
             level: config.logging.level.clone(),
-            directory: expand_path(&config.logging.directory, &app_dir),
+            directory: expand_path(&config.logging.directory, &app_dir, &install_dir),
             max_file_size_mb: config.logging.max_file_size_mb,
             retention_days: config.logging.retention_days,
             backup_log_enabled: config.logging.backup_log_enabled,
         },
         backup: ExpandedBackupConfig {
             enabled: config.backup.enabled,
-            backup_dir: expand_path(&config.backup.backup_dir, &app_dir),
+            backup_dir: expand_path(&config.backup.backup_dir, &app_dir, &install_dir),
             max_backups_per_project: config.backup.max_backups_per_project,
             incremental_threshold_hours: config.backup.incremental_threshold_hours,
         },
@@ -259,8 +377,8 @@ pub fn get_config_with_expanded_paths(app_handle: &AppHandle) -> Result<Expanded
 }
 
 /// 展开路径中的环境变量
-fn expand_path(path: &str, app_data_dir: &Path) -> PathBuf {
-    let expanded = expand_env_vars(path, app_data_dir);
+fn expand_path(path: &str, app_data_dir: &Path, install_dir: &Path) -> PathBuf {
+    let expanded = expand_env_vars(path, app_data_dir, install_dir);
     PathBuf::from(expanded)
 }
 
@@ -529,6 +647,33 @@ pub async fn reset_app_config(app_handle: AppHandle) -> Result<ConfigInfo, Strin
 pub async fn get_config_file_path(app_handle: AppHandle) -> Result<String, String> {
     let config_path = get_config_path(&app_handle);
     Ok(config_path.to_string_lossy().to_string())
+}
+
+/// 安装配置信息结构
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallConfigInfo {
+    /// 安装目录
+    pub install_dir: String,
+    /// 安装配置文件路径
+    pub config_path: String,
+    /// 配置文件是否已存在
+    pub config_exists: bool,
+    /// ${APP_INSTALL_DIR} 变量的实际值
+    pub app_install_dir_value: String,
+}
+
+/// 获取安装目录配置信息（用于前端显示）
+#[tauri::command]
+pub async fn get_install_config_info(app_handle: AppHandle) -> Result<InstallConfigInfo, String> {
+    let install_dir = get_install_dir(&app_handle);
+    let config_path = get_install_config_path(&app_handle);
+    
+    Ok(InstallConfigInfo {
+        install_dir: install_dir.to_string_lossy().to_string(),
+        config_path: config_path.to_string_lossy().to_string(),
+        config_exists: config_path.exists(),
+        app_install_dir_value: install_dir.to_string_lossy().to_string(),
+    })
 }
 
 /// 验证配置路径是否可访问

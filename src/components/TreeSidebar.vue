@@ -203,6 +203,9 @@ const doCreateChapter = async (volumeId: number, initialContent?: string) => {
     if (volume) {
       volume.chapters.push(newChapter);
     }
+    // 创建后选择章节，触发编辑器加载模板内容
+    selectChapter(newChapter);
+    // 然后开始编辑标题
     startEditChapter(newChapter.id, newChapter.title);
   } catch (error) {
     console.error("创建章节失败:", error);
@@ -235,8 +238,11 @@ const createChapter = (volumeId: number) => {
 };
 
 // 处理模板选择
-const handleTemplateSelect = async (content: string) => {
+const handleTemplateSelect = async (data: { content: string; mode: string } | string) => {
   if (!currentVolumeIdForTemplate.value) return;
+  
+  // 兼容两种调用方式：从 TemplateSelector 收到对象，或直接收到字符串
+  const content = typeof data === 'string' ? data : data.content;
   
   showTemplateSelector.value = false;
   await doCreateChapter(currentVolumeIdForTemplate.value, content);
@@ -664,10 +670,10 @@ onMounted(async () => {
               
               <component
                 :is="expandedVolumes.includes(volume.id) ? ChevronDown : ChevronRight"
-                class="w-4 h-4 text-gray-500 flex-shrink-0"
+                class="w-4 h-4 text-gray-500 shrink-0"
               />
               
-              <FolderOpen class="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <FolderOpen class="w-4 h-4 text-blue-500 shrink-0" />
               
               <!-- Volume name (editable) -->
               <template v-if="editingVolumeId === volume.id">
@@ -730,11 +736,11 @@ onMounted(async () => {
                   >
                     <GripVertical class="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab chapter-handle" />
                     
-                    <FileText class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <FileText class="w-4 h-4 text-gray-400 shrink-0" />
 
                     <!-- Status indicator dot -->
                     <span
-                      class="w-2 h-2 rounded-full flex-shrink-0 cursor-pointer hover:scale-125 transition-transform"
+                      class="w-2 h-2 rounded-full shrink-0 cursor-pointer hover:scale-125 transition-transform"
                       :style="{ backgroundColor: getStatusColor(chapter.status) }"
                       :title="`状态: ${getStatusLabel(chapter.status)}`"
                       @click.stop="startEditChapterStatus(chapter)"
@@ -808,9 +814,9 @@ onMounted(async () => {
             >
               <component
                 :is="expandedVolumes.includes(volume.id) ? ChevronDown : ChevronRight"
-                class="w-4 h-4 text-gray-500 flex-shrink-0"
+                class="w-4 h-4 text-gray-500 shrink-0"
               />
-              <FolderOpen class="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <FolderOpen class="w-4 h-4 text-blue-500 shrink-0" />
               <span class="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
                 {{ volume.name }}
               </span>
@@ -827,11 +833,11 @@ onMounted(async () => {
                 @contextmenu="showContextMenu($event, 'chapter', volume.id, chapter.id)"
                 @click="selectChapter(chapter)"
               >
-                <FileText class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <FileText class="w-4 h-4 text-gray-400 shrink-0" />
 
                 <!-- Status indicator dot -->
                 <span
-                  class="w-2 h-2 rounded-full flex-shrink-0 cursor-pointer hover:scale-125 transition-transform"
+                  class="w-2 h-2 rounded-full shrink-0 cursor-pointer hover:scale-125 transition-transform"
                   :style="{ backgroundColor: getStatusColor(chapter.status) }"
                   :title="`状态: ${getStatusLabel(chapter.status)}`"
                   @click.stop="startEditChapterStatus(chapter)"
