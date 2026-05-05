@@ -918,15 +918,15 @@ const todayNewWords = computed(() => {
         <!-- Daily Goal Progress -->
         <n-tooltip trigger="hover">
           <template #trigger>
-            <div class="flex items-center gap-2 cursor-default">
-              <Target class="w-4 h-4 text-blue-500" />
-              <span class="text-sm text-gray-600 dark:text-gray-400">
-                今日: {{ todayWords }} / {{ dailyGoal }}
+            <div class="daily-goal-container">
+              <Target class="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <span class="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                今日: {{ todayWords }} / {{ dailyGoal }} 字
               </span>
               <n-progress type="line" :percentage="dailyProgress" :height="8" :border-radius="4" :fill-border-radius="4"
                 :color="dailyProgress >= 100 ? '#52c41a' : '#3b82f6'" :rail-color="isDark ? '#374151' : '#e5e7eb'"
-                class="w-24" :show-indicator="false" />
-              <span class="text-sm font-medium" :class="dailyProgress >= 100 ? 'text-green-500' : 'text-blue-500'">
+                class="daily-goal-progress" :show-indicator="false" />
+              <span class="text-sm font-medium whitespace-nowrap" :class="dailyProgress >= 100 ? 'text-green-500' : 'text-blue-500'">
                 {{ dailyProgress }}%
               </span>
             </div>
@@ -1070,3 +1070,24 @@ const todayNewWords = computed(() => {
     </n-modal>
   </div>
 </template>
+
+<style scoped>
+/* 每日目标进度容器 - 防止文本换行 */
+.daily-goal-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.daily-goal-container .whitespace-nowrap {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.daily-goal-progress {
+  width: 80px;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+</style>

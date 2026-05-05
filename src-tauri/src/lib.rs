@@ -14,6 +14,7 @@ pub mod export;
 pub mod backup;
 pub mod encryption;
 pub mod inspiration;
+pub mod template;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -133,6 +134,15 @@ pub fn run() {
             inspiration::reorder_inspiration_items,
             inspiration::get_inspiration_board,
             inspiration::get_inspiration_items,
+            // 模板系统命令
+            template::get_builtin_templates,
+            template::get_user_templates,
+            template::save_user_template,
+            template::update_user_template,
+            template::delete_user_template,
+            template::get_all_templates,
+            // 图片处理命令
+            chapter::save_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

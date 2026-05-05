@@ -21,6 +21,8 @@ import {
   Camera,
 } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
+import { readFile } from "@tauri-apps/plugin-fs";
 import type { EditorMode } from "../stores/editor";
 import { createMentionExtension } from "./MentionExtension";
 import {
@@ -30,6 +32,7 @@ import {
   getDocPlainText,
 } from "./SensitiveHighlightPlugin";
 import type { SensitiveMatch } from "./SensitiveHighlightPlugin";
+import TemplateSelector from "./TemplateSelector.vue";
 
 const props = defineProps<{
   modelValue: string;
@@ -56,6 +59,10 @@ const editorContainerRef = ref<HTMLElement | null>(null);
 const currentParagraphIndex = ref(-1);
 const scanTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 const wordCountSaveTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+
+// 模板选择器状态
+const showTemplateSelector = ref(false);
+const templateInsertMode = ref<'replace' | 'insert'>('insert');
 
 // Update word count cache to backend (with debounce)
 const updateWordCountCache = async () => {
@@ -339,6 +346,99 @@ const isActive = (type: string, attrs?: Record<string, unknown>) => {
   return editor.value?.isActive(type, attrs) ?? false;
 };
 
+// 处理模板选择
+const handleTemplateSelect = (content: string) => {
+  if (!editor.value) return;
+  
+  if (templateInsertMode.value === 'replace') {
+    editor.value.commands.setContent(content);
+  } else {
+    editor.value.commands.insertContent(content);
+  }
+  
+  showTemplateSelector.value = false;
+  nextTick(() => {
+    editor.value?.commands.focus();
+  });
+};
+
+// 处理模板选择器关闭
+const handleTemplateSelectorClose = () => {
+  showTemplateSelector.value = false;
+};
+
+// 显示模板选择器
+const showTemplate = () => {
+  showTemplateSelector.value = true;
+};
+
+// 图片占位符处理
+const handleEditorClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  if (target.tagName === 'IMG') {
+    const img = target as HTMLImageElement;
+    // 检查是否是占位符图片
+    if (!img.src || img.src.includes('在此插入图片') || img.src === window.location.href || img.src.endsWith('()')) {
+      // 触发图片选择
+      selectImageForImg(img);
+    }
+  }
+};
+
+// 选择图片
+const selectImageForImg = async (img: HTMLImageElement) => {
+  try {
+    // 打开文件对话框
+    const selected = await open({
+      filters: [{
+        name: 'Image',
+        extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']
+      }]
+    });
+    
+    if (selected && !Array.isArray(selected)) {
+      // 读取文件
+      const fileData = await readFile(selected);
+      
+      // 将 Uint8Array 转换为 base64
+      let binary = '';
+      for (let i = 0; i < fileData.length; i++) {
+        binary += String.fromCharCode(fileData[i]);
+      }
+      const base64Data = btoa(binary);
+      
+      // 获取文件名
+      const fileName = selected.split('/').pop() || 'image.png';
+      
+      // 调用后端命令保存图片
+      const newPath = await invoke<string>('save_image', {
+        projectId: props.projectId,
+        fileName: fileName,
+        fileData: base64Data
+      });
+      
+      // 更新图片 src
+      img.src = newPath;
+      
+      // 触发更新
+      if (editor.value) {
+        const html = editor.value.getHTML();
+        emit('update:modelValue', html);
+        emit('requestSave');
+      }
+    }
+  } catch (error) {
+    console.error('选择图片失败:', error);
+  }
+};
+
+onMounted(() => {
+  // 添加编辑器点击事件监听
+  if (editorContainerRef.value) {
+    editorContainerRef.value.addEventListener('click', handleEditorClick);
+  }
+});
+
 onUnmounted(() => {
   // 清理所有定时器
   if (wordCountSaveTimer.value) {
@@ -525,6 +625,19 @@ onUnmounted(() => {
           </template>
           创建快照
         </NTooltip>
+
+        <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+        <NTooltip trigger="hover">
+          <template #trigger>
+            <NButton size="small" tertiary @click="showTemplate">
+              <template #icon>
+                <NIcon><FileText /></NIcon>
+              </template>
+            </NButton>
+          </template>
+          插入模板
+        </NTooltip>
       </NSpace>
     </div>
 
@@ -555,6 +668,14 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+    
+    <!-- 模板选择器 -->
+    <TemplateSelector
+      v-model:show="showTemplateSelector"
+      :project-id="projectId || 0"
+      @select="handleTemplateSelect"
+      @update:show="handleTemplateSelectorClose"
+    />
   </div>
 </template>
 

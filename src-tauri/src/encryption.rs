@@ -516,25 +516,32 @@ fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), String> {
 fn update_project_encrypted_status(project_path: &Path, encrypted: bool) -> Result<(), String> {
     let project_json_path = project_path.join("project.json");
     
-    if !project_json_path.exists() {
-        return Err("project.json 不存在".to_string());
+    let json: serde_json::Value = if project_json_path.exists() {
+        let content = fs::read_to_string(&project_json_path)
+            .map_err(|e| format!("读取 project.json 失败: {}", e))?;
+        serde_json::from_str(&content)
+            .map_err(|e| format!("解析 project.json 失败: {}", e))?
+    } else {
+        // 如果文件不存在，创建一个基本的 JSON 对象
+        serde_json::json!({
+            "name": "Untitled Project",
+            "encrypted": encrypted
+        })
+    };
+    
+    let mut json_obj = if let Some(obj) = json.as_object().cloned() {
+        obj
+    } else {
+        serde_json::json!({}).as_object().cloned().unwrap()
+    };
+    
+    if encrypted {
+        json_obj.insert("encrypted".to_string(), serde_json::Value::Bool(true));
+    } else {
+        json_obj.remove("encrypted");
     }
     
-    let content = fs::read_to_string(&project_json_path)
-        .map_err(|e| format!("读取 project.json 失败: {}", e))?;
-    
-    let mut json: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| format!("解析 project.json 失败: {}", e))?;
-    
-    if let Some(obj) = json.as_object_mut() {
-        if encrypted {
-            obj.insert("encrypted".to_string(), serde_json::Value::Bool(true));
-        } else {
-            obj.remove("encrypted");
-        }
-    }
-    
-    let updated_content = serde_json::to_string_pretty(&json)
+    let updated_content = serde_json::to_string_pretty(&serde_json::Value::Object(json_obj))
         .map_err(|e| format!("序列化 project.json 失败: {}", e))?;
     
     fs::write(&project_json_path, updated_content)

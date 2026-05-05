@@ -292,6 +292,22 @@ pub(crate) fn init_db(conn: &Connection) -> SqliteResult<()> {
         [],
     )?;
 
+    // 用户自定义模板表
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS user_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            category TEXT NOT NULL DEFAULT '自定义',
+            content TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
     // 迁移：添加 column_name 列到现有表（如果需要）
     let has_column_name: bool = conn
         .query_row(

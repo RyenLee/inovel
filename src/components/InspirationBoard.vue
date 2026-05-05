@@ -72,13 +72,13 @@ const loadBoard = async () => {
     });
 
     // Merge with defaults to ensure all default columns exist
-    const columnMap = new Map<string, ColumnInfo>();
-    data.columns.forEach((col) => columnMap.set(col.name, col));
+    const columnMap: Record<string, ColumnInfo> = {};
+    data.columns.forEach((col) => { columnMap[col.name] = col; });
 
     const mergedColumns: ColumnInfo[] = [];
     defaultColumnNames.forEach((name) => {
-      if (columnMap.has(name)) {
-        mergedColumns.push(columnMap.get(name)!);
+      if (columnMap[name]) {
+        mergedColumns.push(columnMap[name]);
       } else {
         mergedColumns.push({ name, items: [] });
       }

@@ -15,6 +15,7 @@ export interface ProjectMeta {
   last_opened_at?: string;
   is_valid: boolean;
   cover_path?: string;
+  encrypted?: boolean;
 }
 
 export interface CreateProjectParams {

@@ -4,6 +4,52 @@ use rusqlite::Connection;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::AppHandle;
+use base64::{engine::general_purpose, Engine as _};
+
+/// 保存图片到项目 media 目录
+#[tauri::command]
+pub async fn save_image(
+    app_handle: AppHandle,
+    project_id: i64,
+    file_name: String,
+    file_data: String, // base64 编码的文件数据
+) -> Result<String, String> {
+    // 解码 base64 数据
+    let data = general_purpose::STANDARD.decode(&file_data)
+        .map_err(|e| format!("解码文件数据失败: {}", e))?;
+
+    // 获取项目路径
+    let db_path = get_db_path(&app_handle);
+    let conn = Connection::open(&db_path)
+        .map_err(|e| format!("数据库连接失败: {}", e))?;
+    let (storage_path, project_name): (String, String) = conn
+        .query_row("SELECT path, name FROM projects WHERE id = ?1", [project_id], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })
+        .map_err(|e| format!("项目不存在: {}", e))?;
+
+    // 创建 media 目录
+    let media_dir = Path::new(&storage_path)
+        .join(&project_name)
+        .join("media");
+    fs::create_dir_all(&media_dir)
+        .map_err(|e| format!("创建 media 目录失败: {}", e))?;
+
+    // 生成唯一的文件名
+    let timestamp = chrono::Utc::now().timestamp();
+    let extension = file_name.split('.').last().unwrap_or("png");
+    let random_num: u32 = rand::random();
+    let new_file_name = format!("{}_{}.{}", timestamp, random_num, extension);
+    let new_path = media_dir.join(&new_file_name);
+
+    // 写入文件
+    fs::write(&new_path, data)
+        .map_err(|e| format!("写入文件失败: {}", e))?;
+
+    // 返回相对路径
+    let relative_path = format!("media/{}", new_file_name);
+    Ok(relative_path)
+}
 
 #[tauri::command]
 pub async fn create_volume(
@@ -25,7 +71,11 @@ pub async fn create_volume(
 
 #[tauri::command]
 pub async fn create_chapter(
-    app_handle: AppHandle, project_id: i64, volume_id: i64, title: String,
+    app_handle: AppHandle, 
+    project_id: i64, 
+    volume_id: i64, 
+    title: String,
+    initial_content: Option<String>,
 ) -> Result<Chapter, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -49,7 +99,10 @@ pub async fn create_chapter(
     let actual_file_path = Path::new(&storage_path).join(&project_name)
         .join("chapters").join(format!("v{}_c{}.md", volume_id, id));
     fs::create_dir_all(actual_file_path.parent().unwrap()).map_err(|e| format!("创建目录失败: {}", e))?;
-    fs::write(&actual_file_path, "").ok();
+    
+    // 如果有初始内容，写入文件；否则写入空字符串
+    let content = initial_content.unwrap_or_default();
+    fs::write(&actual_file_path, content).map_err(|e| format!("写入章节文件失败: {}", e))?;
 
     conn.execute("UPDATE chapters SET file_path = ?1 WHERE id = ?2",
         (actual_file_path.to_string_lossy().to_string(), id)).map_err(|e| format!("更新文件路径失败: {}", e))?;

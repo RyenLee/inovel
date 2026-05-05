@@ -1,9 +1,35 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  html {
-    @apply antialiased;
-  }
+@theme {
+  --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-bg-tertiary: #f3f4f6;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-border: #e5e7eb;
+  --color-hover: #f3f4f6;
+}
+
+html {
+  font-family: var(--font-sans);
+}
+
+/* 全局样式重置 - 基础背景色，确保页面加载时可见 */
+body {
+  background-color: var(--color-bg-primary, #ffffff);
+  color: var(--color-text-primary, #111827);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* 深色模式变量覆盖 - 确保在基础背景之后定义 */
+.dark body,
+.dark {
+  background-color: var(--color-bg-primary, #1f2937);
+  --color-bg-secondary: #111827;
+  --color-bg-tertiary: #374151;
+  --color-text-primary: #f9fafb;
+  --color-text-secondary: #9ca3af;
+  --color-border: #4b5563;
+  --color-hover: #374151;
 }

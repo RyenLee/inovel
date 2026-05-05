@@ -23,7 +23,7 @@ import {
 } from "naive-ui";
 import { Book, Plus, FolderOpen, FileText, AlertTriangle, Trash2, Edit3, Sun, Moon, Settings, BarChart3, TrendingUp, Calendar, Keyboard, Database, Play, RotateCcw, Eye, CheckCircle, XCircle } from "lucide-vue-next";
 import { useRouter } from "vue-router";
-import { useProjectStore, type ProjectMeta } from "../stores/project";
+import { useProjectStore, type ProjectMeta, type MigrateResult } from "../stores/project";
 import { useTheme } from "../composables/useTheme";
 import { invoke } from "@tauri-apps/api/core";
 import DeleteConfirmModal from "../components/DeleteConfirmModal.vue";
@@ -73,9 +73,24 @@ const averageWordsPerDay = computed(() => {
 });
 
 onMounted(async () => {
-    await projectStore.fetchRecentProjects();
-    await loadStats();
-    await checkMigrationStatus();
+    try {
+        await projectStore.fetchRecentProjects();
+    } catch (error) {
+        console.error("加载项目列表失败:", error);
+        message.error("加载项目列表失败，请检查配置");
+    }
+    
+    try {
+        await loadStats();
+    } catch (error) {
+        console.error("加载统计数据失败:", error);
+    }
+    
+    try {
+        await checkMigrationStatus();
+    } catch (error) {
+        console.error("检查迁移状态失败:", error);
+    }
 });
 
 const loadStats = async () => {
@@ -97,7 +112,7 @@ const loadStats = async () => {
 const showMigrationModal = ref(false);
 const showMigrationResult = ref(false);
 const pendingMigrationCount = ref(0);
-const dryRunResult = ref<import("../stores/project").MigrateResult | null>(null);
+const dryRunResult = ref<MigrateResult | null>(null);
 const migrationProgress = ref(0);
 
 const checkMigrationStatus = async () => {

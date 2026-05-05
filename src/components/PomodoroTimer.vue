@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted, nextTick } from "vue";
+import { ref, computed, watch, onUnmounted, nextTick, onMounted } from "vue";
 import { NButton, NTooltip, NModal, NSlider, NSwitch, useMessage, NIcon, useDialog } from "naive-ui";
 import { Play, Pause, RotateCcw, Settings, X, Volume2, VolumeX, Maximize2, Minimize2, Timer, Coffee, CoffeeIcon } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
@@ -85,8 +85,6 @@ const onDragEnd = () => {
 };
 
 // Add global mouse/touch listeners when dragging
-import { onMounted, onUnmounted } from 'vue';
-
 onMounted(() => {
   document.addEventListener('mousemove', onDragMove);
   document.addEventListener('mouseup', onDragEnd);
@@ -725,6 +723,7 @@ loadSettings();
 
 <style scoped>
 .n-slider {
-  @apply !mx-0;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 </style>

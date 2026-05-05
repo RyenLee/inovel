@@ -418,3 +418,48 @@ pub struct CreateInspirationItemParams {
 pub struct UpdateInspirationItemParams {
     pub content: String,
 }
+
+// ==================== 模板系统相关数据结构 ====================
+
+/// 内置模板结构体（从 builtin_templates.json 加载）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WritingTemplate {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub category: String,
+    pub content: String,
+    pub is_builtin: bool,
+}
+
+/// 用户自定义模板（存储在数据库中）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UserTemplate {
+    pub id: i64,
+    pub project_id: i64,
+    pub name: String,
+    pub description: String,
+    pub category: String,
+    pub content: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// 创建用户模板参数
+#[derive(Debug, Deserialize)]
+pub struct CreateUserTemplateParams {
+    pub project_id: i64,
+    pub name: String,
+    pub description: String,
+    pub category: String,
+    pub content: String,
+}
+
+/// 更新用户模板参数
+#[derive(Debug, Deserialize)]
+pub struct UpdateUserTemplateParams {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub category: Option<String>,
+    pub content: Option<String>,
+}

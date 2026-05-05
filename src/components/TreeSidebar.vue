@@ -17,6 +17,7 @@ import {
 } from "lucide-vue-next";
 import draggable from "vuedraggable";
 import DeleteConfirmModal from "./DeleteConfirmModal.vue";
+import TemplateSelector from "./TemplateSelector.vue";
 import { CHAPTER_STATUS_OPTIONS, getStatusColor, getStatusLabel, type ChapterStatus } from "../types/chapter";
 
 interface Chapter {
@@ -62,6 +63,10 @@ const selectedChapterId = ref<number | null>(null);
 // Status filter
 const statusFilter = ref<ChapterStatus | 'all'>('all');
 const showStatusFilter = ref(false);
+
+// 模板选择器状态
+const showTemplateSelector = ref(false);
+const currentVolumeIdForTemplate = ref<number | null>(null);
 
 const statusFilterOptions = [
   { label: '全部章节', value: 'all' },
@@ -185,7 +190,26 @@ const createVolume = async () => {
 const isCreatingChapter = ref(false);
 const creatingChapterTimeout = ref<number | null>(null);
 
-const createChapter = async (volumeId: number) => {
+// 实际创建章节的函数
+const doCreateChapter = async (volumeId: number, initialContent?: string) => {
+  try {
+    const newChapter = await invoke<Chapter>("create_chapter", {
+      projectId: Number(props.projectId),
+      volumeId,
+      title: "新建章节",
+      initialContent: initialContent || null,
+    });
+    const volume = volumes.value.find((v) => v.id === volumeId);
+    if (volume) {
+      volume.chapters.push(newChapter);
+    }
+    startEditChapter(newChapter.id, newChapter.title);
+  } catch (error) {
+    console.error("创建章节失败:", error);
+  }
+};
+
+const createChapter = (volumeId: number) => {
   // Clear any pending timeout
   if (creatingChapterTimeout.value) {
     clearTimeout(creatingChapterTimeout.value);
@@ -201,25 +225,28 @@ const createChapter = async (volumeId: number) => {
   isCreatingChapter.value = true;
   
   // Small delay to allow any double-click browser event to be filtered
-  creatingChapterTimeout.value = window.setTimeout(async () => {
-    try {
-      const newChapter = await invoke<Chapter>("create_chapter", {
-        projectId: Number(props.projectId),
-        volumeId,
-        title: "新建章节",
-      });
-      const volume = volumes.value.find((v) => v.id === volumeId);
-      if (volume) {
-        volume.chapters.push(newChapter);
-      }
-      startEditChapter(newChapter.id, newChapter.title);
-    } catch (error) {
-      console.error("创建章节失败:", error);
-    } finally {
-      isCreatingChapter.value = false;
-      creatingChapterTimeout.value = null;
-    }
+  creatingChapterTimeout.value = window.setTimeout(() => {
+    // 显示模板选择器
+    currentVolumeIdForTemplate.value = volumeId;
+    showTemplateSelector.value = true;
+    isCreatingChapter.value = false;
+    creatingChapterTimeout.value = null;
   }, 100);
+};
+
+// 处理模板选择
+const handleTemplateSelect = async (content: string) => {
+  if (!currentVolumeIdForTemplate.value) return;
+  
+  showTemplateSelector.value = false;
+  await doCreateChapter(currentVolumeIdForTemplate.value, content);
+  currentVolumeIdForTemplate.value = null;
+};
+
+// 处理模板选择器关闭
+const handleTemplateSelectorClose = () => {
+  showTemplateSelector.value = false;
+  currentVolumeIdForTemplate.value = null;
 };
 
 // Update volume name
@@ -879,8 +906,16 @@ onMounted(async () => {
       :default-keep-files="false"
       @confirm="handleConfirmDeleteChapter"
     />
-  </div>
-</template>
+    </div>
+    
+    <!-- 模板选择器 -->
+    <TemplateSelector
+      v-model:show="showTemplateSelector"
+      :project-id="Number(projectId)"
+      @select="handleTemplateSelect"
+      @update:show="handleTemplateSelectorClose"
+    />
+  </template>
 
 <style scoped>
 .ghost {
