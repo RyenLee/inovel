@@ -821,8 +821,8 @@ const todayNewWords = computed(() => {
       <!-- Editor Area -->
       <main class="flex-1 overflow-hidden flex justify-center"
         :class="isZenModeActive ? 'bg-gray-900' : 'p-4'">
-        <!-- Zen Mode: Centered editor container with max-width -->
-        <div v-if="isZenModeActive" class="w-full max-w-4xl h-full flex flex-col px-8 py-6">
+        <!-- Zen Mode: Centered editor container with 50% width -->
+        <div v-if="isZenModeActive" class="w-1/2 mx-auto h-full flex flex-col px-8 py-6">
           <div v-if="!currentChapter" class="h-full flex flex-col items-center justify-center text-gray-500">
             <FileText class="w-16 h-16 mb-4 opacity-50" />
             <p class="text-lg">请从左侧选择或创建章节</p>

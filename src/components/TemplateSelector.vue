@@ -366,19 +366,22 @@ function markdownToHtml(md: string): string {
 
 .template-card:hover {
   transform: scale(1.02);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .template-card-selected {
   border-color: var(--n-primary-color, #18a058);
-  box-shadow: 0 0 0 2px rgba(24, 160, 88, 0.2);
+  box-shadow: 0 0 0 2px rgba(24, 160, 88, 0.3);
 }
 
+/* 模板预览区域 - 使用深色背景确保文字清晰可见 */
 .template-preview {
   max-height: 100px;
   overflow: hidden;
   position: relative;
-  background-color: var(--n-card-color, #fafafa);
+  background-color: #1e1e2e;
+  border-radius: 4px;
+  padding: 8px;
 }
 
 .template-preview::after {
@@ -388,60 +391,83 @@ function markdownToHtml(md: string): string {
   left: 0;
   right: 0;
   height: 30px;
-  background: linear-gradient(transparent, var(--n-card-color, #fafafa));
+  background: linear-gradient(transparent, #1e1e2e);
   pointer-events: none;
 }
 
+/* 预览内容样式 - 高对比度配色 */
 .preview-content {
   font-size: 12px;
-  line-height: 1.4;
-  opacity: 0.8;
+  line-height: 1.5;
+  color: #e4e4e7;
 }
 
+/* 标题样式 */
 .preview-content:deep(h1),
 .preview-content:deep(h2),
 .preview-content:deep(h3) {
   margin: 4px 0;
   font-weight: 600;
+  color: #fafafa;
 }
 
 .preview-content:deep(h1) {
   font-size: 16px;
+  color: #60a5fa;
 }
 
 .preview-content:deep(h2) {
   font-size: 14px;
+  color: #a78bfa;
 }
 
 .preview-content:deep(h3) {
   font-size: 13px;
+  color: #34d399;
 }
 
 .preview-content:deep(p) {
   margin: 2px 0;
+  color: #d4d4d8;
 }
 
 .preview-content:deep(strong) {
   font-weight: 600;
+  color: #fafafa;
 }
 
 .preview-content:deep(em) {
   font-style: italic;
+  color: #fbbf24;
 }
 
 .preview-content:deep(blockquote) {
-  border-left: 3px solid #ddd;
+  border-left: 3px solid #6366f1;
   padding-left: 8px;
   margin: 4px 0;
-  color: #666;
+  color: #a1a1aa;
+  background-color: rgba(99, 102, 241, 0.1);
+  border-radius: 0 4px 4px 0;
 }
 
-.preview-content:deep(ul) {
+.preview-content:deep(ul),
+.preview-content:deep(ol) {
   margin: 2px 0;
   padding-left: 16px;
+  color: #d4d4d8;
 }
 
 .preview-content:deep(li) {
   margin: 1px 0;
+  color: #d4d4d8;
+}
+
+/* 列表项标记颜色 */
+.preview-content:deep(ul) {
+  list-style-type: disc;
+}
+
+.preview-content:deep(ul li)::marker {
+  color: #22d3ee;
 }
 </style>

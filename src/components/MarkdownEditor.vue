@@ -5,6 +5,10 @@ import { DecorationSet } from "prosemirror-view";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { NButton, NIcon, NSpace, NTooltip, NDropdown, DropdownOption, NModal, NCard, NSlider, NSwitch, NText, NSpace as NSpaceVertical } from "naive-ui";
+
+// Editor container ref for dynamic height calculation
+const editorRootRef = ref<HTMLElement | null>(null);
+let resizeObserver: ResizeObserver | null = null;
 import { createSmartSymbolsExtension } from "./SmartSymbolsExtension";
 import {
   Bold,
@@ -92,13 +96,13 @@ const templateDropdownOptions = computed(() => [
 
 // 美化菜单选项
 const beautifyDropdownOptions = computed(() => [
-  { 
-    label: `首行缩进 ${paragraphIndentEnabled.value ? '✓' : ''}`, 
-    key: 'indent' 
+  {
+    label: `首行缩进 ${paragraphIndentEnabled.value ? '✓' : ''}`,
+    key: 'indent'
   },
-  { 
-    label: `符号自动补全 ${smartSymbolsEnabled.value ? '✓' : ''}`, 
-    key: 'symbols' 
+  {
+    label: `符号自动补全 ${smartSymbolsEnabled.value ? '✓' : ''}`,
+    key: 'symbols'
   },
   { type: 'divider', key: 'd1' },
   { label: '段落拆分...', key: 'split' },
@@ -124,7 +128,7 @@ const updateWordCountCache = async () => {
   if (wordCountSaveTimer.value) {
     clearTimeout(wordCountSaveTimer.value);
   }
-  
+
   // 防抖：停止输入 2 秒后才更新数据库
   wordCountSaveTimer.value = setTimeout(async () => {
     if (props.chapterId && wordCount.value >= 0) {
@@ -182,19 +186,19 @@ const clearSensitiveDecorations = () => {
 // Typewriter scrolling: keep current line centered
 const scrollToCursor = () => {
   if (!editor.value || !editorContainerRef.value) return;
-  
+
   const { view } = editor.value;
   const { from } = view.state.selection;
-  
+
   // Get the DOM position of the cursor
   const coords = view.coordsAtPos(from);
   const container = editorContainerRef.value;
   const containerRect = container.getBoundingClientRect();
-  
+
   // Calculate the relative position
   const relativeTop = coords.top - containerRect.top + container.scrollTop;
   const containerHeight = container.clientHeight;
-  
+
   // Center the cursor line in the container
   const targetScrollTop = relativeTop - containerHeight / 2;
   container.scrollTo({
@@ -206,10 +210,10 @@ const scrollToCursor = () => {
 // Update paragraph styles based on mode
 const updateParagraphStyles = () => {
   if (!editor.value) return;
-  
+
   const { view } = editor.value;
   const { $anchor } = view.state.selection;
-  
+
   // Get the paragraph's position in document
   let paragraphIndex = 0;
   const anchorPos = $anchor.pos;
@@ -222,20 +226,20 @@ const updateParagraphStyles = () => {
     }
     return true;
   });
-  
+
   currentParagraphIndex.value = paragraphIndex;
-  
+
   // Apply styles based on mode
   if (props.editorMode === "typewriter" || props.editorMode === "focus") {
     const editorContent = view.dom.querySelector(".tiptap");
     if (!editorContent) return;
-    
+
     const paragraphs = editorContent.querySelectorAll("p, h1, h2, h3, li, blockquote");
     let currentIndex = 0;
-    
+
     paragraphs.forEach((p) => {
       p.classList.remove("typewriter-dim", "focus-dim", "focus-active");
-      
+
       if (currentIndex === paragraphIndex - 1) {
         // Current paragraph - highlight it
         if (props.editorMode === "focus") {
@@ -314,8 +318,54 @@ const editor = useEditor({
   },
 });
 
+// Dynamic height calculation for editor
+const updateEditorHeight = () => {
+  if (!editorRootRef.value || !editor.value) return;
+
+  const root = editorRootRef.value;
+  const rootRect = root.getBoundingClientRect();
+
+  // Get toolbar height
+  const toolbar = root.querySelector('[class*="border-b"]') as HTMLElement;
+  const toolbarHeight = toolbar ? toolbar.offsetHeight : 0;
+
+  // Get status bar height
+  const statusBar = root.querySelector('[class*="border-t"]') as HTMLElement;
+  const statusBarHeight = statusBar ? statusBar.offsetHeight : 0;
+
+  // Calculate available height for editor content
+  const availableHeight = rootRect.height - toolbarHeight - statusBarHeight;
+
+  // Update tiptap container height
+  const tiptapElement = root.querySelector(".tiptap") as HTMLElement;
+  if (tiptapElement) {
+    tiptapElement.style.maxHeight = `${Math.max(availableHeight, 100)}px`;
+    tiptapElement.style.height = `${Math.max(availableHeight, 100)}px`;
+    tiptapElement.style.overflowY = "auto";
+  }
+
+  // Update EditorContent container
+  const editorContent = root.querySelector('[data-v-editor-content]') as HTMLElement;
+  if (editorContent) {
+    editorContent.style.height = `${Math.max(availableHeight, 100)}px`;
+    editorContent.style.maxHeight = `${Math.max(availableHeight, 100)}px`;
+    editorContent.style.overflow = "hidden";
+  }
+};
+
 // Listen for selection updates
 onMounted(() => {
+  // Setup resize observer for dynamic height calculation
+  if (editorRootRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      nextTick(() => updateEditorHeight());
+    });
+    resizeObserver.observe(editorRootRef.value);
+
+    // Initial height calculation
+    nextTick(() => updateEditorHeight());
+  }
+
   if (editor.value) {
     editor.value.on("selectionUpdate", () => {
       if (props.editorMode === "typewriter") {
@@ -340,16 +390,16 @@ watch(
   () => props.modelValue,
   (newValue) => {
     if (!editor.value) return;
-    
+
     // 获取当前编辑器文本长度，避免 HTML 规范化差异
     const currentTextLength = editor.value.getText().length;
     const newTextLength = newValue ? newValue.length : 0;
-    
+
     // 只有当内容实际发生变化时才更新
     if (currentTextLength !== newTextLength || (newValue && lastSyncedContent !== newValue)) {
       lastSyncedContent = newValue || '';
       editor.value.commands.setContent(newValue || '', { emitUpdate: false });
-      
+
       // 立即更新字数统计
       nextTick(() => {
         if (editor.value) {
@@ -409,9 +459,9 @@ watch(
             .split(/\s+/)
             .filter((w) => w.length > 0).length;
           wordCount.value = chineseChars + englishWords;
-          
+
           updateWordCountCache();
-          
+
           // Debounced sensitive word scan
           if (props.projectId) {
             const scanText = getDocPlainText(editor.state.doc);
@@ -478,17 +528,17 @@ const isActive = (type: string, attrs?: Record<string, unknown>) => {
 // 简单的 Markdown 转 HTML 转换
 const markdownToHtml = (markdown: string): string => {
   if (!markdown) return '';
-  
+
   let html = markdown;
-  
+
   // 表格处理（需要先处理，因为表格包含 | 字符）
   const tableRegex = /^\|(.+)\|\s*\n\|[-:\s|]+\|\s*\n((?:\|.+\|\s*\n?)+)/gm;
   html = html.replace(tableRegex, (match, headerRow, bodyRows) => {
     const headers = headerRow.split('|').map((h: string) => h.trim()).filter(Boolean);
-    const rows = bodyRows.trim().split('\n').map((row: string) => 
+    const rows = bodyRows.trim().split('\n').map((row: string) =>
       row.split('|').map((cell: string) => cell.trim()).filter(Boolean)
     );
-    
+
     let tableHtml = '<table><thead><tr>';
     headers.forEach((h: string) => { tableHtml += `<th>${h}</th>`; });
     tableHtml += '</tr></thead><tbody>';
@@ -500,37 +550,37 @@ const markdownToHtml = (markdown: string): string => {
     tableHtml += '</tbody></table>';
     return tableHtml;
   });
-  
+
   // 分割线
   html = html.replace(/^---$/gim, '<hr>');
-  
+
   // 标题（按顺序处理，从 h3 到 h1 避免嵌套问题）
   html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
   html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
   html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-  
+
   // 粗体
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  
+
   // 斜体
   html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  
+
   // 图片
   html = html.replace(/!\[(.*?)\]\((.*?)\)/g, '<img alt="$1" src="$2">');
-  
+
   // 链接
   html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
-  
+
   // 引用块处理（支持多行引用）
   const quoteBlocks = html.split(/(?:<table>[\s\S]*?<\/table>)/);
   html = quoteBlocks.map(block => {
     if (block.includes('<table>')) return block;
-    
+
     const lines = block.split('\n');
     let result = '';
     let inQuote = false;
     let quoteContent: string[] = [];
-    
+
     for (const line of lines) {
       const trimmed = line.trim();
       if (trimmed.startsWith('>')) {
@@ -553,25 +603,25 @@ const markdownToHtml = (markdown: string): string => {
         result += (result ? '\n' : '') + line;
       }
     }
-    
+
     // 处理末尾的引用块
     if (inQuote && quoteContent.length > 0) {
       result += `<blockquote><p>${quoteContent.join('</p><p>')}</p></blockquote>`;
     }
-    
+
     return result;
   }).join('');
-  
+
   // 无序列表处理
   const ulParts = html.split(/(<blockquote>[\s\S]*?<\/blockquote>)/);
   html = ulParts.map(part => {
     if (part.includes('<blockquote>')) return part;
-    
+
     const lines = part.split('\n');
     let inList = false;
     let listItems: string[] = [];
     let result = '';
-    
+
     for (const line of lines) {
       const trimmed = line.trim();
       if (/^-\s/.test(trimmed)) {
@@ -589,24 +639,24 @@ const markdownToHtml = (markdown: string): string => {
         result += (result ? '\n' : '') + line;
       }
     }
-    
+
     if (inList) {
       result += `<ul>${listItems.join('')}</ul>`;
     }
-    
+
     return result;
   }).join('');
-  
+
   // 有序列表处理
   const olParts = html.split(/(<ul>[\s\S]*?<\/ul>)/);
   html = olParts.map(part => {
     if (part.includes('<ul>')) return part;
-    
+
     const lines = part.split('\n');
     let inList = false;
     let listItems: string[] = [];
     let result = '';
-    
+
     for (const line of lines) {
       const trimmed = line.trim();
       if (/^\d+\.\s/.test(trimmed)) {
@@ -624,14 +674,14 @@ const markdownToHtml = (markdown: string): string => {
         result += (result ? '\n' : '') + line;
       }
     }
-    
+
     if (inList) {
       result += `<ol>${listItems.join('')}</ol>`;
     }
-    
+
     return result;
   }).join('');
-  
+
   // 段落处理
   const blockParts = html.split(/(<h[123]>|<\/h[123]>|<ul>[\s\S]*?<\/ul>|<ol>[\s\S]*?<\/ol>|<blockquote>[\s\S]*?<\/blockquote>|<hr>|<table>[\s\S]*?<\/table>)/);
   html = blockParts.map(part => {
@@ -645,12 +695,12 @@ const markdownToHtml = (markdown: string): string => {
     // 保留换行但处理其他情况
     return `<p>${trimmed.replace(/\n/g, '<br>')}</p>`;
   }).join('');
-  
+
   // 清理残留标签
   html = html.replace(/<p><\/p>/g, '');
   html = html.replace(/<p>\s*<\/p>/g, '');
   html = html.replace(/<p>(<br>)+<\/p>/g, '<br>');
-  
+
   return html;
 };
 
@@ -664,32 +714,32 @@ const INDENT_CHAR = '　　';  // 两个全角空格
 // 切换首行缩进
 const toggleParagraphIndent = () => {
   if (!editor.value) return;
-  
+
   const { from, to } = editor.value.state.selection;
-  
+
   // 检查选区内的段落是否都已缩进
   let allIndented = true;
   editor.value.state.doc.nodesBetween(from, to, (node) => {
     if (node.type.name === 'paragraph') {
       const firstChild = node.firstChild;
-      if (!firstChild || firstChild.type.name !== 'text' || 
-          !firstChild.text?.startsWith(INDENT_CHAR)) {
+      if (!firstChild || firstChild.type.name !== 'text' ||
+        !firstChild.text?.startsWith(INDENT_CHAR)) {
         allIndented = false;
       }
     }
   });
-  
+
   // 对选区内的段落添加/移除缩进
   editor.value.state.doc.nodesBetween(from, to, (node, pos) => {
     if (node.type.name === 'paragraph') {
       const firstChild = node.firstChild;
       const nodeStart = pos;
       const nodeEnd = pos + node.nodeSize;
-      
+
       if (allIndented) {
         // 移除缩进
-        if (firstChild && firstChild.type.name === 'text' && 
-            firstChild.text?.startsWith(INDENT_CHAR)) {
+        if (firstChild && firstChild.type.name === 'text' &&
+          firstChild.text?.startsWith(INDENT_CHAR)) {
           // 删除两个全角空格
           editor.value?.chain()
             .focus()
@@ -714,10 +764,10 @@ const toggleParagraphIndent = () => {
       }
     }
   });
-  
+
   // 更新缩进状态
   paragraphIndentEnabled.value = !allIndented;
-  
+
   // 触发保存
   triggerSave();
 };
@@ -725,10 +775,10 @@ const toggleParagraphIndent = () => {
 // 检查当前是否启用首行缩进
 const checkParagraphIndent = () => {
   if (!editor.value) return false;
-  
+
   let hasIndented = false;
   let hasNonIndented = false;
-  
+
   editor.value.state.doc.descendants((node) => {
     if (node.type.name === 'paragraph') {
       const firstChild = node.firstChild;
@@ -741,7 +791,7 @@ const checkParagraphIndent = () => {
       }
     }
   });
-  
+
   return hasIndented && !hasNonIndented;
 };
 
@@ -750,12 +800,12 @@ const smartSplitText = (text: string, maxLen: number): string[] => {
   if (text.length <= maxLen) {
     return [text];
   }
-  
+
   const sentences: { text: string; end: number }[] = [];
   const sentenceEndRegex = /[。！？！？；;]/g;
   let lastEnd = 0;
   let match;
-  
+
   while ((match = sentenceEndRegex.exec(text)) !== null) {
     sentences.push({
       text: text.slice(lastEnd, match.index + 1),
@@ -763,7 +813,7 @@ const smartSplitText = (text: string, maxLen: number): string[] => {
     });
     lastEnd = match.index + 1;
   }
-  
+
   // 处理最后一段
   if (lastEnd < text.length) {
     sentences.push({
@@ -771,11 +821,11 @@ const smartSplitText = (text: string, maxLen: number): string[] => {
       end: text.length
     });
   }
-  
+
   // 合并句子，确保每段不超过 maxLen
   const result: string[] = [];
   let current = '';
-  
+
   for (const sentence of sentences) {
     if (current.length + sentence.text.length <= maxLen) {
       current += sentence.text;
@@ -796,28 +846,28 @@ const smartSplitText = (text: string, maxLen: number): string[] => {
       }
     }
   }
-  
+
   if (current) {
     result.push(current);
   }
-  
+
   return result;
 };
 
 // 预览段落拆分
 const previewSplitParagraphs = () => {
   if (!editor.value) return;
-  
+
   const { from, to } = editor.value.state.selection;
   const isSelection = from !== to;
-  
+
   splitPreview.value = [];
-  
+
   editor.value.state.doc.nodesBetween(from, to, (node, pos) => {
     if (node.type.name === 'paragraph' && node.textContent.length > splitThreshold.value) {
       const text = node.textContent;
       const split = smartSplitText(text, splitThreshold.value);
-      
+
       if (split.length > 1) {
         splitPreview.value.push({
           original: text,
@@ -826,14 +876,14 @@ const previewSplitParagraphs = () => {
       }
     }
   });
-  
+
   if (splitPreview.value.length === 0) {
     // 如果没有找到需要拆分的段落，检查整个文档
     editor.value.state.doc.descendants((node, pos) => {
       if (node.type.name === 'paragraph' && node.textContent.length > splitThreshold.value) {
         const text = node.textContent;
         const split = smartSplitText(text, splitThreshold.value);
-        
+
         if (split.length > 1 && !splitPreview.value.some(p => p.original === text)) {
           splitPreview.value.push({
             original: text,
@@ -848,10 +898,10 @@ const previewSplitParagraphs = () => {
 // 执行段落拆分
 const applySplitParagraphs = () => {
   if (!editor.value || splitPreview.value.length === 0) return;
-  
+
   // 获取需要拆分的段落位置
   const paragraphsToSplit: { pos: number; splits: string[] }[] = [];
-  
+
   editor.value.state.doc.descendants((node, pos) => {
     if (node.type.name === 'paragraph') {
       const text = node.textContent;
@@ -864,32 +914,32 @@ const applySplitParagraphs = () => {
       }
     }
   });
-  
+
   // 从后往前处理，避免位置偏移问题
   paragraphsToSplit.reverse().forEach(({ pos, splits }) => {
     const node = editor.value!.state.doc.nodeAt(pos);
     if (!node) return;
-    
+
     const nodeEnd = pos + node.nodeSize;
-    
+
     // 删除原段落
     editor.value!.chain()
       .focus()
       .deleteRange({ from: pos, to: nodeEnd })
       .run();
-    
+
     // 在原位置插入拆分后的段落
     const tr = editor.value!.state.tr;
-    const frag = splits.map(text => 
-      editor.value!.state.schema.nodes.paragraph.create(null, 
+    const frag = splits.map(text =>
+      editor.value!.state.schema.nodes.paragraph.create(null,
         editor.value!.state.schema.text(text)
       )
     );
-    
+
     tr.replaceWith(pos, pos, frag);
     editor.value!.view.dispatch(tr);
   });
-  
+
   showSplitDialog.value = false;
   triggerSave();
 };
@@ -915,11 +965,11 @@ const handleTemplateSelect = async (payload: string | { content: string; mode: '
     console.error('编辑器实例未初始化');
     return;
   }
-  
+
   // 兼容新旧两种调用方式
   let content: string;
   let mode: 'replace' | 'insert';
-  
+
   if (typeof payload === 'string') {
     // 旧方式：直接传递内容字符串
     content = payload;
@@ -931,13 +981,13 @@ const handleTemplateSelect = async (payload: string | { content: string; mode: '
     // 同步模式到编辑器
     templateInsertMode.value = mode;
   }
-  
+
   try {
     isApplyingTemplate.value = true;
-    
+
     // 将 Markdown 转换为 HTML
     const htmlContent = markdownToHtml(content);
-    
+
     if (mode === 'replace') {
       // 替换模式：清空内容并插入新模板
       editor.value.commands.setContent(htmlContent || content, { emitUpdate: false });
@@ -949,12 +999,12 @@ const handleTemplateSelect = async (payload: string | { content: string; mode: '
         editor.value.commands.insertContent(content);
       }
     }
-    
+
     // 强制触发内容更新，确保父组件状态同步
     await nextTick();
     const newHtml = editor.value.getHTML();
     emit('update:modelValue', newHtml);
-    
+
     // 更新字数统计
     const text = editor.value.getText();
     const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
@@ -963,12 +1013,12 @@ const handleTemplateSelect = async (payload: string | { content: string; mode: '
       .split(/\s+/)
       .filter((w) => w.length > 0).length;
     wordCount.value = chineseChars + englishWords;
-    
+
     // 触发字数保存
     updateWordCountCache();
-    
+
     showTemplateSelector.value = false;
-    
+
     nextTick(() => {
       editor.value?.commands.focus();
     });
@@ -1032,31 +1082,31 @@ const selectImageForImg = async (img: HTMLImageElement) => {
         extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']
       }]
     });
-    
+
     if (selected && !Array.isArray(selected)) {
       // 读取文件
       const fileData = await readFile(selected);
-      
+
       // 将 Uint8Array 转换为 base64
       let binary = '';
       for (let i = 0; i < fileData.length; i++) {
         binary += String.fromCharCode(fileData[i]);
       }
       const base64Data = btoa(binary);
-      
+
       // 获取文件名
       const fileName = selected.split('/').pop() || 'image.png';
-      
+
       // 调用后端命令保存图片
       const newPath = await invoke<string>('save_image', {
         projectId: props.projectId,
         fileName: fileName,
         fileData: base64Data
       });
-      
+
       // 更新图片 src
       img.src = newPath;
-      
+
       // 触发更新
       if (editor.value) {
         const html = editor.value.getHTML();
@@ -1084,28 +1134,30 @@ onUnmounted(() => {
   if (scanTimer.value) {
     clearTimeout(scanTimer.value);
   }
+  // 清理 ResizeObserver
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
   editor.value?.destroy();
 });
 </script>
 
 <template>
-  <div class="flex flex-col h-full rounded-lg border transition-colors duration-300"
+  <div ref="editorRootRef" class="flex flex-col h-full rounded-lg border transition-colors duration-300 overflow-hidden"
     :class="editor ? (isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200') : ''">
     <!-- Toolbar -->
-    <div v-if="editor"
-      class="flex items-center gap-1 px-3 py-2 border-b flex-wrap"
+    <div v-if="editor" class="flex items-center gap-1 px-3 py-2 border-b flex-wrap"
       :class="isDark ? 'border-gray-700' : 'border-gray-200'">
       <NSpace :size="4">
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton
-              size="small"
-              :type="isActive('bold') ? 'primary' : 'default'"
-              :tertiary="!isActive('bold')"
-              @click="toggleBold"
-            >
+            <NButton size="small" :type="isActive('bold') ? 'primary' : 'default'" :tertiary="!isActive('bold')"
+              @click="toggleBold">
               <template #icon>
-                <NIcon><Bold /></NIcon>
+                <NIcon>
+                  <Bold />
+                </NIcon>
               </template>
             </NButton>
           </template>
@@ -1114,14 +1166,12 @@ onUnmounted(() => {
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton
-              size="small"
-              :type="isActive('italic') ? 'primary' : 'default'"
-              :tertiary="!isActive('italic')"
-              @click="toggleItalic"
-            >
+            <NButton size="small" :type="isActive('italic') ? 'primary' : 'default'" :tertiary="!isActive('italic')"
+              @click="toggleItalic">
               <template #icon>
-                <NIcon><Italic /></NIcon>
+                <NIcon>
+                  <Italic />
+                </NIcon>
               </template>
             </NButton>
           </template>
@@ -1132,14 +1182,12 @@ onUnmounted(() => {
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton
-              size="small"
-              :type="isActive('heading', { level: 1 }) ? 'primary' : 'default'"
-              :tertiary="!isActive('heading', { level: 1 })"
-              @click="setHeading(1)"
-            >
+            <NButton size="small" :type="isActive('heading', { level: 1 }) ? 'primary' : 'default'"
+              :tertiary="!isActive('heading', { level: 1 })" @click="setHeading(1)">
               <template #icon>
-                <NIcon><Heading1 /></NIcon>
+                <NIcon>
+                  <Heading1 />
+                </NIcon>
               </template>
             </NButton>
           </template>
@@ -1148,14 +1196,12 @@ onUnmounted(() => {
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton
-              size="small"
-              :type="isActive('heading', { level: 2 }) ? 'primary' : 'default'"
-              :tertiary="!isActive('heading', { level: 2 })"
-              @click="setHeading(2)"
-            >
+            <NButton size="small" :type="isActive('heading', { level: 2 }) ? 'primary' : 'default'"
+              :tertiary="!isActive('heading', { level: 2 })" @click="setHeading(2)">
               <template #icon>
-                <NIcon><Heading2 /></NIcon>
+                <NIcon>
+                  <Heading2 />
+                </NIcon>
               </template>
             </NButton>
           </template>
@@ -1164,14 +1210,12 @@ onUnmounted(() => {
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton
-              size="small"
-              :type="isActive('heading', { level: 3 }) ? 'primary' : 'default'"
-              :tertiary="!isActive('heading', { level: 3 })"
-              @click="setHeading(3)"
-            >
+            <NButton size="small" :type="isActive('heading', { level: 3 }) ? 'primary' : 'default'"
+              :tertiary="!isActive('heading', { level: 3 })" @click="setHeading(3)">
               <template #icon>
-                <NIcon><Heading3 /></NIcon>
+                <NIcon>
+                  <Heading3 />
+                </NIcon>
               </template>
             </NButton>
           </template>
@@ -1182,14 +1226,12 @@ onUnmounted(() => {
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton
-              size="small"
-              :type="isActive('bulletList') ? 'primary' : 'default'"
-              :tertiary="!isActive('bulletList')"
-              @click="toggleBulletList"
-            >
+            <NButton size="small" :type="isActive('bulletList') ? 'primary' : 'default'"
+              :tertiary="!isActive('bulletList')" @click="toggleBulletList">
               <template #icon>
-                <NIcon><List /></NIcon>
+                <NIcon>
+                  <List />
+                </NIcon>
               </template>
             </NButton>
           </template>
@@ -1198,14 +1240,12 @@ onUnmounted(() => {
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton
-              size="small"
-              :type="isActive('orderedList') ? 'primary' : 'default'"
-              :tertiary="!isActive('orderedList')"
-              @click="toggleOrderedList"
-            >
+            <NButton size="small" :type="isActive('orderedList') ? 'primary' : 'default'"
+              :tertiary="!isActive('orderedList')" @click="toggleOrderedList">
               <template #icon>
-                <NIcon><ListOrdered /></NIcon>
+                <NIcon>
+                  <ListOrdered />
+                </NIcon>
               </template>
             </NButton>
           </template>
@@ -1214,14 +1254,12 @@ onUnmounted(() => {
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton
-              size="small"
-              :type="isActive('blockquote') ? 'primary' : 'default'"
-              :tertiary="!isActive('blockquote')"
-              @click="toggleBlockquote"
-            >
+            <NButton size="small" :type="isActive('blockquote') ? 'primary' : 'default'"
+              :tertiary="!isActive('blockquote')" @click="toggleBlockquote">
               <template #icon>
-                <NIcon><Quote /></NIcon>
+                <NIcon>
+                  <Quote />
+                </NIcon>
               </template>
             </NButton>
           </template>
@@ -1232,7 +1270,9 @@ onUnmounted(() => {
           <template #trigger>
             <NButton size="small" tertiary @click="toggleHorizontalRule">
               <template #icon>
-                <NIcon><Minus /></NIcon>
+                <NIcon>
+                  <Minus />
+                </NIcon>
               </template>
             </NButton>
           </template>
@@ -1245,7 +1285,9 @@ onUnmounted(() => {
           <template #trigger>
             <NButton size="small" tertiary @click="$emit('show-history')">
               <template #icon>
-                <NIcon><History /></NIcon>
+                <NIcon>
+                  <History />
+                </NIcon>
               </template>
             </NButton>
           </template>
@@ -1256,7 +1298,9 @@ onUnmounted(() => {
           <template #trigger>
             <NButton size="small" tertiary @click="$emit('create-snapshot')">
               <template #icon>
-                <NIcon><Camera /></NIcon>
+                <NIcon>
+                  <Camera />
+                </NIcon>
               </template>
             </NButton>
           </template>
@@ -1266,14 +1310,12 @@ onUnmounted(() => {
 
         <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
 
-        <NDropdown
-          trigger="hover"
-          :options="templateDropdownOptions"
-          @select="handleTemplateDropdown"
-        >
+        <NDropdown trigger="hover" :options="templateDropdownOptions" @select="handleTemplateDropdown">
           <NButton size="small" tertiary>
             <template #icon>
-              <NIcon><FileText /></NIcon>
+              <NIcon>
+                <FileText />
+              </NIcon>
             </template>
           </NButton>
         </NDropdown>
@@ -1293,30 +1335,21 @@ onUnmounted(() => {
         </NTooltip>
 
         <!-- 美化菜单 -->
-        <NDropdown
-          trigger="hover"
-          :options="beautifyDropdownOptions"
-          @select="handleBeautifyDropdown"
-        >
+        <NDropdown trigger="hover" :options="beautifyDropdownOptions" @select="handleBeautifyDropdown">
           <NButton size="small" tertiary>
             <template #icon>
-              <NIcon><Wand2 /></NIcon>
+              <NIcon>
+                <Wand2 />
+              </NIcon>
             </template>
           </NButton>
         </NDropdown>
-        <NTooltip trigger="hover">
-          <template #trigger>
-            <NText depth="3" class="text-xs px-1">美化</NText>
-          </template>
-          文本美化工具
-        </NTooltip>
       </NSpace>
     </div>
 
     <!-- Editor Content -->
-    <div ref="editorContainerRef" class="flex-1 overflow-auto">
-      <EditorContent :editor="editor"
-        class="h-full" />
+    <div ref="editorContainerRef" class="flex-1 min-h-0">
+      <EditorContent :editor="editor" class="h-full min-h-0" />
     </div>
 
     <!-- Status Bar -->
@@ -1340,46 +1373,32 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-    
+
     <!-- 模板选择器 -->
-    <TemplateSelector
-      v-model:show="showTemplateSelector"
-      :project-id="projectId || 0"
-      :insert-mode="templateInsertMode"
-      @select="handleTemplateSelect"
-      @update:show="handleTemplateSelectorClose"
-    />
+    <TemplateSelector v-model:show="showTemplateSelector" :project-id="projectId || 0" :insert-mode="templateInsertMode"
+      @select="handleTemplateSelect" @update:show="handleTemplateSelectorClose" />
 
     <!-- 段落拆分对话框 -->
-    <NModal
-      v-model:show="showSplitDialog"
-      preset="card"
-      title="段落拆分"
-      style="width: 600px; max-width: 90vw"
-      :segmented="{ content: true, footer: true }"
-    >
+    <NModal v-model:show="showSplitDialog" preset="card" title="段落拆分" style="width: 600px; max-width: 90vw"
+      :segmented="{ content: true, footer: true }">
       <div class="space-y-4">
         <!-- 阈值设置 -->
         <div class="flex items-center gap-4">
           <NText>拆分阈值：</NText>
-          <NSlider
-            v-model:value="splitThreshold"
-            :min="100"
-            :max="500"
-            :step="10"
-            style="width: 200px"
-          />
+          <NSlider v-model:value="splitThreshold" :min="100" :max="500" :step="10" style="width: 200px" />
           <NText>{{ splitThreshold }} 字符</NText>
         </div>
-        
+
         <!-- 预览按钮 -->
         <NButton @click="previewSplitParagraphs" secondary>
           <template #icon>
-            <NIcon><Eye /></NIcon>
+            <NIcon>
+              <Eye />
+            </NIcon>
           </template>
           刷新预览
         </NButton>
-        
+
         <!-- 预览区域 -->
         <div v-if="splitPreview.length > 0" class="max-h-80 overflow-auto border rounded-lg p-4 space-y-4">
           <div v-for="(item, index) in splitPreview" :key="index">
@@ -1387,7 +1406,7 @@ onUnmounted(() => {
             <div class="bg-gray-100 dark:bg-gray-800 rounded p-2 mb-2 text-sm">
               {{ item.original.slice(0, 100) }}{{ item.original.length > 100 ? '...' : '' }}
             </div>
-            
+
             <NText depth="3" class="text-xs mb-1 block">拆分后（{{ item.split.length }} 段）：</NText>
             <div class="bg-blue-50 dark:bg-blue-900/30 rounded p-2 space-y-1">
               <div v-for="(split, si) in item.split" :key="si" class="text-sm">
@@ -1397,19 +1416,15 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-        
+
         <!-- 无需拆分提示 -->
         <NEmpty v-else description="当前没有超过阈值的段落" />
       </div>
-      
+
       <template #footer>
         <NSpace justify="end">
           <NButton @click="showSplitDialog = false">取消</NButton>
-          <NButton
-            type="primary"
-            :disabled="splitPreview.length === 0"
-            @click="applySplitParagraphs"
-          >
+          <NButton type="primary" :disabled="splitPreview.length === 0" @click="applySplitParagraphs">
             确认拆分
           </NButton>
         </NSpace>
@@ -1421,7 +1436,19 @@ onUnmounted(() => {
 <style>
 /* Tiptap Editor Styles */
 .tiptap {
-  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  box-sizing: border-box;
+}
+
+/* ProseMirror 内部滚动容器 */
+.tiptap .ProseMirror {
+  min-height: calc(100% - 16px);
+  padding: 8px;
+  outline: none;
+  box-sizing: border-box;
 }
 
 .tiptap p.is-editor-empty:first-child::before {
