@@ -1,5 +1,5 @@
 use crate::db::{get_db_path, init_db};
-use crate::models::{Chapter, Volume, VolumeWithChapters};
+use crate::models::{Chapter, ChapterStatusCount, Volume, VolumeWithChapters};
 use rusqlite::Connection;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -41,8 +41,8 @@ pub async fn create_chapter(
         .map_err(|e| format!("项目不存在: {}", e))?;
 
     conn.execute(
-        "INSERT INTO chapters (volume_id, title, file_path, sort_order, summary, word_count_cache, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-        (&volume_id, &title, "", sort_order, "", 0, &now, &now),
+        "INSERT INTO chapters (volume_id, title, file_path, sort_order, summary, word_count_cache, status, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        (&volume_id, &title, "", sort_order, "", 0, "draft", &now, &now),
     ).map_err(|e| format!("创建章节失败: {}", e))?;
     let id = conn.last_insert_rowid();
 
@@ -56,7 +56,7 @@ pub async fn create_chapter(
 
     Ok(Chapter {
         id, volume_id, title, file_path: actual_file_path.to_string_lossy().to_string(),
-        sort_order, summary: String::new(), word_count_cache: 0, created_at: now.clone(), updated_at: now,
+        sort_order, summary: String::new(), word_count_cache: 0, status: "draft".to_string(), created_at: now.clone(), updated_at: now,
     })
 }
 
@@ -177,13 +177,13 @@ pub async fn get_chapter_tree(app_handle: AppHandle, project_id: i64) -> Result<
 
     let mut result = Vec::new();
     for v in volumes {
-        let mut cs = conn.prepare("SELECT id, volume_id, title, file_path, sort_order, summary, word_count_cache, created_at, updated_at FROM chapters WHERE volume_id = ?1 ORDER BY sort_order")
+        let mut cs = conn.prepare("SELECT id, volume_id, title, file_path, sort_order, summary, word_count_cache, status, created_at, updated_at FROM chapters WHERE volume_id = ?1 ORDER BY sort_order")
             .map_err(|e| format!("查询失败: {}", e))?;
         let chapters: Vec<Chapter> = cs.query_map([v.id], |row| {
             Ok(Chapter {
                 id: row.get(0)?, volume_id: row.get(1)?, title: row.get(2)?,
                 file_path: row.get(3)?, sort_order: row.get(4)?, summary: row.get(5)?,
-                word_count_cache: row.get(6)?, created_at: row.get(7)?, updated_at: row.get(8)?,
+                word_count_cache: row.get(6)?, status: row.get(7)?, created_at: row.get(8)?, updated_at: row.get(9)?,
             })
         }).map_err(|e| format!("查询失败: {}", e))?.filter_map(|r| r.ok()).collect();
         result.push(VolumeWithChapters { id: v.id, project_id: v.project_id, name: v.name, sort_order: v.sort_order, chapters });
@@ -215,4 +215,45 @@ pub async fn save_chapter_content(app_handle: AppHandle, project_id: String, cha
     let chapter_path = chapters_dir.join(format!("{}.md", chapter_id));
     fs::write(&chapter_path, content).map_err(|e| format!("保存章节失败: {}", e))?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn update_chapter_status(app_handle: AppHandle, chapter_id: i64, status: String) -> Result<(), String> {
+    // 验证 status 值
+    let valid_statuses = ["outline", "draft", "revised", "final", "abandoned"];
+    if !valid_statuses.contains(&status.as_str()) {
+        return Err(format!("无效的章节状态: {}，有效值为: {:?}", status, valid_statuses));
+    }
+
+    let db_path = get_db_path(&app_handle);
+    let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
+    let now = chrono::Utc::now().to_rfc3339();
+    conn.execute("UPDATE chapters SET status = ?1, updated_at = ?2 WHERE id = ?3", (&status, &now, chapter_id))
+        .map_err(|e| format!("更新章节状态失败: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_chapter_status_counts(app_handle: AppHandle, project_id: i64) -> Result<Vec<ChapterStatusCount>, String> {
+    let db_path = get_db_path(&app_handle);
+    let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
+    init_db(&conn).map_err(|e| format!("数据库初始化失败: {}", e))?;
+
+    // 查询各状态的章节数量
+    let mut stmt = conn.prepare(
+        "SELECT c.status, COUNT(*) as count
+         FROM chapters c
+         JOIN volumes v ON c.volume_id = v.id
+         WHERE v.project_id = ?1
+         GROUP BY c.status"
+    ).map_err(|e| format!("查询失败: {}", e))?;
+
+    let counts: Vec<ChapterStatusCount> = stmt.query_map([project_id], |row| {
+        Ok(ChapterStatusCount {
+            status: row.get(0)?,
+            count: row.get(1)?,
+        })
+    }).map_err(|e| format!("查询失败: {}", e))?.filter_map(|r| r.ok()).collect();
+
+    Ok(counts)
 }

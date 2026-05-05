@@ -71,12 +71,27 @@ pub(crate) fn init_db(conn: &Connection) -> SqliteResult<()> {
             sort_order INTEGER NOT NULL DEFAULT 0,
             summary TEXT NOT NULL DEFAULT '',
             word_count_cache INTEGER NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'draft',
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (volume_id) REFERENCES volumes(id) ON DELETE CASCADE
         )",
         [],
     )?;
+
+    // 迁移：添加 status 列（如果不存在）
+    let has_status: bool = conn.query_row(
+        "SELECT COUNT(*) > 0 FROM pragma_table_info('chapters') WHERE name='status'",
+        [],
+        |row| row.get(0),
+    ).unwrap_or(false);
+
+    if !has_status {
+        let _ = conn.execute(
+            "ALTER TABLE chapters ADD COLUMN status TEXT NOT NULL DEFAULT 'draft'",
+            [],
+        );
+    }
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS writing_goals (

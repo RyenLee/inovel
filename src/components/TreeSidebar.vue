@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useMessage } from "naive-ui";
-import { NTree, NIcon, NButton, NDropdown, NInput, NPopconfirm, NEmpty } from "naive-ui";
+import { NTree, NIcon, NButton, NDropdown, NInput, NPopconfirm, NEmpty, NSelect } from "naive-ui";
 import {
   ChevronRight,
   ChevronDown,
@@ -13,11 +13,12 @@ import {
   Trash2,
   MoreVertical,
   GripVertical,
+  Filter,
 } from "lucide-vue-next";
 import draggable from "vuedraggable";
 import DeleteConfirmModal from "./DeleteConfirmModal.vue";
+import { CHAPTER_STATUS_OPTIONS, getStatusColor, getStatusLabel, type ChapterStatus } from "../types/chapter";
 
-// Types
 interface Chapter {
   id: number;
   volume_id: number;
@@ -26,6 +27,7 @@ interface Chapter {
   sort_order: number;
   summary: string;
   word_count_cache: number;
+  status: ChapterStatus;
   created_at: string;
   updated_at: string;
 }
@@ -57,6 +59,32 @@ const isLoading = ref(true);
 const expandedVolumes = ref<number[]>([]);
 const selectedChapterId = ref<number | null>(null);
 
+// Status filter
+const statusFilter = ref<ChapterStatus | 'all'>('all');
+const showStatusFilter = ref(false);
+
+const statusFilterOptions = [
+  { label: '全部章节', value: 'all' },
+  { label: '大纲', value: 'outline', color: '#9CA3AF' },
+  { label: '草稿', value: 'draft', color: '#F59E0B' },
+  { label: '修订', value: 'revised', color: '#3B82F6' },
+  { label: '定稿', value: 'final', color: '#10B981' },
+  { label: '废弃', value: 'abandoned', color: '#EF4444' },
+];
+
+// Filtered volumes based on status filter
+const filteredVolumes = computed(() => {
+  if (statusFilter.value === 'all') {
+    return volumes.value;
+  }
+  return volumes.value
+    .map(volume => ({
+      ...volume,
+      chapters: volume.chapters.filter(chapter => chapter.status === statusFilter.value),
+    }))
+    .filter(volume => volume.chapters.length > 0);
+});
+
 // Context menu state
 const contextMenuVisible = ref(false);
 const contextMenuX = ref(0);
@@ -70,6 +98,50 @@ const editingVolumeId = ref<number | null>(null);
 const editingChapterId = ref<number | null>(null);
 const editingVolumeName = ref("");
 const editingChapterTitle = ref("");
+
+// Status edit state
+const editingChapterStatusId = ref<number | null>(null);
+const editingChapterStatus = ref<ChapterStatus>('draft');
+
+// Update chapter status
+const updateChapterStatus = async (chapterId: number, newStatus: ChapterStatus) => {
+  try {
+    await invoke("update_chapter_status", {
+      chapterId,
+      status: newStatus,
+    });
+    for (const volume of volumes.value) {
+      const chapter = volume.chapters.find((c) => c.id === chapterId);
+      if (chapter) {
+        chapter.status = newStatus;
+        break;
+      }
+    }
+    message.success(`章节状态已更新为: ${getStatusLabel(newStatus)}`);
+  } catch (error) {
+    console.error("更新章节状态失败:", error);
+    message.error("更新章节状态失败");
+  }
+};
+
+// Start editing chapter status
+const startEditChapterStatus = (chapter: Chapter) => {
+  editingChapterStatusId.value = chapter.id;
+  editingChapterStatus.value = chapter.status;
+};
+
+// Confirm status edit
+const confirmEditChapterStatus = () => {
+  if (editingChapterStatusId.value !== null) {
+    updateChapterStatus(editingChapterStatusId.value, editingChapterStatus.value);
+  }
+  editingChapterStatusId.value = null;
+};
+
+// Cancel status edit
+const cancelEditChapterStatus = () => {
+  editingChapterStatusId.value = null;
+};
 
 // 删除确认弹窗状态
 const showDeleteVolumeModal = ref(false);
@@ -336,8 +408,32 @@ const contextMenuOptions = computed(() => {
         icon: () => null,
       },
     ];
-  } else if (contextMenuType.value === "chapter") {
+  } else if (contextMenuType.value === "chapter" && contextMenuChapterId.value !== null) {
+    // Get current chapter status for menu
+    let currentStatus: ChapterStatus = 'draft';
+    for (const volume of volumes.value) {
+      const chapter = volume.chapters.find((c) => c.id === contextMenuChapterId.value);
+      if (chapter) {
+        currentStatus = chapter.status;
+        break;
+      }
+    }
+
+    // Build status submenu
+    const statusOptions = CHAPTER_STATUS_OPTIONS.map(opt => ({
+      label: opt.label,
+      key: `status-${opt.value}`,
+      icon: () => null,
+      disabled: opt.value === currentStatus,
+    }));
+
     return [
+      {
+        label: "修改状态",
+        key: "change-status",
+        icon: () => null,
+        children: statusOptions,
+      },
       {
         label: "重命名",
         key: "rename",
@@ -363,6 +459,15 @@ const contextMenuOptions = computed(() => {
 const handleContextMenuSelect = async (key: string) => {
   hideContextMenu();
 
+  // Handle status change
+  if (key.startsWith('status-')) {
+    const newStatus = key.replace('status-', '') as ChapterStatus;
+    if (contextMenuChapterId.value !== null) {
+      await updateChapterStatus(contextMenuChapterId.value, newStatus);
+    }
+    return;
+  }
+
   switch (key) {
     case "add-volume":
       await createVolume();
@@ -371,6 +476,9 @@ const handleContextMenuSelect = async (key: string) => {
       if (contextMenuVolumeId.value !== null) {
         await createChapter(contextMenuVolumeId.value);
       }
+      break;
+    case "change-status":
+      // Open status dropdown
       break;
     case "rename":
       if (contextMenuType.value === "volume" && contextMenuVolumeId.value !== null) {
@@ -460,18 +568,50 @@ onMounted(async () => {
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
       <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200">章节结构</h2>
-      <NButton size="tiny" @click="createVolume">
-        <template #icon>
-          <Plus class="w-4 h-4" />
-        </template>
-      </NButton>
+      <div class="flex items-center gap-2">
+        <!-- Status Filter -->
+        <NButton size="tiny" quaternary @click="showStatusFilter = !showStatusFilter" :type="statusFilter !== 'all' ? 'primary' : undefined">
+          <template #icon>
+            <Filter class="w-4 h-4" />
+          </template>
+        </NButton>
+        <NButton size="tiny" @click="createVolume">
+          <template #icon>
+            <Plus class="w-4 h-4" />
+          </template>
+        </NButton>
+      </div>
+    </div>
+
+    <!-- Status Filter Bar -->
+    <div v-if="showStatusFilter" class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-xs text-gray-500">筛选:</span>
+        <button
+          v-for="opt in statusFilterOptions"
+          :key="opt.value"
+          class="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full transition-colors"
+          :class="statusFilter === opt.value
+            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
+          @click="statusFilter = opt.value as ChapterStatus | 'all'"
+        >
+          <span
+            v-if="opt.value !== 'all'"
+            class="w-2 h-2 rounded-full"
+            :style="{ backgroundColor: opt.color }"
+          ></span>
+          {{ opt.label }}
+        </button>
+      </div>
     </div>
 
     <!-- Tree Content -->
     <div class="flex-1 overflow-y-auto p-2">
-      <NEmpty v-if="!isLoading && volumes.length === 0" description="暂无章节" class="py-8">
+      <NEmpty v-if="!isLoading && filteredVolumes.length === 0" description="暂无章节" class="py-8">
         <template #extra>
-          <NButton size="small" @click="createVolume">创建第一个卷</NButton>
+          <NButton v-if="volumes.length === 0" size="small" @click="createVolume">创建第一个卷</NButton>
+          <span v-else class="text-sm text-gray-500">没有符合条件的章节</span>
         </template>
       </NEmpty>
 
@@ -483,6 +623,7 @@ onMounted(async () => {
         ghost-class="ghost"
         @end="onVolumeReorder"
         class="space-y-1"
+        v-if="statusFilter === 'all'"
       >
         <template #item="{ element: volume }">
           <div class="volume-item">
@@ -563,7 +704,15 @@ onMounted(async () => {
                     <GripVertical class="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab chapter-handle" />
                     
                     <FileText class="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    
+
+                    <!-- Status indicator dot -->
+                    <span
+                      class="w-2 h-2 rounded-full flex-shrink-0 cursor-pointer hover:scale-125 transition-transform"
+                      :style="{ backgroundColor: getStatusColor(chapter.status) }"
+                      :title="`状态: ${getStatusLabel(chapter.status)}`"
+                      @click.stop="startEditChapterStatus(chapter)"
+                    ></span>
+
                     <!-- Chapter title (editable) -->
                     <template v-if="editingChapterId === chapter.id">
                       <NInput
@@ -590,6 +739,20 @@ onMounted(async () => {
                     <span class="text-xs text-gray-400">
                       {{ chapter.word_count_cache }}字
                     </span>
+
+                    <!-- Status edit dropdown -->
+                    <div v-if="editingChapterStatusId === chapter.id" class="relative">
+                      <NSelect
+                        v-model:value="editingChapterStatus"
+                        size="tiny"
+                        :options="CHAPTER_STATUS_OPTIONS.map(o => ({ label: o.label, value: o.value }))"
+                        class="w-20"
+                        autofocus
+                        @click.stop
+                        @update:value="confirmEditChapterStatus"
+                        @blur="cancelEditChapterStatus"
+                      />
+                    </div>
                   </div>
                 </template>
               </draggable>
@@ -606,6 +769,73 @@ onMounted(async () => {
           </div>
         </template>
       </draggable>
+
+      <!-- Simple volume list when filter is active (no drag) -->
+      <div v-if="statusFilter !== 'all'" class="space-y-1">
+        <template v-for="volume in filteredVolumes" :key="volume.id">
+          <div class="volume-item">
+            <!-- Volume Header -->
+            <div
+              class="flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 group"
+              @click="toggleVolume(volume.id)"
+            >
+              <component
+                :is="expandedVolumes.includes(volume.id) ? ChevronDown : ChevronRight"
+                class="w-4 h-4 text-gray-500 flex-shrink-0"
+              />
+              <FolderOpen class="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <span class="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
+                {{ volume.name }}
+              </span>
+              <span class="text-xs text-gray-400">{{ volume.chapters.length }}章节</span>
+            </div>
+
+            <!-- Chapters -->
+            <div v-if="expandedVolumes.includes(volume.id)" class="ml-4 mt-1 space-y-0.5">
+              <div
+                v-for="chapter in volume.chapters"
+                :key="chapter.id"
+                class="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 group"
+                :class="{ 'bg-blue-50 dark:bg-blue-900/30': selectedChapterId === chapter.id }"
+                @contextmenu="showContextMenu($event, 'chapter', volume.id, chapter.id)"
+                @click="selectChapter(chapter)"
+              >
+                <FileText class="w-4 h-4 text-gray-400 flex-shrink-0" />
+
+                <!-- Status indicator dot -->
+                <span
+                  class="w-2 h-2 rounded-full flex-shrink-0 cursor-pointer hover:scale-125 transition-transform"
+                  :style="{ backgroundColor: getStatusColor(chapter.status) }"
+                  :title="`状态: ${getStatusLabel(chapter.status)}`"
+                  @click.stop="startEditChapterStatus(chapter)"
+                ></span>
+
+                <span class="flex-1 text-sm text-gray-600 dark:text-gray-300 truncate">
+                  {{ chapter.title }}
+                </span>
+
+                <span class="text-xs text-gray-400">
+                  {{ chapter.word_count_cache }}字
+                </span>
+
+                <!-- Status edit dropdown -->
+                <div v-if="editingChapterStatusId === chapter.id" class="relative">
+                  <NSelect
+                    v-model:value="editingChapterStatus"
+                    size="tiny"
+                    :options="CHAPTER_STATUS_OPTIONS.map(o => ({ label: o.label, value: o.value }))"
+                    class="w-20"
+                    autofocus
+                    @click.stop
+                    @update:value="confirmEditChapterStatus"
+                    @blur="cancelEditChapterStatus"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
 
       <!-- Add volume button (when empty) -->
       <button

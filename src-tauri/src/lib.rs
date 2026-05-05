@@ -61,6 +61,8 @@ pub fn run() {
             chapter::get_chapter_tree,
             chapter::update_chapter_word_count,
             chapter::update_chapter_summary,
+            chapter::update_chapter_status,
+            chapter::get_chapter_status_counts,
             writing::get_writing_goal,
             writing::save_writing_goal,
             writing::get_writing_stats,

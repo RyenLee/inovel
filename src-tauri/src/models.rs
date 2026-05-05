@@ -64,8 +64,15 @@ pub struct Chapter {
     pub sort_order: i32,
     pub summary: String,
     pub word_count_cache: i32,
+    pub status: String,
     pub created_at: String,
     pub updated_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ChapterStatusCount {
+    pub status: String,
+    pub count: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

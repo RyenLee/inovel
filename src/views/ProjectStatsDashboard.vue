@@ -9,7 +9,7 @@ import {
     NSpin,
     NIcon,
 } from "naive-ui";
-import { ArrowLeft, TrendingUp, Clock, Calendar, BarChart3 } from "lucide-vue-next";
+import { ArrowLeft, TrendingUp, Clock, Calendar, BarChart3, PieChart } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import { useProjectStore } from "../stores/project";
 
@@ -19,6 +19,11 @@ interface WritingRecord {
     duration: number;
 }
 
+interface ChapterStatusCount {
+    status: string;
+    count: number;
+}
+
 const route = useRoute();
 const router = useRouter();
 const projectStore = useProjectStore();
@@ -26,6 +31,7 @@ const projectStore = useProjectStore();
 const projectId = computed(() => Number(route.params.projectId));
 const isLoading = ref(true);
 const writingRecords = ref<WritingRecord[]>([]);
+const chapterStatusCounts = ref<ChapterStatusCount[]>([]);
 
 const projectName = computed(() => {
     return projectStore.currentProject?.name || "项目";
@@ -41,17 +47,105 @@ onMounted(async () => {
 const loadStats = async () => {
     isLoading.value = true;
     try {
-        const records = await invoke<WritingRecord[]>("get_writing_stats", {
-            projectId: projectId.value,
-            days: 30,
-        });
+        const [records, statusCounts] = await Promise.all([
+            invoke<WritingRecord[]>("get_writing_stats", {
+                projectId: projectId.value,
+                days: 30,
+            }),
+            invoke<ChapterStatusCount[]>("get_chapter_status_counts", {
+                projectId: projectId.value,
+            }),
+        ]);
         writingRecords.value = records;
+        chapterStatusCounts.value = statusCounts;
     } catch (error) {
         console.error("Failed to load stats:", error);
     } finally {
         isLoading.value = false;
     }
 };
+
+// Chapter status configuration
+const STATUS_CONFIG = {
+    outline: { label: '大纲', color: '#9CA3AF' },
+    draft: { label: '草稿', color: '#F59E0B' },
+    revised: { label: '修订', color: '#3B82F6' },
+    final: { label: '定稿', color: '#10B981' },
+    abandoned: { label: '废弃', color: '#EF4444' },
+} as const;
+
+const totalChapters = computed(() => {
+    return chapterStatusCounts.value.reduce((sum, item) => sum + item.count, 0);
+});
+
+// Generate pie chart data
+const pieChartData = computed(() => {
+    const allStatuses = ['outline', 'draft', 'revised', 'final', 'abandoned'];
+    const total = totalChapters.value || 1; // Avoid division by zero
+
+    return allStatuses.map(status => {
+        const countItem = chapterStatusCounts.value.find(c => c.status === status);
+        const count = countItem?.count || 0;
+        const percentage = Math.round((count / total) * 100);
+
+        return {
+            status,
+            label: STATUS_CONFIG[status as keyof typeof STATUS_CONFIG].label,
+            color: STATUS_CONFIG[status as keyof typeof STATUS_CONFIG].color,
+            count,
+            percentage,
+        };
+    });
+});
+
+// SVG pie chart calculations
+const pieChartSize = 120;
+const pieChartRadius = 40;
+const pieChartCenter = pieChartSize / 2;
+
+const pieChartPaths = computed(() => {
+    const total = totalChapters.value || 1;
+    let currentAngle = -90; // Start from top
+
+    return pieChartData.value.map(item => {
+        const angle = (item.count / total) * 360;
+        const startAngle = currentAngle;
+        const endAngle = currentAngle + angle;
+        currentAngle = endAngle;
+
+        if (item.count === 0) {
+            return null;
+        }
+
+        const startRad = (startAngle * Math.PI) / 180;
+        const endRad = (endAngle * Math.PI) / 180;
+
+        const x1 = pieChartCenter + pieChartRadius * Math.cos(startRad);
+        const y1 = pieChartCenter + pieChartRadius * Math.sin(startRad);
+        const x2 = pieChartCenter + pieChartRadius * Math.cos(endRad);
+        const y2 = pieChartCenter + pieChartRadius * Math.sin(endRad);
+
+        const largeArc = angle > 180 ? 1 : 0;
+
+        if (angle >= 360) {
+            // Full circle
+            return {
+                d: `M ${pieChartCenter} ${pieChartCenter - pieChartRadius}
+                    A ${pieChartRadius} ${pieChartRadius} 0 1 1 ${pieChartCenter - 0.01} ${pieChartCenter - pieChartRadius}
+                    A ${pieChartRadius} ${pieChartRadius} 0 1 1 ${pieChartCenter} ${pieChartCenter - pieChartRadius}`,
+                fill: item.color,
+            };
+        }
+
+        return {
+            d: `M ${pieChartCenter} ${pieChartCenter}
+                L ${x1} ${y1}
+                A ${pieChartRadius} ${pieChartRadius} 0 ${largeArc} 1 ${x2} ${y2}
+                Z`,
+            fill: item.color,
+        };
+    }).filter(Boolean);
+});
 
 const totalWordsThisMonth = computed(() => {
     return writingRecords.value.reduce((sum, r) => sum + r.total_words, 0);
@@ -346,6 +440,56 @@ const formatDate = (dateStr: string) => {
                                     {{ record.duration }} 分钟
                                 </span>
                             </div>
+                        </div>
+                    </n-card>
+                </n-gi>
+
+                <!-- Chapter Status Distribution -->
+                <n-gi span="0:24 640:24 1024:12">
+                    <n-card title="章节状态分布" hoverable>
+                        <div class="flex flex-col items-center">
+                            <div v-if="totalChapters === 0" class="py-8 text-center text-gray-400">
+                                暂无章节
+                            </div>
+                            <template v-else>
+                                <!-- Pie Chart -->
+                                <svg :width="pieChartSize" :height="pieChartSize" class="mb-4">
+                                    <g v-for="(path, index) in pieChartPaths" :key="index">
+                                        <path :d="path?.d || ''" :fill="path?.fill" stroke="white" stroke-width="2"/>
+                                    </g>
+                                    <circle :cx="pieChartCenter" :cy="pieChartCenter" r="20" fill="white" />
+                                    <text :x="pieChartCenter" :y="pieChartCenter + 4" text-anchor="middle" class="text-xs font-medium fill-gray-600 dark:fill-gray-300">
+                                        {{ totalChapters }}
+                                    </text>
+                                </svg>
+
+                                <!-- Legend -->
+                                <div class="w-full space-y-2">
+                                    <div
+                                        v-for="item in pieChartData"
+                                        :key="item.status"
+                                        class="flex items-center justify-between py-1"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="w-3 h-3 rounded-full"
+                                                :style="{ backgroundColor: item.color }"
+                                            ></span>
+                                            <span class="text-sm text-gray-600 dark:text-gray-400">
+                                                {{ item.label }}
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-sm font-medium text-gray-900 dark:text-white">
+                                                {{ item.count }} 章
+                                            </span>
+                                            <span class="text-xs text-gray-400 w-10 text-right">
+                                                {{ item.percentage }}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </n-card>
                 </n-gi>
