@@ -13,6 +13,7 @@ pub mod sensitive;
 pub mod export;
 pub mod backup;
 pub mod encryption;
+pub mod inspiration;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -125,6 +126,13 @@ pub fn run() {
             encryption::change_project_password,
             encryption::reencrypt_project,
             encryption::is_project_encrypted_command,
+            // 灵感看板命令
+            inspiration::create_inspiration_item,
+            inspiration::update_inspiration_item,
+            inspiration::delete_inspiration_item,
+            inspiration::reorder_inspiration_items,
+            inspiration::get_inspiration_board,
+            inspiration::get_inspiration_items,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

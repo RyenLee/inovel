@@ -277,6 +277,37 @@ pub(crate) fn init_db(conn: &Connection) -> SqliteResult<()> {
         [],
     )?;
 
+    // 灵感看板条目表
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS inspiration_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            column_name TEXT NOT NULL DEFAULT '灵感',
+            content TEXT NOT NULL DEFAULT '',
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
+    // 迁移：添加 column_name 列到现有表（如果需要）
+    let has_column_name: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('inspiration_items') WHERE name='column_name'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(true);
+
+    if !has_column_name {
+        let _ = conn.execute(
+            "ALTER TABLE inspiration_items ADD COLUMN column_name TEXT NOT NULL DEFAULT '灵感'",
+            [],
+        );
+    }
+
     Ok(())
 }
 

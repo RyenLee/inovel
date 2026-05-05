@@ -19,7 +19,8 @@ import ExportDialog from "../components/ExportDialog.vue";
 import BackupDialog from "../components/BackupDialog.vue";
 import ShortcutSettings from "../components/ShortcutSettings.vue";
 import PomodoroTimer from "../components/PomodoroTimer.vue";
-import { Timer } from "lucide-vue-next";
+import InspirationBoard from "../components/InspirationBoard.vue";
+import { Timer, Lightbulb } from "lucide-vue-next";
 import { useTheme } from "../composables/useTheme";
 
 const { isDark, toggleDark } = useTheme();
@@ -59,7 +60,7 @@ const isSaving = ref(false);
 const showSidebar = ref(true);
 const showWorldbuilding = ref(false); // 右侧世界观面板
 const sidebarMode = ref<"tree" | "outline">("tree"); // 侧边栏模式切换
-const sidebarTab = ref<"chapters" | "worldbuilding" | "relationship" | "timeline">("chapters"); // 侧边栏内容切换
+const sidebarTab = ref<"chapters" | "worldbuilding" | "relationship" | "timeline" | "inspiration">("chapters"); // 侧边栏内容切换
 const chapterTree = ref<VolumeWithChapters[]>([]);
 const editorRef = ref<InstanceType<typeof MarkdownEditor> | null>(null);
 const worldbuildingPanelRef = ref<{ viewCharacterDetail: (character: Character) => void } | null>(null);
@@ -129,6 +130,9 @@ const showShortcuts = ref(false)
 // Pomodoro Timer visibility state (default to hidden)
 const showPomodoro = ref(false);
 
+// Inspiration Board visibility state (default to hidden)
+const showInspirationBoard = ref(false);
+
 // Zen Mode / Fullscreen state
 const isZenMode = ref(false);
 const isPomodoroZenMode = ref(false); // 番茄钟触发的专注模式
@@ -144,6 +148,13 @@ const handlePomodoroZenMode = (enabled: boolean) => {
 const isZenModeActive = computed(() => {
   return isZenMode.value || isPomodoroZenMode.value;
 });
+
+// Handle inserting content from inspiration board
+const handleInsertFromInspiration = (content: string) => {
+  if (editorRef.value?.editor) {
+    editorRef.value.editor.commands.insertContent(content);
+  }
+};
 
 // Toggle Zen Mode (pseudo fullscreen - hides UI elements, centers editor)
 const toggleZenMode = async () => {
@@ -752,6 +763,15 @@ const todayNewWords = computed(() => {
             </template>
             {{ showPomodoro ? '隐藏' : '显示' }}番茄钟
           </n-tooltip>
+          <n-tooltip trigger="hover">
+            <template #trigger>
+              <button @click="showInspirationBoard = !showInspirationBoard" class="p-2 rounded-lg transition-colors duration-300"
+                :class="showInspirationBoard ? 'bg-yellow-500 text-white' : isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+                <Lightbulb class="w-5 h-5" />
+              </button>
+            </template>
+            {{ showInspirationBoard ? '隐藏' : '显示' }}灵感看板
+          </n-tooltip>
         </div>
       </div>
     </header>
@@ -1029,5 +1049,24 @@ const todayNewWords = computed(() => {
       :visible="showPomodoro"
       @zen-mode="handlePomodoroZenMode"
     />
+
+    <!-- Inspiration Board Modal -->
+    <n-modal
+      v-model:show="showInspirationBoard"
+      preset="card"
+      title="灵感看板"
+      :style="{ width: '90vw', height: '80vh' }"
+      :max-height="600"
+      :mask-closable="true"
+    >
+      <template #header-extra>
+        <n-tag type="warning" size="small">双击卡片编辑，右键插入到编辑器</n-tag>
+      </template>
+      <InspirationBoard
+        :project-id="Number(projectId)"
+        :is-dark="isDark"
+        @insert-content="handleInsertFromInspiration"
+      />
+    </n-modal>
   </div>
 </template>

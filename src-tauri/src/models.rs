@@ -390,3 +390,31 @@ pub struct FocusStats {
     pub short_break_sessions: i32,
     pub long_break_sessions: i32,
 }
+
+// ==================== 灵感看板相关数据结构 ====================
+
+/// 灵感条目
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct InspirationItem {
+    pub id: i64,
+    pub project_id: i64,
+    pub column_name: String,
+    pub content: String,
+    pub sort_order: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// 创建灵感条目参数
+#[derive(Debug, Deserialize)]
+pub struct CreateInspirationItemParams {
+    pub project_id: i64,
+    pub column_name: String,
+    pub content: String,
+}
+
+/// 更新灵感条目参数
+#[derive(Debug, Deserialize)]
+pub struct UpdateInspirationItemParams {
+    pub content: String,
+}
