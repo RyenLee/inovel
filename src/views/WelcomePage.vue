@@ -44,6 +44,11 @@ const editingProject = ref<ProjectMeta | null>(null);
 const showDeleteProjectModal = ref(false);
 const projectToDelete = ref<ProjectMeta | null>(null);
 
+// 解密相关
+const showDecryptModal = ref(false);
+const decryptPassword = ref("");
+const projectToDecrypt = ref<ProjectMeta | null>(null);
+
 // Form state
 const formData = ref({
     name: "",
@@ -268,6 +273,13 @@ const handleOpenProject = async (project: ProjectMeta) => {
                 }
             },
         });
+        return;
+    }
+
+    // 检查项目是否已加密
+    if (project.encrypted) {
+        projectToDecrypt.value = project;
+        showDecryptModal.value = true;
         return;
     }
 

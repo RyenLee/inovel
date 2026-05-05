@@ -18,6 +18,8 @@ import SensitiveWordsManager from "../components/SensitiveWordsManager.vue";
 import ExportDialog from "../components/ExportDialog.vue";
 import BackupDialog from "../components/BackupDialog.vue";
 import ShortcutSettings from "../components/ShortcutSettings.vue";
+import PomodoroTimer from "../components/PomodoroTimer.vue";
+import { Timer } from "lucide-vue-next";
 import { useTheme } from "../composables/useTheme";
 
 const { isDark, toggleDark } = useTheme();
@@ -124,13 +126,32 @@ const showExport = ref(false)
 const showBackup = ref(false)
 const showShortcuts = ref(false)
 
+// Pomodoro Timer visibility state (default to hidden)
+const showPomodoro = ref(false);
+
 // Zen Mode / Fullscreen state
 const isZenMode = ref(false);
+const isPomodoroZenMode = ref(false); // 番茄钟触发的专注模式
 const isFullscreen = ref(false);
 const appWindow = getCurrentWindow();
 
+// Pomodoro zen mode handler
+const handlePomodoroZenMode = (enabled: boolean) => {
+  isPomodoroZenMode.value = enabled;
+};
+
+// Combined zen mode state
+const isZenModeActive = computed(() => {
+  return isZenMode.value || isPomodoroZenMode.value;
+});
+
 // Toggle Zen Mode (pseudo fullscreen - hides UI elements, centers editor)
 const toggleZenMode = async () => {
+  if (isPomodoroZenMode.value) {
+    // Can't toggle while pomodoro zen mode is active
+    message.warning("番茄钟专注模式进行中，请等待结束后再切换");
+    return;
+  }
   isZenMode.value = !isZenMode.value;
   if (isZenMode.value) {
     message.info("禅模式已开启，按 Esc 或点击退出按钮退出");
@@ -164,6 +185,7 @@ const exitZenMode = () => {
     isZenMode.value = false;
     message.info("已退出禅模式");
   }
+  // Note: pomodoro zen mode is controlled by the timer itself
 };
 
 const handleSelectCharacter = async (character: Character) => {
@@ -619,14 +641,21 @@ const todayNewWords = computed(() => {
       isZenMode ? '!bg-gray-900' : ''
     ]">
     <!-- Zen Mode Exit Button (floating) -->
-    <button v-if="isZenMode" @click="exitZenMode"
+    <button v-if="isZenMode && !isPomodoroZenMode" @click="exitZenMode"
       class="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg shadow-lg hover:bg-gray-700 transition-colors">
       <X class="w-4 h-4" />
       退出禅模式 (Esc)
     </button>
 
+    <!-- Pomodoro Zen Mode Indicator -->
+    <button v-if="isPomodoroZenMode" @click="isPomodoroZenMode = false"
+      class="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg shadow-lg hover:bg-purple-700 transition-colors">
+      <X class="w-4 h-4" />
+      退出专注模式
+    </button>
+
     <!-- Header (hidden in zen mode) -->
-    <header v-if="!isZenMode" class="border-b transition-colors duration-300 flex-shrink-0"
+    <header v-if="!isZenModeActive" class="border-b transition-colors duration-300 flex-shrink-0"
       :class="isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'">
       <div class="px-4 py-3 flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -714,19 +743,28 @@ const todayNewWords = computed(() => {
             </template>
             快捷键设置
           </n-tooltip>
+          <n-tooltip trigger="hover">
+            <template #trigger>
+              <button @click="showPomodoro = !showPomodoro" class="p-2 rounded-lg transition-colors duration-300"
+                :class="showPomodoro ? 'bg-red-500 text-white' : isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+                <Timer class="w-5 h-5" />
+              </button>
+            </template>
+            {{ showPomodoro ? '隐藏' : '显示' }}番茄钟
+          </n-tooltip>
         </div>
       </div>
     </header>
 
-    <div class="flex-1 flex overflow-hidden" :class="isZenMode ? '!p-0' : ''">
+    <div class="flex-1 flex overflow-hidden" :class="isZenModeActive ? '!p-0' : ''">
       <!-- Sidebar Toggle Button -->
-      <button v-if="!showSidebar && !isZenMode" @click="toggleSidebar"
+      <button v-if="!showSidebar && !isZenModeActive" @click="toggleSidebar"
         class="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-r-lg shadow-md">
         <ChevronRight class="w-4 h-4" />
       </button>
 
       <!-- Tree Sidebar (hidden in zen mode) -->
-      <div v-if="showSidebar && !isZenMode" class="w-64 flex-shrink-0 relative">
+      <div v-if="showSidebar && !isZenModeActive" class="w-64 flex-shrink-0 relative">
         <button @click="toggleSidebar"
           class="absolute -right-3 top-1/2 -translate-y-1/2 z-10 p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md">
           <ChevronLeft class="w-3 h-3" />
@@ -755,9 +793,9 @@ const todayNewWords = computed(() => {
 
       <!-- Editor Area -->
       <main class="flex-1 overflow-hidden flex justify-center"
-        :class="isZenMode ? 'bg-gray-900' : 'p-4'">
+        :class="isZenModeActive ? 'bg-gray-900' : 'p-4'">
         <!-- Zen Mode: Centered editor container with max-width -->
-        <div v-if="isZenMode" class="w-full max-w-4xl h-full flex flex-col px-8 py-6">
+        <div v-if="isZenModeActive" class="w-full max-w-4xl h-full flex flex-col px-8 py-6">
           <div v-if="!currentChapter" class="h-full flex flex-col items-center justify-center text-gray-500">
             <FileText class="w-16 h-16 mb-4 opacity-50" />
             <p class="text-lg">请从左侧选择或创建章节</p>
@@ -801,7 +839,7 @@ const todayNewWords = computed(() => {
       </main>
 
       <!-- Worldbuilding Panel (Right Sidebar, hidden in zen mode) -->
-      <div v-if="showWorldbuilding && !isZenMode"
+      <div v-if="showWorldbuilding && !isZenModeActive"
         class="w-[480px] flex-shrink-0 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden flex flex-col">
         <!-- Panel Header with Tabs -->
         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
@@ -846,7 +884,7 @@ const todayNewWords = computed(() => {
       </div>
 
       <!-- Worldbuilding Toggle Button (hidden in zen mode) -->
-      <button v-if="!showWorldbuilding && !isZenMode" @click="showWorldbuilding = true"
+      <button v-if="!showWorldbuilding && !isZenModeActive" @click="showWorldbuilding = true"
         class="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-l-lg shadow-md transition-transform hover:translate-x-0"
         :style="{ top: 'calc(50% + 36px)' }">
         <Globe class="w-4 h-4 text-blue-600" />
@@ -854,7 +892,7 @@ const todayNewWords = computed(() => {
     </div>
 
     <!-- Status Bar with Writing Progress (hidden in zen mode) -->
-    <footer v-if="!isZenMode" class="border-t transition-colors duration-300 flex-shrink-0 px-4 py-2"
+    <footer v-if="!isZenModeActive" class="border-t transition-colors duration-300 flex-shrink-0 px-4 py-2"
       :class="isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'">
       <div class="flex items-center gap-6">
         <!-- Daily Goal Progress -->
@@ -982,5 +1020,14 @@ const todayNewWords = computed(() => {
     <BackupDialog v-model:show="showBackup" :project-id="Number(projectId)" />
     <!-- Shortcut Settings -->
     <ShortcutSettings v-model:show="showShortcuts" />
+
+    <!-- Pomodoro Timer (floating) -->
+    <PomodoroTimer
+      v-if="projectId && !isLoading"
+      :project-id="Number(projectId)"
+      :is-dark="isDark"
+      :visible="showPomodoro"
+      @zen-mode="handlePomodoroZenMode"
+    />
   </div>
 </template>

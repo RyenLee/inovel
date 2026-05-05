@@ -17,13 +17,17 @@ import {
     NTabs,
     NTabPane,
     NImage,
+    NTag,
+    NProgress,
 } from "naive-ui";
 import { ArrowLeft, Target, Save, FolderOpen, Keyboard, ImageIcon } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useProjectStore } from "../stores/project";
 import ShortcutSettings from "../components/ShortcutSettings.vue";
+import type { EncryptProjectParams, DecryptProjectParams, ChangePasswordParams, EncryptionProgress } from "../types/encryption";
 
 const route = useRoute();
 const router = useRouter();
@@ -46,6 +50,17 @@ const dailyGoal = ref(3000);
 const coverUrl = ref<string | null>(null);
 const isChangingCover = ref(false);
 
+// 加密相关状态
+const encryptPassword = ref("");
+const encryptConfirmPassword = ref("");
+const oldPassword = ref("");
+const newPassword = ref("");
+const confirmNewPassword = ref("");
+const decryptPassword = ref("");
+const isProcessing = ref(false);
+const encryptProgress = ref<EncryptionProgress | null>(null);
+const isEncrypted = ref(false);
+
 // Get project info
 const projectName = computed(() => {
     return projectStore.currentProject?.name || "项目";
@@ -56,6 +71,22 @@ onMounted(async () => {
         await projectStore.openProject(projectId.value);
     }
     await loadSettings();
+    
+    // 检查项目是否已加密
+    if (projectStore.currentProject) {
+        isEncrypted.value = await projectStore.isProjectEncrypted(projectStore.currentProject.path);
+    }
+    
+    // 监听加密进度
+    const app = getCurrentWindow();
+    app.listen('encryption-progress', (event: any) => {
+        encryptProgress.value = event.payload;
+    });
+    
+    // 监听解密进度
+    app.listen('decryption-progress', (event: any) => {
+        encryptProgress.value = event.payload;
+    });
 });
 
 const loadSettings = async () => {
@@ -168,6 +199,83 @@ const saveDailyGoal = async () => {
 
 const goBack = () => {
     router.push(`/editor/${projectId.value}`);
+};
+
+// 加密相关方法
+const handleEncrypt = async () => {
+    if (encryptPassword.value !== encryptConfirmPassword.value) {
+        message.error("两次输入的密码不一致");
+        return;
+    }
+    if (encryptPassword.value.length < 8) {
+        message.error("密码长度至少 8 位");
+        return;
+    }
+    
+    isProcessing.value = true;
+    try {
+        const params = {
+            project_path: projectStore.currentProject?.path || "",
+            password: encryptPassword.value,
+            confirm_password: encryptConfirmPassword.value,
+        };
+        await invoke("encrypt_project", { params });
+        isEncrypted.value = true;
+        encryptPassword.value = "";
+        encryptConfirmPassword.value = "";
+        message.success("项目已加密");
+    } catch (e) {
+        message.error(`加密失败: ${e}`);
+    } finally {
+        isProcessing.value = false;
+    }
+};
+
+const handleChangePassword = async () => {
+    if (newPassword.value !== confirmNewPassword.value) {
+        message.error("两次输入的新密码不一致");
+        return;
+    }
+    if (newPassword.value.length < 8) {
+        message.error("新密码长度至少 8 位");
+        return;
+    }
+    
+    isProcessing.value = true;
+    try {
+        const params = {
+            project_path: projectStore.currentProject?.path || "",
+            old_password: oldPassword.value,
+            new_password: newPassword.value,
+            confirm_password: confirmNewPassword.value,
+        };
+        await invoke("change_project_password", { params });
+        oldPassword.value = "";
+        newPassword.value = "";
+        confirmNewPassword.value = "";
+        message.success("密码已修改");
+    } catch (e) {
+        message.error(`修改密码失败: ${e}`);
+    } finally {
+        isProcessing.value = false;
+    }
+};
+
+const handleDecrypt = async () => {
+    isProcessing.value = true;
+    try {
+        await invoke("disable_encryption", { 
+            project_path: projectStore.currentProject?.path || "", 
+            password: decryptPassword.value 
+        });
+        isEncrypted.value = false;
+        decryptPassword.value = "";
+        message.success("项目已解密，加密已关闭");
+    } catch (e) {
+        message.error(`关闭加密失败: ${e}`);
+    } finally {
+        isProcessing.value = false;
+    }
 };
 </script>
 
@@ -312,6 +420,142 @@ const goBack = () => {
                             <span>点击编辑器左侧的世界图标进入世界观设定面板</span>
                         </div>
                     </n-card>
+                </n-tab-pane>
+
+                <n-tab-pane name="security" tab="安全性">
+                    <div v-if="isLoading" class="flex justify-center py-12">
+                        <n-spin size="large" />
+                    </div>
+                    <n-grid v-else :cols="1" :x-gap="16" :y-gap="16">
+                        <!-- 加密状态显示 -->
+                        <n-gi>
+                            <n-card title="加密状态" hoverable>
+                                <div class="flex items-center gap-4">
+                                    <n-tag :type="isEncrypted ? 'success' : 'default'">
+                                        {{ isEncrypted ? '已加密' : '未加密' }}
+                                    </n-tag>
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ isEncrypted ? '项目文件已加密存储' : '项目文件未加密' }}
+                                    </span>
+                                </div>
+                            </n-card>
+                        </n-gi>
+
+                        <!-- 设置密码/启用加密 -->
+                        <n-gi v-if="!isEncrypted">
+                            <n-card title="启用加密" hoverable>
+                                <n-form label-placement="top">
+                                    <n-form-item label="设置密码">
+                                        <n-input 
+                                            v-model:value="encryptPassword" 
+                                            type="password" 
+                                            placeholder="请输入密码（至少8位）"
+                                            show-password-on="mousedown"
+                                        />
+                                    </n-form-item>
+                                    <n-form-item label="确认密码">
+                                        <n-input 
+                                            v-model:value="encryptConfirmPassword" 
+                                            type="password" 
+                                            placeholder="请再次输入密码"
+                                            show-password-on="mousedown"
+                                        />
+                                    </n-form-item>
+                                    <n-form-item>
+                                        <n-button 
+                                            type="primary" 
+                                            @click="handleEncrypt"
+                                            :loading="isProcessing"
+                                            :disabled="!encryptPassword || !encryptConfirmPassword"
+                                        >
+                                            启用加密
+                                        </n-button>
+                                    </n-form-item>
+                                </n-form>
+                                <n-progress 
+                                    v-if="encryptProgress" 
+                                    type="line" 
+                                    :percentage="Math.round(encryptProgress.current / encryptProgress.total * 100)"
+                                    :indicator-placement="'inside'"
+                                    :processing="isProcessing"
+                                />
+                                <div v-if="encryptProgress" class="text-sm text-gray-500 mt-2">
+                                    正在加密: {{ encryptProgress.current }} / {{ encryptProgress.total }} ({{ encryptProgress.currentFile }})
+                                </div>
+                            </n-card>
+                        </n-gi>
+
+                        <!-- 修改密码 -->
+                        <n-gi v-if="isEncrypted">
+                            <n-card title="修改密码" hoverable>
+                                <n-form label-placement="top">
+                                    <n-form-item label="原密码">
+                                        <n-input 
+                                            v-model:value="oldPassword" 
+                                            type="password" 
+                                            placeholder="请输入原密码"
+                                            show-password-on="mousedown"
+                                        />
+                                    </n-form-item>
+                                    <n-form-item label="新密码">
+                                        <n-input 
+                                            v-model:value="newPassword" 
+                                            type="password" 
+                                            placeholder="请输入新密码（至少8位）"
+                                            show-password-on="mousedown"
+                                        />
+                                    </n-form-item>
+                                    <n-form-item label="确认新密码">
+                                        <n-input 
+                                            v-model:value="confirmNewPassword" 
+                                            type="password" 
+                                            placeholder="请再次输入新密码"
+                                            show-password-on="mousedown"
+                                        />
+                                    </n-form-item>
+                                    <n-form-item>
+                                        <n-button 
+                                            type="warning" 
+                                            @click="handleChangePassword"
+                                            :loading="isProcessing"
+                                            :disabled="!oldPassword || !newPassword || !confirmNewPassword"
+                                        >
+                                            修改密码
+                                        </n-button>
+                                    </n-form-item>
+                                </n-form>
+                            </n-card>
+                        </n-gi>
+
+                        <!-- 关闭加密 -->
+                        <n-gi v-if="isEncrypted">
+                            <n-card title="关闭加密" hoverable>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                                    关闭加密将解密所有项目文件。需要输入密码确认。
+                                </p>
+                                <n-form label-placement="top">
+                                    <n-form-item label="密码">
+                                        <n-input 
+                                            v-model:value="decryptPassword" 
+                                            type="password" 
+                                            placeholder="请输入密码"
+                                            show-password-on="mousedown"
+                                        />
+                                    </n-form-item>
+                                    <n-form-item>
+                                        <n-button 
+                                            type="error" 
+                                            @click="handleDecrypt"
+                                            :loading="isProcessing"
+                                            :disabled="!decryptPassword"
+                                        >
+                                            关闭加密
+                                        </n-button>
+                                    </n-form-item>
+                                </n-form>
+                            </n-card>
+                        </n-gi>
+                    </n-grid>
                 </n-tab-pane>
             </n-tabs>
         </main>

@@ -30,6 +30,8 @@ pub struct ProjectMeta {
     pub is_valid: bool,
     #[serde(default)]
     pub cover_path: Option<String>,
+    #[serde(default)]
+    pub encrypted: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -328,4 +330,63 @@ pub struct MigrateResult {
 pub struct RollbackParams {
     /// 要回滚的项目 DB ID 列表。为空则回滚全部。
     pub project_ids: Option<Vec<i64>>,
+}
+
+// ==================== 加密相关数据结构 ====================
+
+/// 加密进度（用于前端显示）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EncryptionProgress {
+    pub current: usize,
+    pub total: usize,
+    pub current_file: String,
+}
+
+/// 加密项目参数
+#[derive(Debug, Deserialize)]
+pub struct EncryptProjectParams {
+    pub project_path: String,
+    pub password: String,
+    pub confirm_password: String,
+}
+
+/// 解密项目参数
+#[derive(Debug, Deserialize)]
+pub struct DecryptProjectParams {
+    pub project_path: String,
+    pub password: String,
+}
+
+/// 修改密码参数
+#[derive(Debug, Deserialize)]
+pub struct ChangePasswordParams {
+    pub project_path: String,
+    pub old_password: String,
+    pub new_password: String,
+    pub confirm_password: String,
+}
+
+// ==================== 番茄钟相关数据结构 ====================
+
+/// 专注会话记录
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FocusSession {
+    pub id: i64,
+    pub project_id: i64,
+    pub session_type: String,
+    pub duration_minutes: i32,
+    pub started_at: String,
+    pub completed: bool,
+    pub created_at: String,
+}
+
+/// 专注统计数据
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FocusStats {
+    pub total_sessions: i32,
+    pub total_minutes: i32,
+    pub completed_sessions: i32,
+    pub work_sessions: i32,
+    pub short_break_sessions: i32,
+    pub long_break_sessions: i32,
 }

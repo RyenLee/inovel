@@ -12,6 +12,7 @@ pub mod git_snapshot;
 pub mod sensitive;
 pub mod export;
 pub mod backup;
+pub mod encryption;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -68,6 +69,10 @@ pub fn run() {
             writing::get_writing_stats,
             writing::upsert_writing_record,
             writing::get_today_words,
+            // 番茄钟专注会话命令
+            writing::record_focus_session,
+            writing::get_focus_sessions,
+            writing::get_focus_stats,
             names::generate_names,
             worldbuilding::create_character,
             worldbuilding::update_character,
@@ -113,6 +118,13 @@ pub fn run() {
             backup::delete_backup_record,
             backup::get_backup_logs,
             backup::get_backup_stats,
+            // 加密相关命令
+            encryption::encrypt_project,
+            encryption::decrypt_project,
+            encryption::verify_project_password,
+            encryption::change_project_password,
+            encryption::reencrypt_project,
+            encryption::is_project_encrypted_command,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

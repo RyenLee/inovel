@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import type { EncryptionProgress, EncryptProjectParams, DecryptProjectParams, ChangePasswordParams } from "../types/encryption";
 
 export interface ProjectMeta {
   id: number;
@@ -57,6 +58,11 @@ export const useProjectStore = defineStore("project", () => {
   const currentProject = ref<ProjectMeta | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
+
+  // 加密相关状态
+  const isEncrypted = ref(false);
+  const isDecrypting = ref(false);
+  const decryptProgress = ref<EncryptionProgress | null>(null);
 
   async function fetchRecentProjects() {
     isLoading.value = true;
@@ -157,6 +163,85 @@ export const useProjectStore = defineStore("project", () => {
     currentProject.value = project;
   }
 
+  // === 加密相关 ===
+
+  /** 加密项目 */
+  async function encryptProject(params: EncryptProjectParams): Promise<void> {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      await invoke("encrypt_project", { params });
+    } catch (e) {
+      error.value = String(e);
+      console.error("Failed to encrypt project:", e);
+      throw e;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /** 解密项目 */
+  async function decryptProject(params: DecryptProjectParams): Promise<string> {
+    isDecrypting.value = true;
+    error.value = null;
+    try {
+      const decryptedPath = await invoke<string>("decrypt_project", { params });
+      isEncrypted.value = false;
+      return decryptedPath;
+    } catch (e) {
+      error.value = String(e);
+      console.error("Failed to decrypt project:", e);
+      throw e;
+    } finally {
+      isDecrypting.value = false;
+    }
+  }
+
+  /** 验证密码 */
+  async function verifyPassword(params: DecryptProjectParams): Promise<boolean> {
+    try {
+      return await invoke<boolean>("verify_project_password", { project_path: params.project_path, password: params.password });
+    } catch (e) {
+      console.error("Failed to verify password:", e);
+      return false;
+    }
+  }
+
+  /** 修改密码 */
+  async function changePassword(params: ChangePasswordParams): Promise<void> {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      await invoke("change_project_password", { params });
+    } catch (e) {
+      error.value = String(e);
+      console.error("Failed to change password:", e);
+      throw e;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /** 重新加密项目（关闭项目时调用） */
+  async function reencryptProject(projectPath: string, password: string): Promise<void> {
+    try {
+      await invoke("reencrypt_project", { project_path: projectPath, password });
+    } catch (e) {
+      console.error("Failed to reencrypt project:", e);
+      throw e;
+    }
+  }
+
+  /** 检查项目是否已加密 */
+  async function isProjectEncrypted(projectPath: string): Promise<boolean> {
+    try {
+      return await invoke<boolean>("is_project_encrypted_command", { project_path: projectPath });
+    } catch (e) {
+      console.error("Failed to check if project is encrypted:", e);
+      return false;
+    }
+  }
+
   // === 数据迁移相关 ===
 
   /** 迁移状态 */
@@ -225,6 +310,17 @@ export const useProjectStore = defineStore("project", () => {
     removeProjectFromList,
     updateProject,
     setCurrentProject,
+
+    // 加密相关
+    isEncrypted,
+    isDecrypting,
+    decryptProgress,
+    encryptProject,
+    decryptProject,
+    verifyPassword,
+    changePassword,
+    reencryptProject,
+    isProjectEncrypted,
 
     // 迁移相关
     isMigrating,

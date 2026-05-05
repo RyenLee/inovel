@@ -262,6 +262,21 @@ pub(crate) fn init_db(conn: &Connection) -> SqliteResult<()> {
         [],
     )?;
 
+    // 番茄钟专注记录表
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS focus_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            session_type TEXT NOT NULL DEFAULT 'work',
+            duration_minutes INTEGER NOT NULL,
+            started_at TEXT NOT NULL,
+            completed INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
     Ok(())
 }
 
