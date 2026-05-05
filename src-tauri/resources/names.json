@@ -1,0 +1,74 @@
+{
+  "chinese_name": {
+    "male": [
+      "伟", "强", "磊", "洋", "勇", "军", "杰", "涛", "明", "超",
+      "亮", "志", "鹏", "飞", "华", "波", "斌", "勇", "浩", "宇",
+      "晨", "阳", "霖", "峰", "凯", "文", "博", "鑫", "旭", "辉",
+      "健", "海", "龙", "瑞", "强", "刚", "平", "福", "国", "安",
+      "锋", "亮", "威", "胜", "雄", "志", "毅", "俊", "豪", "诚",
+      "林", "建", "成", "东", "升", "洪", "昌", "盛", "武", "胜",
+      "振", "邦", "承", "继", "思", "德", "立", "功", "业", "耀",
+      "松", "柏", "宁", "远", "行", "知", "信", "达", "永", "恒",
+      "正", "义", "仁", "礼", "智", "清", "廉", "祥", "泰", "康",
+      "延", "庆", "秉", "传", "修", "齐", "治", "平", "兴", "旺"
+    ],
+    "female": [
+      "芳", "娜", "秀", "敏", "静", "丽", "艳", "霞", "红", "玉",
+      "华", "兰", "梅", "英", "玲", "凤", "珍", "琴", "琳", "雅",
+      "欣", "倩", "颖", "佳", "妍", "怡", "婷", "梦", "雪", "瑶",
+      "琪", "瑾", "璐", "怡", "悦", "雯", "萱", "诗", "雅", "洁",
+      "萍", "霞", "云", "翠", "莲", "菊", "梅", "兰", "竹", "菊",
+      "莉", "燕", "燕", "凤", "蝶", "莺", "鹂", "燕", "蕾", "蓉",
+      "薇", "蕾", "蕊", "荷", "桂", "杏", "桃", "樱", "菲", "婉",
+      "妹", "娥", "娟", "婵", "妙", "妤", "姿", "仪", "婵", "媛",
+      "丹", "青", "紫", "碧", "若", "如", "慧", "淑", "贞", "端",
+      "绮", "筱", "筠", "缇", "绘", "织", "纶", "绣", "锦", "绮"
+    ]
+  },
+  "western_name": {
+    "male": [
+      "James", "John", "Robert", "Michael", "William", "David", "Richard", "Charles", "Joseph", "Thomas",
+      "Christopher", "Daniel", "Paul", "Mark", "Steven", "Andrew", "Kenneth", "Joshua", "Kevin", "Brian",
+      "George", "Edward", "Ronald", "Timothy", "Jason", "Jeffrey", "Ryan", "Jacob", "Gary", "Nicholas",
+      "Eric", "Jonathan", "Stephen", "Larry", "Justin", "Scott", "Brandon", "Benjamin", "Samuel", "Raymond",
+      "Gregory", "Frank", "Alexander", "Patrick", "Jack", "Dennis", "Jerry", "Tyler", "Aaron", "Jose",
+      "Adam", "Henry", "Douglas", "Zachary", "Peter", "Kyle", "Noah", "Ethan", "Logan", "Mason",
+      "Lucas", "Oliver", "Elijah", "Aiden", "Jameson", "Carter", "Wyatt", "Luke", "Owen", "Gabriel",
+      "Nathan", "Dylan", "Isaac", "Sebastian", "Julian", "Levi", "Anthony", "Caleb", "Isaiah", "Hunter"
+    ],
+    "female": [
+      "Mary", "Patricia", "Jennifer", "Linda", "Elizabeth", "Barbara", "Susan", "Jessica", "Sarah", "Karen",
+      "Lisa", "Nancy", "Betty", "Margaret", "Sandra", "Ashley", "Kimberly", "Emily", "Donna", "Michelle",
+      "Carol", "Amanda", "Dorothy", "Melissa", "Deborah", "Stephanie", "Rebecca", "Sharon", "Laura", "Cynthia",
+      "Kathleen", "Amy", "Angela", "Shirley", "Anna", "Brenda", "Pamela", "Emma", "Nicole", "Helen",
+      "Samantha", "Katherine", "Christine", "Debra", "Rachel", "Carolyn", "Janet", "Catherine", "Maria", "Heather",
+      "Olivia", "Isabella", "Sophia", "Mia", "Charlotte", "Amelia", "Harper", "Evelyn", "Abigail", "Ella",
+      "Avery", "Scarlett", "Grace", "Chloe", "Lily", "Addison", "Aubrey", "Lillian", "Natalie", "Zoey",
+      "Hannah", "Layla", "Stella", "Victoria", "Penelope", "Riley", "Aria", "Eleanor", "Savannah", "Claire"
+    ]
+  },
+  "chinese_place": [
+    "京城", "洛阳", "长安", "苏州", "扬州", "杭州", "金陵", "成都", "长安", "济南",
+    "太原", "洛阳", "开封", "襄阳", "荆州", "江陵", "南昌", "长沙", "福州", "广州",
+    "桂林", "昆明", "大理", "西藏", "敦煌", "西安", "兰州", "银川", "西宁", "拉萨",
+    "天津", "上海", "重庆", "沈阳", "长春", "哈尔滨", "大连", "青岛", "厦门", "深圳",
+    "东海", "南海", "西海", "北海", "天山", "昆仑", "华山", "嵩山", "泰山", "衡山",
+    "恒山", "衡山", "黄山", "庐山", "峨眉", "武当", "少林", "终南", "蓬莱", "方丈",
+    "郑州", "石家庄", "合肥", "南宁", "海口", "贵阳", "呼和浩特", "乌鲁木齐", "兰州", "西宁",
+    "银川", "海口", "三亚", "丽江", "平遥", "凤凰", "婺源", "景德镇", "曲阜", "岳阳",
+    "绍兴", "荆州", "襄阳", "汉中", "咸阳", "洛阳", "安阳", "徐州", "扬州", "开封",
+    "雁荡", "武夷", "龙虎", "青城", "齐云", "崂山", "九华", "普陀", "五台", "峨眉"
+  ],
+  "western_place": [
+    "London", "Paris", "Rome", "Madrid", "Berlin", "Vienna", "Amsterdam", "Prague", "Barcelona", "Munich",
+    "Florence", "Venice", "Milan", "Geneva", "Zurich", "Brussels", "Stockholm", "Copenhagen", "Oslo", "Helsinki",
+    "Athens", "Istanbul", "Moscow", "Warsaw", "Budapest", "Vienna", "Dublin", "Edinburgh", "Manchester", "Liverpool",
+    "Boston", "Chicago", "San Francisco", "Los Angeles", "Seattle", "Miami", "Denver", "Phoenix", "Portland", "Atlanta",
+    "New York", "Washington", "Philadelphia", "Baltimore", "Detroit", "Cleveland", "Minneapolis", "Austin", "Dallas", "Houston",
+    "Sydney", "Melbourne", "Brisbane", "Perth", "Auckland", "Wellington", "Toronto", "Vancouver", "Montreal", "Calgary",
+    "Osaka", "Tokyo", "Seoul", "Shanghai", "Beijing", "Hong Kong", "Singapore", "Bangkok", "Dubai", "Abu Dhabi",
+    "Cape Town", "Nairobi", "Casablanca", "Cairo", "Reykjavik", "Havana", "Lima", "Bogota", "Santiago", "Buenos Aires",
+    "Lisbon", "Porto", "Seville", "Valencia", "Granada", "Bruges", "Ghent", "Antwerp", "Rotterdam", "The Hague",
+    "Lyon", "Marseille", "Nice", "Strasbourg", "Bordeaux", "Frankfurt", "Hamburg", "Cologne", "Düsseldorf", "Stuttgart"
+  ]
+}

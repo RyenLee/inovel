@@ -1,0 +1,40 @@
+[package]
+name = "inovel"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "inovel_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.11.0", features = ["protocol-asset"] }
+tauri-plugin-opener = { version = "2.0.0-rc.8" }
+tauri-plugin-dialog = { version = "2.0.0-rc.8" }
+tauri-plugin-updater = "2"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+rusqlite = { version = "0.39.0", features = ["bundled"] }
+chrono = { version = "0.4.44", features = ["serde"] }
+dirs = "6.0.0"
+lazy_static = "1.4.0"
+rand = "0.8.5"
+git2 = "0.19"
+aho-corasick = "1.1"
+epub-builder = "0.8"
+zip = "2.2"
+walkdir = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
+regex-lite = "0.1"
