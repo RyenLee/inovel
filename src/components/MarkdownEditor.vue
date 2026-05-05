@@ -9,6 +9,7 @@ import { NButton, NIcon, NSpace, NTooltip, NDropdown, DropdownOption, NModal, NC
 // Editor container ref for dynamic height calculation
 const editorRootRef = ref<HTMLElement | null>(null);
 let resizeObserver: ResizeObserver | null = null;
+let windowResizeHandler: (() => void) | null = null;
 import { createSmartSymbolsExtension } from "./SmartSymbolsExtension";
 import {
   Bold,
@@ -33,6 +34,7 @@ import {
   Wand2,
   Settings,
   Eye,
+  X,
 } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -86,13 +88,26 @@ const splitPreview = ref<{ original: string; split: string[] }[]>([]);  // 预�
 const smartSymbolsEnabled = ref(true);  // 智能符号开关
 const paragraphIndentEnabled = ref(false);  // 首行缩进状态
 
-// 模板下拉菜单选项
-const templateDropdownOptions = computed(() => [
-  { label: '替换内容', key: 'replace', icon: templateInsertMode.value === 'replace' ? () => h(NIcon, null, { component: Check }) : undefined },
-  { label: '插入内容', key: 'insert', icon: templateInsertMode.value === 'insert' ? () => h(NIcon, null, { component: Check }) : undefined },
-  { type: 'divider', key: 'd1' },
-  { label: '打开模板库', key: 'open' },
-]);
+// 信纸背景效果类型
+type PaperStyle = 'none' | 'lined' | 'lined-margin' | 'grid' | 'dots';
+const paperStyle = ref<PaperStyle>('none');  // 当前信纸效果
+const lineHeight = ref(28);  // 行高（与横线间距一致）
+const showLineHeightControl = ref(false);  // 显示行高控制面板
+
+// 行高预设选项
+const lineHeightPresets = [
+  { label: '紧凑', value: 22 },
+  { label: '标准', value: 28 },
+  { label: '宽松', value: 34 },
+  { label: '超大', value: 42 },
+];
+
+// 切换信纸效果
+const togglePaperStyle = () => {
+  const styles: PaperStyle[] = ['none', 'lined', 'lined-margin', 'grid', 'dots'];
+  const currentIndex = styles.indexOf(paperStyle.value);
+  paperStyle.value = styles[(currentIndex + 1) % styles.length];
+};
 
 // 美化菜单选项
 const beautifyDropdownOptions = computed(() => [
@@ -100,12 +115,19 @@ const beautifyDropdownOptions = computed(() => [
     label: `首行缩进 ${paragraphIndentEnabled.value ? '✓' : ''}`,
     key: 'indent'
   },
-  {
-    label: `符号自动补全 ${smartSymbolsEnabled.value ? '✓' : ''}`,
-    key: 'symbols'
-  },
   { type: 'divider', key: 'd1' },
-  { label: '段落拆分...', key: 'split' },
+  {
+    label: `信纸效果 ${paperStyle.value !== 'none' ? '✓' : ''}`,
+    key: 'paper'
+  },
+  {
+    label: '行间距设置...',
+    key: 'lineHeight'
+  },
+  {
+    label: '段落拆分...',
+    key: 'split'
+  },
 ]);
 
 // 处理美化菜单选择
@@ -116,6 +138,12 @@ const handleBeautifyDropdown = (key: string) => {
       break;
     case 'symbols':
       smartSymbolsEnabled.value = !smartSymbolsEnabled.value;
+      break;
+    case 'paper':
+      togglePaperStyle();
+      break;
+    case 'lineHeight':
+      showLineHeightControl.value = !showLineHeightControl.value;
       break;
     case 'split':
       openSplitDialog();
@@ -319,6 +347,7 @@ const editor = useEditor({
 });
 
 // Dynamic height calculation for editor
+let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
 const updateEditorHeight = () => {
   if (!editorRootRef.value || !editor.value) return;
 
@@ -365,6 +394,15 @@ onMounted(() => {
     // Initial height calculation
     nextTick(() => updateEditorHeight());
   }
+
+  // 添加窗口 resize 事件监听，确保编辑器响应窗口大小变化
+  windowResizeHandler = () => {
+    if (resizeTimeout) clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      nextTick(() => updateEditorHeight());
+    }, 16); // 约 60fps 节流
+  };
+  window.addEventListener('resize', windowResizeHandler);
 
   if (editor.value) {
     editor.value.on("selectionUpdate", () => {
@@ -1048,17 +1086,6 @@ const toggleTemplateMode = () => {
   templateInsertMode.value = templateInsertMode.value === 'replace' ? 'insert' : 'replace';
 };
 
-// 处理模板下拉菜单选择
-const handleTemplateDropdown = (key: string) => {
-  if (key === 'replace') {
-    templateInsertMode.value = 'replace';
-  } else if (key === 'insert') {
-    templateInsertMode.value = 'insert';
-  } else if (key === 'open') {
-    showTemplateSelector.value = true;
-  }
-};
-
 // 图片占位符处理
 const handleEditorClick = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
@@ -1134,6 +1161,14 @@ onUnmounted(() => {
   if (scanTimer.value) {
     clearTimeout(scanTimer.value);
   }
+  if (resizeTimeout) {
+    clearTimeout(resizeTimeout);
+  }
+  // 移除窗口 resize 事件监听
+  if (windowResizeHandler) {
+    window.removeEventListener('resize', windowResizeHandler);
+    windowResizeHandler = null;
+  }
   // 清理 ResizeObserver
   if (resizeObserver) {
     resizeObserver.disconnect();
@@ -1147,7 +1182,7 @@ onUnmounted(() => {
   <div ref="editorRootRef" class="flex flex-col h-full rounded-lg border transition-colors duration-300 overflow-hidden"
     :class="editor ? (isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200') : ''">
     <!-- Toolbar -->
-    <div v-if="editor" class="flex items-center gap-1 px-3 py-2 border-b flex-wrap"
+    <div v-if="editor" class="relative flex items-center gap-1 px-3 py-2 border-b flex-wrap"
       :class="isDark ? 'border-gray-700' : 'border-gray-200'">
       <NSpace :size="4">
         <NTooltip trigger="hover">
@@ -1310,15 +1345,18 @@ onUnmounted(() => {
 
         <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
 
-        <NDropdown trigger="hover" :options="templateDropdownOptions" @select="handleTemplateDropdown">
-          <NButton size="small" tertiary>
-            <template #icon>
-              <NIcon>
-                <FileText />
-              </NIcon>
-            </template>
-          </NButton>
-        </NDropdown>
+        <NTooltip trigger="hover">
+          <template #trigger>
+            <NButton size="small" tertiary @click="showTemplateSelector = true">
+              <template #icon>
+                <NIcon>
+                  <FileText />
+                </NIcon>
+              </template>
+            </NButton>
+          </template>
+          打开模板库
+        </NTooltip>
         <NTooltip trigger="hover">
           <template #trigger>
             <div class="flex items-center">
@@ -1344,12 +1382,52 @@ onUnmounted(() => {
             </template>
           </NButton>
         </NDropdown>
+
+        <!-- 行间距控制面板 -->
+        <div v-if="showLineHeightControl"
+          class="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 min-w-[240px]">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">行间距</span>
+            <button @click="showLineHeightControl = false"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+
+          <!-- 预设按钮 -->
+          <div class="flex gap-1 mb-3">
+            <button v-for="preset in lineHeightPresets" :key="preset.value" @click="lineHeight = preset.value"
+              class="flex-1 px-2 py-1.5 text-xs rounded transition-colors"
+              :class="lineHeight === preset.value
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'">
+              {{ preset.label }}
+            </button>
+          </div>
+
+          <!-- 滑块控制 -->
+          <div class="space-y-2">
+            <NSlider v-model:value="lineHeight" :min="18" :max="50" :step="1" :tooltip="false" />
+            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+              <span>紧凑</span>
+              <span class="font-medium text-blue-500">{{ lineHeight }}px</span>
+              <span>宽松</span>
+            </div>
+          </div>
+
+          <!-- 快速设置提示 -->
+          <div v-if="paperStyle !== 'none'" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              当前行高 {{ lineHeight }}px 与信纸背景完美对齐
+            </p>
+          </div>
+        </div>
       </NSpace>
     </div>
 
     <!-- Editor Content -->
     <div ref="editorContainerRef" class="flex-1 min-h-0">
-      <EditorContent :editor="editor" class="h-full min-h-0" />
+      <EditorContent :editor="editor" class="h-full min-h-0" :class="`paper-${paperStyle}`" />
     </div>
 
     <!-- Status Bar -->
@@ -1438,17 +1516,35 @@ onUnmounted(() => {
 .tiptap {
   min-height: 100%;
   max-height: 100%;
+  height: 100%;
   overflow-y: auto;
   scroll-behavior: smooth;
   box-sizing: border-box;
+  transition: height 0.1s ease-out;
 }
 
 /* ProseMirror 内部滚动容器 */
 .tiptap .ProseMirror {
   min-height: calc(100% - 16px);
+  height: 100%;
   padding: 8px;
   outline: none;
   box-sizing: border-box;
+}
+
+/* EditorContent 包装器样式，确保响应式高度 */
+.editor-content-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 确保编辑器根容器正确响应窗口大小变化 */
+[data-v-editor-content] {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  transition: height 0.1s ease-out;
 }
 
 .tiptap p.is-editor-empty:first-child::before {
@@ -1720,5 +1816,200 @@ onUnmounted(() => {
   text-decoration-color: #ef4444;
   text-decoration-style: wavy;
   text-underline-offset: 3px;
+}
+
+/* =====================
+   信纸背景效果样式
+   ===================== */
+
+/* 基础行高设置（与横线间距一致）- 强制覆盖所有子元素 */
+.paper-lined,
+.paper-lined-margin,
+.paper-grid,
+.paper-dots {
+  line-height: v-bind(lineHeight + 'px') !important;
+}
+
+.paper-lined .tiptap,
+.paper-lined-margin .tiptap,
+.paper-grid .tiptap,
+.paper-dots .tiptap {
+  line-height: v-bind(lineHeight + 'px') !important;
+}
+
+/* 横线效果 - 浅灰色横线 */
+.paper-lined .ProseMirror {
+  background-image: repeating-linear-gradient(transparent,
+      transparent calc(v-bind(lineHeight) * 1px - 1px),
+      #e5e7eb calc(v-bind(lineHeight) * 1px - 1px),
+      #e5e7eb calc(v-bind(lineHeight) * 1px));
+  /* 背景从 8px + 16px = 24px 开始，与第一行文字顶部对齐 */
+  background-position: 0 calc(v-bind(lineHeight) * 1px - 9px);
+  background-attachment: local;
+}
+
+/* 横线 + 红色边距线效果 */
+.paper-lined-margin .ProseMirror {
+  background-image:
+    /* 横线 */
+    repeating-linear-gradient(transparent,
+      transparent calc(v-bind(lineHeight) * 1px - 9px),
+      #e5e7eb calc(v-bind(lineHeight) * 1px - 9px),
+      #e5e7eb calc(v-bind(lineHeight) * 1px));
+  /* 背景从 8px + 16px 开始，与第一行文字顶部对齐 */
+  background-position: 0 calc(v-bind(lineHeight) * 1px - 9px);
+  background-attachment: local;
+}
+
+/* 横线 + 边距线的竖线层（单独处理避免覆盖） */
+.paper-lined-margin .tiptap::before {
+  content: '';
+  position: absolute;
+  left: 40px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, #fca5a5 0%, #fca5a5 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.paper-lined-margin {
+  position: relative;
+  padding-left: 50px !important;
+}
+
+/* 网格效果 - 横线和竖线 */
+.paper-grid .ProseMirror {
+  background-image:
+    /* 横线 */
+    repeating-linear-gradient(transparent,
+      transparent calc(v-bind(lineHeight) * 1px - 9px),
+      #d1d5db calc(v-bind(lineHeight) * 1px - 9px),
+      #d1d5db calc(v-bind(lineHeight) * 1px)),
+    /* 竖线 */
+    repeating-linear-gradient(to right,
+      #f3f4f6 1px,
+      transparent 1px);
+  /* 横线从 8px + 16px 开始，与第一行文字顶部对齐 */
+  background-position: 0 calc(v-bind(lineHeight) * 1px - 9px), 0 0;
+  background-size: 100% v-bind(lineHeight)px, 24px 100%;
+  background-attachment: local, local;
+}
+
+/* 点阵效果 */
+.paper-dots .ProseMirror {
+  background-image: radial-gradient(circle,
+      #d1d5db 1px,
+      transparent 1px);
+  /* 点阵从 8px + 16px 开始，与第一行文字顶部对齐 */
+  background-size: 24px v-bind(lineHeight)px;
+  background-position: 0 calc(v-bind(lineHeight) * 1px - 9px);
+  background-attachment: local;
+}
+
+/* 深色模式下的横线效果 */
+.dark .paper-lined .ProseMirror {
+  background-image: repeating-linear-gradient(transparent,
+      transparent calc(v-bind(lineHeight) * 1px - 9px),
+      #374151 calc(v-bind(lineHeight) * 1px - 9px),
+      #374151 calc(v-bind(lineHeight) * 1px));
+}
+
+/* 深色模式下的横线 + 边距线效果 */
+.dark .paper-lined-margin .ProseMirror {
+  background-image:
+    repeating-linear-gradient(transparent,
+      transparent calc(v-bind(lineHeight) * 1px - 9px),
+      #374151 calc(v-bind(lineHeight) * 1px - 9px),
+      #374151 calc(v-bind(lineHeight) * 1px));
+}
+
+.dark .paper-lined-margin .tiptap::before {
+  background: linear-gradient(to bottom, #7f1d1d 0%, #7f1d1d 100%);
+}
+
+/* 深色模式下的网格效果 */
+.dark .paper-grid .ProseMirror {
+  background-image:
+    repeating-linear-gradient(transparent,
+      transparent calc(v-bind(lineHeight) * 1px - 9px),
+      #374151 calc(v-bind(lineHeight) * 1px - 9px),
+      #374151 calc(v-bind(lineHeight) * 1px)),
+    repeating-linear-gradient(to right,
+      #374151 1px,
+      transparent 1px);
+}
+
+/* 深色模式下的点阵效果 */
+.dark .paper-dots .ProseMirror {
+  background-image: radial-gradient(circle,
+      #4b5563 1px,
+      transparent 1px);
+}
+
+/* 强制覆盖段落样式，确保与横线对齐 */
+.paper-lined .tiptap p,
+.paper-lined-margin .tiptap p,
+.paper-grid .tiptap p,
+.paper-dots .tiptap p {
+  line-height: v-bind(lineHeight + 'px') !important;
+  margin-bottom: v-bind(lineHeight + 'px') !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* 列表项也需要对齐 */
+.paper-lined .tiptap li,
+.paper-lined-margin .tiptap li,
+.paper-grid .tiptap li,
+.paper-dots .tiptap li {
+  line-height: v-bind(lineHeight + 'px') !important;
+}
+
+/* 标题特殊处理 - 使用信纸行高作为基准 */
+.paper-lined .tiptap h1,
+.paper-lined-margin .tiptap h1,
+.paper-grid .tiptap h1,
+.paper-dots .tiptap h1 {
+  line-height: v-bind(lineHeight + 'px') !important;
+  margin-top: v-bind(lineHeight + 'px') !important;
+  margin-bottom: calc(v-bind(lineHeight) * 0.5px) !important;
+}
+
+.paper-lined .tiptap h2,
+.paper-lined-margin .tiptap h2,
+.paper-grid .tiptap h2,
+.paper-dots .tiptap h2 {
+  line-height: v-bind(lineHeight + 'px') !important;
+  margin-top: v-bind(lineHeight + 'px') !important;
+  margin-bottom: calc(v-bind(lineHeight) * 0.5px) !important;
+}
+
+.paper-lined .tiptap h3,
+.paper-lined-margin .tiptap h3,
+.paper-grid .tiptap h3,
+.paper-dots .tiptap h3 {
+  line-height: v-bind(lineHeight + 'px') !important;
+  margin-top: calc(v-bind(lineHeight) * 0.5px) !important;
+  margin-bottom: calc(v-bind(lineHeight) * 0.5px) !important;
+}
+
+/* 引用块样式 */
+.paper-lined .tiptap blockquote,
+.paper-lined-margin .tiptap blockquote,
+.paper-grid .tiptap blockquote,
+.paper-dots .tiptap blockquote {
+  margin-top: v-bind(lineHeight + 'px') !important;
+  margin-bottom: v-bind(lineHeight + 'px') !important;
+}
+
+/* 分隔线样式 */
+.paper-lined .tiptap hr,
+.paper-lined-margin .tiptap hr,
+.paper-grid .tiptap hr,
+.paper-dots .tiptap hr {
+  margin-top: v-bind(lineHeight + 'px') !important;
+  margin-bottom: v-bind(lineHeight + 'px') !important;
 }
 </style>
