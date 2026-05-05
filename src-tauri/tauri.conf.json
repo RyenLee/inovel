@@ -39,7 +39,8 @@
       "icons/icon.ico"
     ],
     "resources": [
-      "resources/names.json"
+      "resources/names.json",
+      "builtin_templates.json"
     ],
     "category": "Productivity",
     "shortDescription": "小说创作与管理工具",

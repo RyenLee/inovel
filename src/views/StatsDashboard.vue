@@ -11,7 +11,7 @@ import {
     NSpin,
     NIcon,
 } from "naive-ui";
-import { ArrowLeft, TrendingUp, Clock, Target, Calendar, BarChart3 } from "lucide-vue-next";
+import { ArrowLeft, TrendingUp, Clock, Target, Calendar, BarChart3, Timer, Coffee, Brain } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 
 interface WritingRecord {
@@ -20,9 +20,37 @@ interface WritingRecord {
     duration: number;
 }
 
+interface FocusSession {
+    id: number;
+    project_id: number;
+    session_type: string;
+    duration_minutes: number;
+    started_at: string;
+    completed: boolean;
+    created_at: string;
+}
+
+interface FocusStats {
+    total_sessions: number;
+    total_minutes: number;
+    completed_sessions: number;
+    work_sessions: number;
+    short_break_sessions: number;
+    long_break_sessions: number;
+}
+
 const router = useRouter();
 const isLoading = ref(true);
 const writingRecords = ref<WritingRecord[]>([]);
+const focusSessions = ref<FocusSession[]>([]);
+const focusStats = ref<FocusStats>({
+    total_sessions: 0,
+    total_minutes: 0,
+    completed_sessions: 0,
+    work_sessions: 0,
+    short_break_sessions: 0,
+    long_break_sessions: 0,
+});
 
 onMounted(async () => {
     await loadStats();
@@ -36,6 +64,23 @@ const loadStats = async () => {
             days: 30,
         });
         writingRecords.value = records;
+
+        // Load focus session stats
+        try {
+            const stats = await invoke<FocusStats>("get_focus_stats", {
+                projectId: 0,
+                days: 30,
+            });
+            focusStats.value = stats;
+
+            const sessions = await invoke<FocusSession[]>("get_focus_sessions", {
+                projectId: 0,
+                days: 30,
+            });
+            focusSessions.value = sessions;
+        } catch (e) {
+            console.error("Failed to load focus stats:", e);
+        }
     } catch (error) {
         console.error("Failed to load stats:", error);
     } finally {
@@ -130,6 +175,80 @@ const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return `${date.getMonth() + 1}/${date.getDate()}`;
 };
+
+// Focus session computed properties
+const totalFocusMinutes = computed(() => {
+    return focusStats.value.total_minutes;
+});
+
+const formatFocusTime = (minutes: number) => {
+    if (minutes < 60) {
+        return `${minutes}分钟`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`;
+};
+
+const focusHeatmapData = computed(() => {
+    const data: { date: string; value: number; level: number }[] = [];
+    const today = new Date();
+
+    for (let i = 83; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+
+        // Count focus sessions for this date
+        const daySessions = focusSessions.value.filter(s => s.started_at.startsWith(dateStr));
+        const totalMinutes = daySessions.reduce((sum, s) => sum + s.duration_minutes, 0);
+        const value = totalMinutes;
+
+        let level = 0;
+        const maxMinutes = Math.max(...focusSessions.value.reduce((acc: number[], s) => {
+            const day = s.started_at.split('T')[0];
+            const existing = acc.find((_, i) => {
+                const existingDate = new Date(today);
+                existingDate.setDate(existingDate.getDate() - (83 - i));
+                return existingDate.toISOString().split('T')[0] === day;
+            }, 0);
+            return acc;
+        }, []), 60);
+
+        if (value > 0) {
+            if (value <= 25) level = 1;
+            else if (value <= 50) level = 2;
+            else if (value <= 100) level = 3;
+            else level = 4;
+        }
+
+        data.push({ date: dateStr, value, level });
+    }
+
+    return data;
+});
+
+const recentFocusSessions = computed(() => {
+    return focusSessions.value.slice(0, 10);
+});
+
+const getSessionTypeLabel = (type: string) => {
+    switch (type) {
+        case 'work': return '专注';
+        case 'short_break': return '短休息';
+        case 'long_break': return '长休息';
+        default: return type;
+    }
+};
+
+const getSessionTypeColor = (type: string) => {
+    switch (type) {
+        case 'work': return '#ef4444';
+        case 'short_break': return '#22c55e';
+        case 'long_break': return '#3b82f6';
+        default: return '#6b7280';
+    }
+};
 </script>
 
 <template>
@@ -158,7 +277,7 @@ const formatDate = (dateStr: string) => {
                 <n-gi span="0:24 640:12 1024:6">
                     <n-card hoverable>
                         <div class="flex items-center gap-3 whitespace-nowrap">
-                            <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
+                            <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 shrink-0">
                                 <TrendingUp class="w-6 h-6 text-blue-600" />
                             </div>
                             <div class="overflow-hidden">
@@ -173,7 +292,7 @@ const formatDate = (dateStr: string) => {
                 <n-gi span="0:24 640:12 1024:6">
                     <n-card hoverable>
                         <div class="flex items-center gap-3 whitespace-nowrap">
-                            <div class="p-3 rounded-full bg-green-100 dark:bg-green-900/30 flex-shrink-0">
+                            <div class="p-3 rounded-full bg-green-100 dark:bg-green-900/30 shrink-0">
                                 <Target class="w-6 h-6 text-green-600" />
                             </div>
                             <div class="overflow-hidden">
@@ -188,7 +307,7 @@ const formatDate = (dateStr: string) => {
                 <n-gi span="0:24 640:12 1024:6">
                     <n-card hoverable>
                         <div class="flex items-center gap-3 whitespace-nowrap">
-                            <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30 flex-shrink-0">
+                            <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30 shrink-0">
                                 <Clock class="w-6 h-6 text-purple-600" />
                             </div>
                             <div class="overflow-hidden">
@@ -203,12 +322,42 @@ const formatDate = (dateStr: string) => {
                 <n-gi span="0:24 640:12 1024:6">
                     <n-card hoverable>
                         <div class="flex items-center gap-3 whitespace-nowrap">
-                            <div class="p-3 rounded-full bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
+                            <div class="p-3 rounded-full bg-orange-100 dark:bg-orange-900/30 shrink-0">
                                 <Calendar class="w-6 h-6 text-orange-600" />
                             </div>
                             <div class="overflow-hidden">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">写作天数</p>
                                 <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ totalDays }} 天</p>
+                            </div>
+                        </div>
+                    </n-card>
+                </n-gi>
+
+                <!-- Total Focus Minutes -->
+                <n-gi span="0:24 640:12 1024:6">
+                    <n-card hoverable>
+                        <div class="flex items-center gap-3 whitespace-nowrap">
+                            <div class="p-3 rounded-full bg-red-100 dark:bg-red-900/30 shrink-0">
+                                <Timer class="w-6 h-6 text-red-600" />
+                            </div>
+                            <div class="overflow-hidden">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">专注时长</p>
+                                <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ formatFocusTime(totalFocusMinutes) }}</p>
+                            </div>
+                        </div>
+                    </n-card>
+                </n-gi>
+
+                <!-- Completed Pomodoros -->
+                <n-gi span="0:24 640:12 1024:6">
+                    <n-card hoverable>
+                        <div class="flex items-center gap-3 whitespace-nowrap">
+                            <div class="p-3 rounded-full bg-pink-100 dark:bg-pink-900/30 shrink-0">
+                                <Brain class="w-6 h-6 text-pink-600" />
+                            </div>
+                            <div class="overflow-hidden">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">完成番茄</p>
+                                <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ focusStats.completed_sessions }}</p>
                             </div>
                         </div>
                     </n-card>
@@ -347,6 +496,82 @@ const formatDate = (dateStr: string) => {
                                 <span class="text-sm text-gray-400">
                                     {{ record.duration }} 分钟
                                 </span>
+                            </div>
+                        </div>
+                    </n-card>
+                </n-gi>
+
+                <!-- Focus Session Heatmap -->
+                <n-gi span="0:24 640:24 1024:24">
+                    <n-card title="专注热力图" hoverable>
+                        <div v-if="focusSessions.length === 0" class="py-8 text-center text-gray-400">
+                            暂无专注记录，使用番茄钟开始计时
+                        </div>
+                        <div v-else class="overflow-x-auto">
+                            <div class="flex gap-1 mb-2">
+                                <div class="text-xs text-gray-400 w-12">周一</div>
+                                <div class="text-xs text-gray-400 w-12">周二</div>
+                                <div class="text-xs text-gray-400 w-12">周三</div>
+                                <div class="text-xs text-gray-400 w-12">周四</div>
+                                <div class="text-xs text-gray-400 w-12">周五</div>
+                                <div class="text-xs text-gray-400 w-12">周六</div>
+                                <div class="text-xs text-gray-400 w-12">周日</div>
+                            </div>
+                            <div class="grid grid-rows-12 grid-flow-col gap-1">
+                                <div
+                                    v-for="(day, index) in focusHeatmapData"
+                                    :key="index"
+                                    class="w-3 h-3 rounded-sm transition-colors"
+                                    :class="{
+                                        'bg-gray-100 dark:bg-gray-700': day.level === 0,
+                                        'bg-red-200 dark:bg-red-900': day.level === 1,
+                                        'bg-red-400 dark:bg-red-700': day.level === 2,
+                                        'bg-red-500 dark:bg-red-600': day.level === 3,
+                                        'bg-red-600 dark:bg-red-500': day.level === 4,
+                                    }"
+                                    :title="`${day.date}: ${day.value} 分钟`"
+                                />
+                            </div>
+                            <div class="flex items-center gap-2 mt-4 text-xs text-gray-500">
+                                <span>少</span>
+                                <div class="flex gap-1">
+                                    <div class="w-3 h-3 rounded-sm bg-gray-100 dark:bg-gray-700" />
+                                    <div class="w-3 h-3 rounded-sm bg-red-200 dark:bg-red-900" />
+                                    <div class="w-3 h-3 rounded-sm bg-red-400 dark:bg-red-700" />
+                                    <div class="w-3 h-3 rounded-sm bg-red-500 dark:bg-red-600" />
+                                    <div class="w-3 h-3 rounded-sm bg-red-600 dark:bg-red-500" />
+                                </div>
+                                <span>多</span>
+                            </div>
+                        </div>
+                    </n-card>
+                </n-gi>
+
+                <!-- Recent Focus Sessions -->
+                <n-gi span="0:24 640:24 1024:24">
+                    <n-card title="最近专注记录" hoverable>
+                        <div v-if="recentFocusSessions.length === 0" class="py-8 text-center text-gray-400">
+                            暂无专注记录，使用番茄钟开始计时
+                        </div>
+                        <div v-else>
+                            <div
+                                v-for="session in recentFocusSessions"
+                                :key="session.id"
+                                class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                            >
+                                <span class="text-sm text-gray-600 dark:text-gray-400">
+                                    {{ formatDate(session.started_at) }}
+                                </span>
+                                <span
+                                    class="px-2 py-0.5 rounded text-xs font-medium"
+                                    :style="{ backgroundColor: getSessionTypeColor(session.session_type) + '20', color: getSessionTypeColor(session.session_type) }"
+                                >
+                                    {{ getSessionTypeLabel(session.session_type) }}
+                                </span>
+                                <span class="font-medium text-gray-900 dark:text-white">
+                                    {{ session.duration_minutes }} 分钟
+                                </span>
+                                <span v-if="session.completed" class="text-xs text-green-500">✓</span>
                             </div>
                         </div>
                     </n-card>

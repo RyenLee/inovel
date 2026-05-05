@@ -1,9 +1,55 @@
 use crate::db::{get_db_path, init_db};
-use crate::models::{Chapter, Volume, VolumeWithChapters};
+use crate::models::{Chapter, ChapterStatusCount, Volume, VolumeWithChapters};
 use rusqlite::Connection;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::AppHandle;
+use base64::{engine::general_purpose, Engine as _};
+
+/// 保存图片到项目 media 目录
+#[tauri::command]
+pub async fn save_image(
+    app_handle: AppHandle,
+    project_id: i64,
+    file_name: String,
+    file_data: String, // base64 编码的文件数据
+) -> Result<String, String> {
+    // 解码 base64 数据
+    let data = general_purpose::STANDARD.decode(&file_data)
+        .map_err(|e| format!("解码文件数据失败: {}", e))?;
+
+    // 获取项目路径
+    let db_path = get_db_path(&app_handle);
+    let conn = Connection::open(&db_path)
+        .map_err(|e| format!("数据库连接失败: {}", e))?;
+    let (storage_path, project_name): (String, String) = conn
+        .query_row("SELECT path, name FROM projects WHERE id = ?1", [project_id], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })
+        .map_err(|e| format!("项目不存在: {}", e))?;
+
+    // 创建 media 目录
+    let media_dir = Path::new(&storage_path)
+        .join(&project_name)
+        .join("media");
+    fs::create_dir_all(&media_dir)
+        .map_err(|e| format!("创建 media 目录失败: {}", e))?;
+
+    // 生成唯一的文件名
+    let timestamp = chrono::Utc::now().timestamp();
+    let extension = file_name.split('.').last().unwrap_or("png");
+    let random_num: u32 = rand::random();
+    let new_file_name = format!("{}_{}.{}", timestamp, random_num, extension);
+    let new_path = media_dir.join(&new_file_name);
+
+    // 写入文件
+    fs::write(&new_path, data)
+        .map_err(|e| format!("写入文件失败: {}", e))?;
+
+    // 返回相对路径
+    let relative_path = format!("media/{}", new_file_name);
+    Ok(relative_path)
+}
 
 #[tauri::command]
 pub async fn create_volume(
@@ -25,7 +71,11 @@ pub async fn create_volume(
 
 #[tauri::command]
 pub async fn create_chapter(
-    app_handle: AppHandle, project_id: i64, volume_id: i64, title: String,
+    app_handle: AppHandle, 
+    project_id: i64, 
+    volume_id: i64, 
+    title: String,
+    initial_content: Option<String>,
 ) -> Result<Chapter, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -41,22 +91,25 @@ pub async fn create_chapter(
         .map_err(|e| format!("项目不存在: {}", e))?;
 
     conn.execute(
-        "INSERT INTO chapters (volume_id, title, file_path, sort_order, summary, word_count_cache, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-        (&volume_id, &title, "", sort_order, "", 0, &now, &now),
+        "INSERT INTO chapters (volume_id, title, file_path, sort_order, summary, word_count_cache, status, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        (&volume_id, &title, "", sort_order, "", 0, "draft", &now, &now),
     ).map_err(|e| format!("创建章节失败: {}", e))?;
     let id = conn.last_insert_rowid();
 
     let actual_file_path = Path::new(&storage_path).join(&project_name)
         .join("chapters").join(format!("v{}_c{}.md", volume_id, id));
     fs::create_dir_all(actual_file_path.parent().unwrap()).map_err(|e| format!("创建目录失败: {}", e))?;
-    fs::write(&actual_file_path, "").ok();
+    
+    // 如果有初始内容，写入文件；否则写入空字符串
+    let content = initial_content.unwrap_or_default();
+    fs::write(&actual_file_path, content).map_err(|e| format!("写入章节文件失败: {}", e))?;
 
     conn.execute("UPDATE chapters SET file_path = ?1 WHERE id = ?2",
         (actual_file_path.to_string_lossy().to_string(), id)).map_err(|e| format!("更新文件路径失败: {}", e))?;
 
     Ok(Chapter {
         id, volume_id, title, file_path: actual_file_path.to_string_lossy().to_string(),
-        sort_order, summary: String::new(), word_count_cache: 0, created_at: now.clone(), updated_at: now,
+        sort_order, summary: String::new(), word_count_cache: 0, status: "draft".to_string(), created_at: now.clone(), updated_at: now,
     })
 }
 
@@ -177,13 +230,13 @@ pub async fn get_chapter_tree(app_handle: AppHandle, project_id: i64) -> Result<
 
     let mut result = Vec::new();
     for v in volumes {
-        let mut cs = conn.prepare("SELECT id, volume_id, title, file_path, sort_order, summary, word_count_cache, created_at, updated_at FROM chapters WHERE volume_id = ?1 ORDER BY sort_order")
+        let mut cs = conn.prepare("SELECT id, volume_id, title, file_path, sort_order, summary, word_count_cache, status, created_at, updated_at FROM chapters WHERE volume_id = ?1 ORDER BY sort_order")
             .map_err(|e| format!("查询失败: {}", e))?;
         let chapters: Vec<Chapter> = cs.query_map([v.id], |row| {
             Ok(Chapter {
                 id: row.get(0)?, volume_id: row.get(1)?, title: row.get(2)?,
                 file_path: row.get(3)?, sort_order: row.get(4)?, summary: row.get(5)?,
-                word_count_cache: row.get(6)?, created_at: row.get(7)?, updated_at: row.get(8)?,
+                word_count_cache: row.get(6)?, status: row.get(7)?, created_at: row.get(8)?, updated_at: row.get(9)?,
             })
         }).map_err(|e| format!("查询失败: {}", e))?.filter_map(|r| r.ok()).collect();
         result.push(VolumeWithChapters { id: v.id, project_id: v.project_id, name: v.name, sort_order: v.sort_order, chapters });
@@ -192,27 +245,101 @@ pub async fn get_chapter_tree(app_handle: AppHandle, project_id: i64) -> Result<
 }
 
 #[tauri::command]
-pub async fn get_chapter_content(app_handle: AppHandle, project_id: String, chapter_id: String) -> Result<String, String> {
+pub async fn get_chapter_content(app_handle: AppHandle, _project_id: String, chapter_id: serde_json::Value) -> Result<String, String> {
+    // 支持字符串或数字类型的 chapter_id
+    let chapter_id: i64 = match chapter_id {
+        serde_json::Value::String(s) => s.parse().map_err(|_| "chapter_id 必须是有效的整数".to_string())?,
+        serde_json::Value::Number(n) => n.as_i64().ok_or("chapter_id 超出有效范围")?,
+        _ => return Err("chapter_id 必须是字符串或数字".to_string()),
+    };
+    
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
-    let (storage_path, project_name): (String, String) = conn
-        .query_row("SELECT path, name FROM projects WHERE id = ?1", [project_id], |row| Ok((row.get(0)?, row.get(1)?)))
-        .map_err(|e| format!("项目不存在: {}", e))?;
-    let full_path = Path::new(&storage_path).join(&project_name).join("chapters").join(format!("{}.md", chapter_id));
-    if !full_path.exists() { return Ok(String::new()); }
-    fs::read_to_string(&full_path).map_err(|e| format!("读取章节失败: {}", e))
+    
+    // 从数据库获取章节的文件路径
+    let file_path: Option<String> = conn
+        .query_row("SELECT file_path FROM chapters WHERE id = ?1", [chapter_id], |row| row.get(0))
+        .ok();
+    
+    if let Some(path) = file_path {
+        let full_path = PathBuf::from(&path);
+        if full_path.exists() {
+            return fs::read_to_string(&full_path).map_err(|e| format!("读取章节失败: {}", e));
+        }
+    }
+    
+    Ok(String::new())
 }
 
 #[tauri::command]
-pub async fn save_chapter_content(app_handle: AppHandle, project_id: String, chapter_id: String, content: String) -> Result<(), String> {
-    let db_path = get_db_path(&app_handle);
+pub async fn save_chapter_content(_app_handle: AppHandle, _project_id: String, chapter_id: serde_json::Value, content: String) -> Result<(), String> {
+    // 支持字符串或数字类型的 chapter_id
+    let chapter_id: i64 = match chapter_id {
+        serde_json::Value::String(s) => s.parse().map_err(|_| "chapter_id 必须是有效的整数".to_string())?,
+        serde_json::Value::Number(n) => n.as_i64().ok_or("chapter_id 超出有效范围")?,
+        _ => return Err("chapter_id 必须是字符串或数字".to_string()),
+    };
+    
+    let db_path = get_db_path(&_app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
-    let (storage_path, project_name): (String, String) = conn
-        .query_row("SELECT path, name FROM projects WHERE id = ?1", [project_id], |row| Ok((row.get(0)?, row.get(1)?)))
-        .map_err(|e| format!("项目不存在: {}", e))?;
-    let chapters_dir = Path::new(&storage_path).join(&project_name).join("chapters");
-    fs::create_dir_all(&chapters_dir).map_err(|e| format!("创建章节目录失败: {}", e))?;
-    let chapter_path = chapters_dir.join(format!("{}.md", chapter_id));
+    
+    // 从数据库获取章节的文件路径
+    let file_path: Option<String> = conn
+        .query_row("SELECT file_path FROM chapters WHERE id = ?1", [chapter_id], |row| row.get(0))
+        .ok();
+    
+    let chapter_path = if let Some(path) = file_path {
+        PathBuf::from(path)
+    } else {
+        return Err(format!("无法找到章节 {} 的文件路径", chapter_id));
+    };
+    
+    // 确保目录存在
+    if let Some(parent) = chapter_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("创建目录失败: {}", e))?;
+    }
+    
     fs::write(&chapter_path, content).map_err(|e| format!("保存章节失败: {}", e))?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn update_chapter_status(app_handle: AppHandle, chapter_id: i64, status: String) -> Result<(), String> {
+    // 验证 status 值
+    let valid_statuses = ["outline", "draft", "revised", "final", "abandoned"];
+    if !valid_statuses.contains(&status.as_str()) {
+        return Err(format!("无效的章节状态: {}，有效值为: {:?}", status, valid_statuses));
+    }
+
+    let db_path = get_db_path(&app_handle);
+    let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
+    let now = chrono::Utc::now().to_rfc3339();
+    conn.execute("UPDATE chapters SET status = ?1, updated_at = ?2 WHERE id = ?3", (&status, &now, chapter_id))
+        .map_err(|e| format!("更新章节状态失败: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_chapter_status_counts(app_handle: AppHandle, project_id: i64) -> Result<Vec<ChapterStatusCount>, String> {
+    let db_path = get_db_path(&app_handle);
+    let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
+    init_db(&conn).map_err(|e| format!("数据库初始化失败: {}", e))?;
+
+    // 查询各状态的章节数量
+    let mut stmt = conn.prepare(
+        "SELECT c.status, COUNT(*) as count
+         FROM chapters c
+         JOIN volumes v ON c.volume_id = v.id
+         WHERE v.project_id = ?1
+         GROUP BY c.status"
+    ).map_err(|e| format!("查询失败: {}", e))?;
+
+    let counts: Vec<ChapterStatusCount> = stmt.query_map([project_id], |row| {
+        Ok(ChapterStatusCount {
+            status: row.get(0)?,
+            count: row.get(1)?,
+        })
+    }).map_err(|e| format!("查询失败: {}", e))?.filter_map(|r| r.ok()).collect();
+
+    Ok(counts)
 }

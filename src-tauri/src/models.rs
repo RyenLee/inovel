@@ -30,6 +30,8 @@ pub struct ProjectMeta {
     pub is_valid: bool,
     #[serde(default)]
     pub cover_path: Option<String>,
+    #[serde(default)]
+    pub encrypted: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -64,8 +66,15 @@ pub struct Chapter {
     pub sort_order: i32,
     pub summary: String,
     pub word_count_cache: i32,
+    pub status: String,
     pub created_at: String,
     pub updated_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ChapterStatusCount {
+    pub status: String,
+    pub count: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -321,4 +330,136 @@ pub struct MigrateResult {
 pub struct RollbackParams {
     /// 要回滚的项目 DB ID 列表。为空则回滚全部。
     pub project_ids: Option<Vec<i64>>,
+}
+
+// ==================== 加密相关数据结构 ====================
+
+/// 加密进度（用于前端显示）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EncryptionProgress {
+    pub current: usize,
+    pub total: usize,
+    pub current_file: String,
+}
+
+/// 加密项目参数
+#[derive(Debug, Deserialize)]
+pub struct EncryptProjectParams {
+    pub project_path: String,
+    pub password: String,
+    pub confirm_password: String,
+}
+
+/// 解密项目参数
+#[derive(Debug, Deserialize)]
+pub struct DecryptProjectParams {
+    pub project_path: String,
+    pub password: String,
+}
+
+/// 修改密码参数
+#[derive(Debug, Deserialize)]
+pub struct ChangePasswordParams {
+    pub project_path: String,
+    pub old_password: String,
+    pub new_password: String,
+    pub confirm_password: String,
+}
+
+// ==================== 番茄钟相关数据结构 ====================
+
+/// 专注会话记录
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FocusSession {
+    pub id: i64,
+    pub project_id: i64,
+    pub session_type: String,
+    pub duration_minutes: i32,
+    pub started_at: String,
+    pub completed: bool,
+    pub created_at: String,
+}
+
+/// 专注统计数据
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FocusStats {
+    pub total_sessions: i32,
+    pub total_minutes: i32,
+    pub completed_sessions: i32,
+    pub work_sessions: i32,
+    pub short_break_sessions: i32,
+    pub long_break_sessions: i32,
+}
+
+// ==================== 灵感看板相关数据结构 ====================
+
+/// 灵感条目
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct InspirationItem {
+    pub id: i64,
+    pub project_id: i64,
+    pub column_name: String,
+    pub content: String,
+    pub sort_order: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// 创建灵感条目参数
+#[derive(Debug, Deserialize)]
+pub struct CreateInspirationItemParams {
+    pub project_id: i64,
+    pub column_name: String,
+    pub content: String,
+}
+
+/// 更新灵感条目参数
+#[derive(Debug, Deserialize)]
+pub struct UpdateInspirationItemParams {
+    pub content: String,
+}
+
+// ==================== 模板系统相关数据结构 ====================
+
+/// 内置模板结构体（从 builtin_templates.json 加载）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WritingTemplate {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub category: String,
+    pub content: String,
+    pub is_builtin: bool,
+}
+
+/// 用户自定义模板（存储在数据库中）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UserTemplate {
+    pub id: i64,
+    pub project_id: i64,
+    pub name: String,
+    pub description: String,
+    pub category: String,
+    pub content: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// 创建用户模板参数
+#[derive(Debug, Deserialize)]
+pub struct CreateUserTemplateParams {
+    pub project_id: i64,
+    pub name: String,
+    pub description: String,
+    pub category: String,
+    pub content: String,
+}
+
+/// 更新用户模板参数
+#[derive(Debug, Deserialize)]
+pub struct UpdateUserTemplateParams {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub category: Option<String>,
+    pub content: Option<String>,
 }

@@ -1,5 +1,6 @@
 use crate::db::{get_db_path, init_db, check_project_exists};
 use crate::git_snapshot::init_git_repo;
+use crate::encryption::is_project_encrypted;
 use crate::models::{
     CreateProjectParams, MigrateResult, MigrationDetail, ProjectMeta, RollbackParams,
     UpdateProjectParams,
@@ -106,7 +107,7 @@ pub async fn create_project(
         id, project_id: project_id.clone(), name: params.name, author: params.author,
         description: params.description, path: project_folder.to_string_lossy().to_string(),
         created_at: now.clone(), last_opened_at: Some(now), is_valid: true,
-        cover_path: None,
+        cover_path: None, encrypted: false,
     })
 }
 
@@ -130,7 +131,7 @@ pub async fn get_recent_projects(app_handle: AppHandle) -> Result<Vec<ProjectMet
                 description: row.get(4)?, path: path.clone(),
                 created_at: row.get(6)?, last_opened_at: row.get(7)?,
                 is_valid: check_project_exists(&path),
-                cover_path: None,
+                cover_path: None, encrypted: false,
             })
         })
         .map_err(|e| format!("查询执行失败: {}", e))?
@@ -158,7 +159,7 @@ pub async fn open_project(app_handle: AppHandle, id: i64) -> Result<ProjectMeta,
             description: row.get(4)?, path: path.clone(),
             created_at: row.get(6)?, last_opened_at: row.get(7)?,
             is_valid: check_project_exists(&path),
-            cover_path: None,
+            cover_path: None, encrypted: false,
         })
     }).map_err(|e| format!("项目不存在: {}", e))?;
 
@@ -181,7 +182,10 @@ pub async fn open_project(app_handle: AppHandle, id: i64) -> Result<ProjectMeta,
         None
     };
 
-    Ok(ProjectMeta { cover_path, ..project })
+    // 检查项目是否加密
+    let encrypted = is_project_encrypted(&PathBuf::from(&project.path));
+
+    Ok(ProjectMeta { cover_path, encrypted, ..project })
 }
 
 /// 从列表中移除项目（可选删除本地文件）
@@ -281,7 +285,7 @@ pub async fn update_project(
             description: row.get(4)?, path: path.clone(),
             created_at: row.get(6)?, last_opened_at: row.get(7)?,
             is_valid: check_project_exists(&path),
-            cover_path: None,
+            cover_path: None, encrypted: false,
         })
     }).map_err(|e| format!("查询项目失败: {}", e))?;
     Ok(ProjectMeta { cover_path, ..project })

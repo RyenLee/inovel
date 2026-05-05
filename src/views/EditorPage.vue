@@ -18,6 +18,9 @@ import SensitiveWordsManager from "../components/SensitiveWordsManager.vue";
 import ExportDialog from "../components/ExportDialog.vue";
 import BackupDialog from "../components/BackupDialog.vue";
 import ShortcutSettings from "../components/ShortcutSettings.vue";
+import PomodoroTimer from "../components/PomodoroTimer.vue";
+import InspirationBoard from "../components/InspirationBoard.vue";
+import { Timer, Lightbulb } from "lucide-vue-next";
 import { useTheme } from "../composables/useTheme";
 
 const { isDark, toggleDark } = useTheme();
@@ -57,7 +60,7 @@ const isSaving = ref(false);
 const showSidebar = ref(true);
 const showWorldbuilding = ref(false); // 右侧世界观面板
 const sidebarMode = ref<"tree" | "outline">("tree"); // 侧边栏模式切换
-const sidebarTab = ref<"chapters" | "worldbuilding" | "relationship" | "timeline">("chapters"); // 侧边栏内容切换
+const sidebarTab = ref<"chapters" | "worldbuilding" | "relationship" | "timeline" | "inspiration">("chapters"); // 侧边栏内容切换
 const chapterTree = ref<VolumeWithChapters[]>([]);
 const editorRef = ref<InstanceType<typeof MarkdownEditor> | null>(null);
 const worldbuildingPanelRef = ref<{ viewCharacterDetail: (character: Character) => void } | null>(null);
@@ -124,13 +127,42 @@ const showExport = ref(false)
 const showBackup = ref(false)
 const showShortcuts = ref(false)
 
+// Pomodoro Timer visibility state (default to hidden)
+const showPomodoro = ref(false);
+
+// Inspiration Board visibility state (default to hidden)
+const showInspirationBoard = ref(false);
+
 // Zen Mode / Fullscreen state
 const isZenMode = ref(false);
+const isPomodoroZenMode = ref(false); // 番茄钟触发的专注模式
 const isFullscreen = ref(false);
 const appWindow = getCurrentWindow();
 
+// Pomodoro zen mode handler
+const handlePomodoroZenMode = (enabled: boolean) => {
+  isPomodoroZenMode.value = enabled;
+};
+
+// Combined zen mode state
+const isZenModeActive = computed(() => {
+  return isZenMode.value || isPomodoroZenMode.value;
+});
+
+// Handle inserting content from inspiration board
+const handleInsertFromInspiration = (content: string) => {
+  if (editorRef.value?.editor) {
+    editorRef.value.editor.commands.insertContent(content);
+  }
+};
+
 // Toggle Zen Mode (pseudo fullscreen - hides UI elements, centers editor)
 const toggleZenMode = async () => {
+  if (isPomodoroZenMode.value) {
+    // Can't toggle while pomodoro zen mode is active
+    message.warning("番茄钟专注模式进行中，请等待结束后再切换");
+    return;
+  }
   isZenMode.value = !isZenMode.value;
   if (isZenMode.value) {
     message.info("禅模式已开启，按 Esc 或点击退出按钮退出");
@@ -164,6 +196,7 @@ const exitZenMode = () => {
     isZenMode.value = false;
     message.info("已退出禅模式");
   }
+  // Note: pomodoro zen mode is controlled by the timer itself
 };
 
 const handleSelectCharacter = async (character: Character) => {
@@ -324,17 +357,17 @@ const loadTodayRecord = async () => {
   }
 };
 
-// 加载章节内容（使用 file_path）
-const loadChapterContentByPath = async (filePath: string) => {
+// 加载章节内容（使用 chapterId）
+const loadChapterContentByPath = async (chapterId: number): Promise<string> => {
   try {
     const content = await invoke<string>("get_chapter_content", {
-      projectId: projectId.value,
-      chapterId: filePath,
+      projectId: String(projectId.value),
+      chapterId: String(chapterId),
     });
-    currentContent.value = content;
+    return content;
   } catch (error) {
     console.error("加载章节失败:", error);
-    currentContent.value = "";
+    return "";
   }
 };
 
@@ -346,8 +379,8 @@ const saveChapter = async () => {
   try {
     // 保存内容
     await invoke("save_chapter_content", {
-      projectId: projectId.value,
-      chapterId: currentChapter.value.file_path,
+      projectId: String(projectId.value),
+      chapterId: String(currentChapter.value.id),
       content: currentContent.value,
     });
     // Auto-commit to git after save
@@ -506,18 +539,25 @@ const handleKeyDown = (event: KeyboardEvent) => {
 
 // 处理章节选择
 const handleSelectChapter = async (chapterId: number, chapter: Chapter) => {
+  // 如果是同一个章节，无需处理
+  if (currentChapter.value?.id === chapterId) {
+    return;
+  }
+
   // 先保存当前章节
   if (currentChapter.value) {
     await saveChapter();
   }
 
-  // 清除编辑器内容，避免闪烁显示旧内容
-  currentContent.value = '';
-  
+  // 设置加载状态，编辑器会显示占位符
   currentChapter.value = chapter;
+  currentContent.value = ''; // 清空内容
   
   // 加载新章节内容
-  await loadChapterContentByPath(chapter.file_path);
+  const content = await loadChapterContentByPath(chapter.id);
+  
+  // 内容加载完成后再更新，避免中间状态导致的闪烁
+  currentContent.value = content;
   
   // 重新加载章节树以获取最新字数
   await loadChapterTree();
@@ -616,17 +656,24 @@ const todayNewWords = computed(() => {
   <div class="h-screen flex flex-col transition-colors duration-300"
     :class="[
       isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900',
-      isZenMode ? '!bg-gray-900' : ''
+      isZenMode ? 'bg-gray-900!' : ''
     ]">
     <!-- Zen Mode Exit Button (floating) -->
-    <button v-if="isZenMode" @click="exitZenMode"
+    <button v-if="isZenMode && !isPomodoroZenMode" @click="exitZenMode"
       class="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg shadow-lg hover:bg-gray-700 transition-colors">
       <X class="w-4 h-4" />
       退出禅模式 (Esc)
     </button>
 
+    <!-- Pomodoro Zen Mode Indicator -->
+    <button v-if="isPomodoroZenMode" @click="isPomodoroZenMode = false"
+      class="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg shadow-lg hover:bg-purple-700 transition-colors">
+      <X class="w-4 h-4" />
+      退出专注模式
+    </button>
+
     <!-- Header (hidden in zen mode) -->
-    <header v-if="!isZenMode" class="border-b transition-colors duration-300 flex-shrink-0"
+    <header v-if="!isZenModeActive" class="border-b transition-colors duration-300 shrink-0"
       :class="isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'">
       <div class="px-4 py-3 flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -714,19 +761,37 @@ const todayNewWords = computed(() => {
             </template>
             快捷键设置
           </n-tooltip>
+          <n-tooltip trigger="hover">
+            <template #trigger>
+              <button @click="showPomodoro = !showPomodoro" class="p-2 rounded-lg transition-colors duration-300"
+                :class="showPomodoro ? 'bg-red-500 text-white' : isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+                <Timer class="w-5 h-5" />
+              </button>
+            </template>
+            {{ showPomodoro ? '隐藏' : '显示' }}番茄钟
+          </n-tooltip>
+          <n-tooltip trigger="hover">
+            <template #trigger>
+              <button @click="showInspirationBoard = !showInspirationBoard" class="p-2 rounded-lg transition-colors duration-300"
+                :class="showInspirationBoard ? 'bg-yellow-500 text-white' : isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+                <Lightbulb class="w-5 h-5" />
+              </button>
+            </template>
+            {{ showInspirationBoard ? '隐藏' : '显示' }}灵感看板
+          </n-tooltip>
         </div>
       </div>
     </header>
 
-    <div class="flex-1 flex overflow-hidden" :class="isZenMode ? '!p-0' : ''">
+    <div class="flex-1 flex overflow-hidden" :class="isZenModeActive ? 'p-0!' : ''">
       <!-- Sidebar Toggle Button -->
-      <button v-if="!showSidebar && !isZenMode" @click="toggleSidebar"
+      <button v-if="!showSidebar && !isZenModeActive" @click="toggleSidebar"
         class="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-r-lg shadow-md">
         <ChevronRight class="w-4 h-4" />
       </button>
 
       <!-- Tree Sidebar (hidden in zen mode) -->
-      <div v-if="showSidebar && !isZenMode" class="w-64 flex-shrink-0 relative">
+      <div v-if="showSidebar && !isZenModeActive" class="w-64 shrink-0 relative">
         <button @click="toggleSidebar"
           class="absolute -right-3 top-1/2 -translate-y-1/2 z-10 p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md">
           <ChevronLeft class="w-3 h-3" />
@@ -755,9 +820,9 @@ const todayNewWords = computed(() => {
 
       <!-- Editor Area -->
       <main class="flex-1 overflow-hidden flex justify-center"
-        :class="isZenMode ? 'bg-gray-900' : 'p-4'">
-        <!-- Zen Mode: Centered editor container with max-width -->
-        <div v-if="isZenMode" class="w-full max-w-4xl h-full flex flex-col px-8 py-6">
+        :class="isZenModeActive ? 'bg-gray-900' : 'p-4'">
+        <!-- Zen Mode: Centered editor container with 50% width -->
+        <div v-if="isZenModeActive" class="w-1/2 mx-auto h-full flex flex-col px-8 py-6">
           <div v-if="!currentChapter" class="h-full flex flex-col items-center justify-center text-gray-500">
             <FileText class="w-16 h-16 mb-4 opacity-50" />
             <p class="text-lg">请从左侧选择或创建章节</p>
@@ -801,8 +866,8 @@ const todayNewWords = computed(() => {
       </main>
 
       <!-- Worldbuilding Panel (Right Sidebar, hidden in zen mode) -->
-      <div v-if="showWorldbuilding && !isZenMode"
-        class="w-[480px] flex-shrink-0 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden flex flex-col">
+      <div v-if="showWorldbuilding && !isZenModeActive"
+        class="w-[480px] shrink-0 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden flex flex-col">
         <!-- Panel Header with Tabs -->
         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <div class="flex items-center gap-2">
@@ -846,7 +911,7 @@ const todayNewWords = computed(() => {
       </div>
 
       <!-- Worldbuilding Toggle Button (hidden in zen mode) -->
-      <button v-if="!showWorldbuilding && !isZenMode" @click="showWorldbuilding = true"
+      <button v-if="!showWorldbuilding && !isZenModeActive" @click="showWorldbuilding = true"
         class="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-l-lg shadow-md transition-transform hover:translate-x-0"
         :style="{ top: 'calc(50% + 36px)' }">
         <Globe class="w-4 h-4 text-blue-600" />
@@ -854,21 +919,21 @@ const todayNewWords = computed(() => {
     </div>
 
     <!-- Status Bar with Writing Progress (hidden in zen mode) -->
-    <footer v-if="!isZenMode" class="border-t transition-colors duration-300 flex-shrink-0 px-4 py-2"
+    <footer v-if="!isZenModeActive" class="border-t transition-colors duration-300 shrink-0 px-4 py-2"
       :class="isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'">
       <div class="flex items-center gap-6">
         <!-- Daily Goal Progress -->
         <n-tooltip trigger="hover">
           <template #trigger>
-            <div class="flex items-center gap-2 cursor-default">
-              <Target class="w-4 h-4 text-blue-500" />
-              <span class="text-sm text-gray-600 dark:text-gray-400">
-                今日: {{ todayWords }} / {{ dailyGoal }}
+            <div class="daily-goal-container">
+              <Target class="w-4 h-4 text-blue-500 shrink-0" />
+              <span class="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                今日: {{ todayWords }} / {{ dailyGoal }} 字
               </span>
               <n-progress type="line" :percentage="dailyProgress" :height="8" :border-radius="4" :fill-border-radius="4"
                 :color="dailyProgress >= 100 ? '#52c41a' : '#3b82f6'" :rail-color="isDark ? '#374151' : '#e5e7eb'"
-                class="w-24" :show-indicator="false" />
-              <span class="text-sm font-medium" :class="dailyProgress >= 100 ? 'text-green-500' : 'text-blue-500'">
+                class="daily-goal-progress" :show-indicator="false" />
+              <span class="text-sm font-medium whitespace-nowrap" :class="dailyProgress >= 100 ? 'text-green-500' : 'text-blue-500'">
                 {{ dailyProgress }}%
               </span>
             </div>
@@ -885,7 +950,7 @@ const todayNewWords = computed(() => {
         <!-- Export Button -->
         <n-tooltip trigger="hover">
           <template #trigger>
-            <n-button size="tiny" quaternary @click="showExport = true" class="!text-gray-500 hover:!text-blue-500">
+            <n-button size="tiny" quaternary @click="showExport = true" class="text-gray-500! hover:text-blue-500!">
               <template #icon>
                 <n-icon>
                   <Download />
@@ -900,7 +965,7 @@ const todayNewWords = computed(() => {
         <n-tooltip trigger="hover">
           <template #trigger>
             <n-button size="tiny" quaternary @click="showBackup = true"
-              class="!text-gray-500 hover:!text-green-500">
+              class="text-gray-500! hover:text-green-500!">
               <template #icon>
                 <n-icon>
                   <Package />
@@ -915,7 +980,7 @@ const todayNewWords = computed(() => {
         <n-tooltip trigger="hover">
           <template #trigger>
             <n-button size="tiny" quaternary @click="showSensitiveWords = true"
-              class="!text-gray-500 hover:!text-red-500">
+              class="text-gray-500! hover:text-red-500!">
               <template #icon>
                 <n-icon>
                   <AlertTriangle />
@@ -982,5 +1047,54 @@ const todayNewWords = computed(() => {
     <BackupDialog v-model:show="showBackup" :project-id="Number(projectId)" />
     <!-- Shortcut Settings -->
     <ShortcutSettings v-model:show="showShortcuts" />
+
+    <!-- Pomodoro Timer (floating) -->
+    <PomodoroTimer
+      v-if="projectId && !isLoading"
+      :project-id="Number(projectId)"
+      :is-dark="isDark"
+      :visible="showPomodoro"
+      @zen-mode="handlePomodoroZenMode"
+    />
+
+    <!-- Inspiration Board Modal -->
+    <n-modal
+      v-model:show="showInspirationBoard"
+      preset="card"
+      title="灵感看板"
+      :style="{ width: '90vw', height: '80vh' }"
+      :max-height="600"
+      :mask-closable="true"
+    >
+      <template #header-extra>
+        <n-tag type="warning" size="small">双击卡片编辑，右键插入到编辑器</n-tag>
+      </template>
+      <InspirationBoard
+        :project-id="Number(projectId)"
+        :is-dark="isDark"
+        @insert-content="handleInsertFromInspiration"
+      />
+    </n-modal>
   </div>
 </template>
+
+<style scoped>
+/* 每日目标进度容器 - 防止文本换行 */
+.daily-goal-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.daily-goal-container .whitespace-nowrap {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.daily-goal-progress {
+  width: 80px;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+</style>

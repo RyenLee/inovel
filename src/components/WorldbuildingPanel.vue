@@ -40,8 +40,8 @@
             <div class="flex items-start gap-3">
               <!-- Avatar -->
               <div 
-                class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white flex-shrink-0"
-                :class="character.gender === 'male' ? 'bg-gradient-to-br from-blue-500 to-blue-600' : character.gender === 'female' ? 'bg-gradient-to-br from-pink-500 to-pink-600' : 'bg-gradient-to-br from-gray-500 to-gray-600'"
+                class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white shrink-0"
+                :class="character.gender === 'male' ? 'bg-linear-to-br from-blue-500 to-blue-600' : character.gender === 'female' ? 'bg-linear-to-br from-pink-500 to-pink-600' : 'bg-linear-to-br from-gray-500 to-gray-600'"
               >
                 {{ character.name.charAt(0).toUpperCase() }}
               </div>
@@ -63,10 +63,10 @@
                 
                 <!-- Tags -->
                 <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
-                  <n-tag v-if="character.gender" size="small" :type="character.gender === 'male' ? 'info' : 'warning'" :bordered="false" class="!rounded-full">
+                  <n-tag v-if="character.gender" size="small" :type="character.gender === 'male' ? 'info' : 'warning'" :bordered="false" class="rounded-full!">
                     {{ character.gender === 'male' ? '♂ 男' : '♀ 女' }}
                   </n-tag>
-                  <n-tag v-if="character.age" size="small" type="default" :bordered="false" class="!rounded-full">
+                  <n-tag v-if="character.age" size="small" type="default" :bordered="false" class="rounded-full!">
                     {{ character.age }}岁
                   </n-tag>
                 </div>
@@ -79,7 +79,7 @@
             </div>
             
             <!-- Hover indicator -->
-            <div class="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+            <div class="absolute inset-0 rounded-xl bg-linear-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
           </div>
         </div>
         
@@ -107,7 +107,7 @@
           >
             <div class="flex items-start gap-3">
               <!-- Location Icon -->
-              <div class="w-12 h-12 rounded-full flex items-center justify-center text-lg flex-shrink-0 bg-gradient-to-br from-green-400 to-green-600">
+              <div class="w-12 h-12 rounded-full flex items-center justify-center text-lg shrink-0 bg-linear-to-br from-green-400 to-green-600">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -129,10 +129,10 @@
                 </div>
                 
                 <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
-                  <n-tag v-if="location.location_type" size="small" type="success" :bordered="false" class="!rounded-full">
+                  <n-tag v-if="location.location_type" size="small" type="success" :bordered="false" class="rounded-full!">
                     {{ getLocationTypeLabel(location.location_type) }}
                   </n-tag>
-                  <n-tag v-if="location.population" size="small" type="default" :bordered="false" class="!rounded-full">
+                  <n-tag v-if="location.population" size="small" type="default" :bordered="false" class="rounded-full!">
                     {{ location.population.toLocaleString() }}人
                   </n-tag>
                 </div>
@@ -143,7 +143,7 @@
               </div>
             </div>
             
-            <div class="absolute inset-0 rounded-xl bg-gradient-to-r from-green-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+            <div class="absolute inset-0 rounded-xl bg-linear-to-r from-green-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
           </div>
         </div>
         
@@ -171,7 +171,7 @@
           >
             <div class="flex items-start gap-3">
               <!-- Org Icon -->
-              <div class="w-12 h-12 rounded-full flex items-center justify-center text-lg flex-shrink-0 bg-gradient-to-br from-amber-400 to-amber-600">
+              <div class="w-12 h-12 rounded-full flex items-center justify-center text-lg shrink-0 bg-linear-to-br from-amber-400 to-amber-600">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                 </svg>
@@ -192,10 +192,10 @@
                 </div>
                 
                 <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
-                  <n-tag v-if="org.org_type" size="small" type="warning" :bordered="false" class="!rounded-full">
+                  <n-tag v-if="org.org_type" size="small" type="warning" :bordered="false" class="rounded-full!">
                     {{ getOrgTypeLabel(org.org_type) }}
                   </n-tag>
-                  <n-tag v-if="org.member_count" size="small" type="default" :bordered="false" class="!rounded-full">
+                  <n-tag v-if="org.member_count" size="small" type="default" :bordered="false" class="rounded-full!">
                     {{ org.member_count }}人
                   </n-tag>
                 </div>
@@ -206,7 +206,7 @@
               </div>
             </div>
             
-            <div class="absolute inset-0 rounded-xl bg-gradient-to-r from-amber-500/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+            <div class="absolute inset-0 rounded-xl bg-linear-to-r from-amber-500/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
           </div>
         </div>
         
@@ -407,7 +407,7 @@
           <div class="flex flex-col items-center text-center pb-4 border-b border-gray-100 dark:border-gray-700">
             <div 
               class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white mb-3"
-              :class="viewingCharacter.gender === 'male' ? 'bg-gradient-to-br from-blue-500 to-blue-600' : viewingCharacter.gender === 'female' ? 'bg-gradient-to-br from-pink-500 to-pink-600' : 'bg-gradient-to-br from-gray-500 to-gray-600'"
+              :class="viewingCharacter.gender === 'male' ? 'bg-linear-to-br from-blue-500 to-blue-600' : viewingCharacter.gender === 'female' ? 'bg-linear-to-br from-pink-500 to-pink-600' : 'bg-linear-to-br from-gray-500 to-gray-600'"
             >
               {{ viewingCharacter.name.charAt(0).toUpperCase() }}
             </div>

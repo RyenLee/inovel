@@ -208,7 +208,7 @@ const doRestore = async (hash: string) => {
                 >
                   {{ selectedB === snap.hash ? 'B' : selectedA === snap.hash ? 'A' : '' }}
                 </NButton>
-                <History class="w-4 h-4 text-blue-500 flex-shrink-0" />
+                <History class="w-4 h-4 text-blue-500 shrink-0" />
                 <div>
                   <div class="history-item-msg">{{ snap.message }}</div>
                   <div class="history-item-meta">

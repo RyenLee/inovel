@@ -71,12 +71,27 @@ pub(crate) fn init_db(conn: &Connection) -> SqliteResult<()> {
             sort_order INTEGER NOT NULL DEFAULT 0,
             summary TEXT NOT NULL DEFAULT '',
             word_count_cache INTEGER NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'draft',
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (volume_id) REFERENCES volumes(id) ON DELETE CASCADE
         )",
         [],
     )?;
+
+    // 迁移：添加 status 列（如果不存在）
+    let has_status: bool = conn.query_row(
+        "SELECT COUNT(*) > 0 FROM pragma_table_info('chapters') WHERE name='status'",
+        [],
+        |row| row.get(0),
+    ).unwrap_or(false);
+
+    if !has_status {
+        let _ = conn.execute(
+            "ALTER TABLE chapters ADD COLUMN status TEXT NOT NULL DEFAULT 'draft'",
+            [],
+        );
+    }
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS writing_goals (
@@ -246,6 +261,68 @@ pub(crate) fn init_db(conn: &Connection) -> SqliteResult<()> {
         )",
         [],
     )?;
+
+    // 番茄钟专注记录表
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS focus_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            session_type TEXT NOT NULL DEFAULT 'work',
+            duration_minutes INTEGER NOT NULL,
+            started_at TEXT NOT NULL,
+            completed INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
+    // 灵感看板条目表
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS inspiration_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            column_name TEXT NOT NULL DEFAULT '灵感',
+            content TEXT NOT NULL DEFAULT '',
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
+    // 用户自定义模板表
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS user_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            category TEXT NOT NULL DEFAULT '自定义',
+            content TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
+    // 迁移：添加 column_name 列到现有表（如果需要）
+    let has_column_name: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('inspiration_items') WHERE name='column_name'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(true);
+
+    if !has_column_name {
+        let _ = conn.execute(
+            "ALTER TABLE inspiration_items ADD COLUMN column_name TEXT NOT NULL DEFAULT '灵感'",
+            [],
+        );
+    }
 
     Ok(())
 }

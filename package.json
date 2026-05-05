@@ -34,7 +34,9 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.4",
     "@tauri-apps/cli": "^2.11.0",
+    "@tauri-apps/plugin-fs": "^2.5.1",
     "@types/diff": "^7.0.2",
     "@types/node": "^25.6.0",
     "@types/sortablejs": "^1.15.9",
@@ -45,6 +47,6 @@
     "tailwindcss": "^4.2.4",
     "typescript": "~6.0.3",
     "vite": "^8.0.10",
-    "vue-tsc": "^3.2.8"
+    "vue-tsc": "~3.2.8"
   }
 }

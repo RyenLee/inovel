@@ -23,7 +23,7 @@ import {
 } from "naive-ui";
 import { Book, Plus, FolderOpen, FileText, AlertTriangle, Trash2, Edit3, Sun, Moon, Settings, BarChart3, TrendingUp, Calendar, Keyboard, Database, Play, RotateCcw, Eye, CheckCircle, XCircle } from "lucide-vue-next";
 import { useRouter } from "vue-router";
-import { useProjectStore, type ProjectMeta } from "../stores/project";
+import { useProjectStore, type ProjectMeta, type MigrateResult } from "../stores/project";
 import { useTheme } from "../composables/useTheme";
 import { invoke } from "@tauri-apps/api/core";
 import DeleteConfirmModal from "../components/DeleteConfirmModal.vue";
@@ -43,6 +43,11 @@ const editingProject = ref<ProjectMeta | null>(null);
 // 删除确认弹窗状态
 const showDeleteProjectModal = ref(false);
 const projectToDelete = ref<ProjectMeta | null>(null);
+
+// 解密相关
+const showDecryptModal = ref(false);
+const decryptPassword = ref("");
+const projectToDecrypt = ref<ProjectMeta | null>(null);
 
 // Form state
 const formData = ref({
@@ -68,9 +73,24 @@ const averageWordsPerDay = computed(() => {
 });
 
 onMounted(async () => {
-    await projectStore.fetchRecentProjects();
-    await loadStats();
-    await checkMigrationStatus();
+    try {
+        await projectStore.fetchRecentProjects();
+    } catch (error) {
+        console.error("加载项目列表失败:", error);
+        message.error("加载项目列表失败，请检查配置");
+    }
+    
+    try {
+        await loadStats();
+    } catch (error) {
+        console.error("加载统计数据失败:", error);
+    }
+    
+    try {
+        await checkMigrationStatus();
+    } catch (error) {
+        console.error("检查迁移状态失败:", error);
+    }
 });
 
 const loadStats = async () => {
@@ -92,7 +112,7 @@ const loadStats = async () => {
 const showMigrationModal = ref(false);
 const showMigrationResult = ref(false);
 const pendingMigrationCount = ref(0);
-const dryRunResult = ref<import("../stores/project").MigrateResult | null>(null);
+const dryRunResult = ref<MigrateResult | null>(null);
 const migrationProgress = ref(0);
 
 const checkMigrationStatus = async () => {
@@ -271,6 +291,13 @@ const handleOpenProject = async (project: ProjectMeta) => {
         return;
     }
 
+    // 检查项目是否已加密
+    if (project.encrypted) {
+        projectToDecrypt.value = project;
+        showDecryptModal.value = true;
+        return;
+    }
+
     const result = await projectStore.openProject(project.id);
     if (result.success) {
         router.push(`/editor/${project.id}`);
@@ -372,7 +399,7 @@ const closeModal = () => {
                 <n-gi span="0:24 640:12 1024:1">
                     <n-card hoverable>
                         <div class="flex items-center gap-3">
-                            <div class="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 flex-shrink-0">
+                            <div class="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 shrink-0">
                                 <TrendingUp class="w-5 h-5 text-green-600" />
                             </div>
                             <div class="overflow-hidden">
@@ -389,7 +416,7 @@ const closeModal = () => {
                 <n-gi span="0:24 640:12 1024:1">
                     <n-card hoverable>
                         <div class="flex items-center gap-3">
-                            <div class="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex-shrink-0">
+                            <div class="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 shrink-0">
                                 <BarChart3 class="w-5 h-5 text-purple-600" />
                             </div>
                             <div class="overflow-hidden">
@@ -406,7 +433,7 @@ const closeModal = () => {
                 <n-gi span="0:24 640:12 1024:1">
                     <n-card hoverable>
                         <div class="flex items-center gap-3">
-                            <div class="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
+                            <div class="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30 shrink-0">
                                 <Calendar class="w-5 h-5 text-orange-600" />
                             </div>
                             <div class="overflow-hidden">

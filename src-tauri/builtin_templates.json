@@ -1,0 +1,66 @@
+[
+  {
+    "id": "builtin_blank",
+    "name": "空白页",
+    "description": "从空白页面开始写作",
+    "category": "章节",
+    "content": "# 新章节\n\n",
+    "is_builtin": true
+  },
+  {
+    "id": "builtin_image_text",
+    "name": "图文混排",
+    "description": "上图下文式布局，适合场景描写",
+    "category": "图文",
+    "content": "## 章节标题\n\n![在此插入图片]()\n\n正文内容开始...\n\n在这里描述场景、人物或情节。",
+    "is_builtin": true
+  },
+  {
+    "id": "builtin_list",
+    "name": "列表结构",
+    "description": "使用列表组织要点，适合大纲或笔记",
+    "category": "结构化",
+    "content": "## 标题\n\n- 要点 A\n- 要点 B\n  - 子项 1\n  - 子项 2\n- 要点 C\n\n列表可以帮助你清晰地组织思路。",
+    "is_builtin": true
+  },
+  {
+    "id": "builtin_dialogue",
+    "name": "对话剧本",
+    "description": "对话格式模板，适合编写对话场景",
+    "category": "对话",
+    "content": "**张三**：\"你好，很久不见了。\"\n\n**李四**：\"是啊，最近过得怎么样？\"\n\n[两人走进咖啡店，找了个靠窗的位置坐下]\n\n**张三**：\"其实我今天找你，是有件事想和你商量...\"\n\n**李四**：\"什么事？你说。\"",
+    "is_builtin": true
+  },
+  {
+    "id": "builtin_quote",
+    "name": "引用开头",
+    "description": "以引用开始的章节，营造氛围",
+    "category": "章节",
+    "content": "> \"在命运的十字路口，每个选择都通往不同的未来。\"\n> — 《古老预言集》\n\n\n\n从这里开始你的故事...\n\n",
+    "is_builtin": true
+  },
+  {
+    "id": "builtin_three_act",
+    "name": "三段式",
+    "description": "经典三幕结构，适合章节内容组织",
+    "category": "结构化",
+    "content": "## 起始\n\n第一段：引入场景或人物...\n\n## 发展\n\n第二段：展开情节或冲突...\n\n## 结局\n\n第三段：收束或留下悬念...\n\n",
+    "is_builtin": true
+  },
+  {
+    "id": "builtin_character_entry",
+    "name": "人物出场",
+    "description": "人物首次出场场景模板",
+    "category": "章节",
+    "content": "## 章节标题\n\n**出场人物：** 张三、李四\n\n**场景：** 咖啡店\n\n---\n\n张三推开门，风铃清脆地响了一声。他扫视了一圈，很快就看到了角落里那个熟悉的身影。\n\n[在这里继续描写人物的动作、对话和心理活动]",
+    "is_builtin": true
+  },
+  {
+    "id": "builtin_split_notes",
+    "name": "分栏笔记",
+    "description": "左右分栏式笔记，适合对比或双线叙事",
+    "category": "结构化",
+    "content": "> **提示：** 你可以使用表格来实现分栏效果\n\n| 左侧内容 | 右侧内容 |\n| --- | --- |\n| 第一条线索 | 对应的发现 |\n| 人物 A 的视角 | 人物 B 的视角 |\n| 过去发生的事 | 现在的影响 |\n\n---\n\n或者使用并排的两个引用块：\n\n> **左侧叙事**\n> \n> 在这里写下第一条叙事线...\n\n> **右侧叙事**\n> \n> 在这里写下第二条叙事线...",
+    "is_builtin": true
+  }
+]

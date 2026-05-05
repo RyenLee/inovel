@@ -12,6 +12,9 @@ pub mod git_snapshot;
 pub mod sensitive;
 pub mod export;
 pub mod backup;
+pub mod encryption;
+pub mod inspiration;
+pub mod template;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -20,15 +23,43 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    use tauri_plugin_prevent_default::Flags;
+    
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(
+            tauri_plugin_prevent_default::Builder::new()
+                // 禁用所有浏览器键盘快捷键
+                // 注: 鼠标侧键(前进/后退)需要通过 JavaScript 层拦截
+                .with_flags(
+                    Flags::keyboard() | 
+                    Flags::RELOAD | 
+                    Flags::DEV_TOOLS
+                )
+                .build()
+        )
         .setup(|app| {
-            // 初始化配置系统
+            // 初始化配置系统（用户数据目录）
             if let Err(e) = config::init_config(app.handle()) {
                 eprintln!("配置初始化失败: {}", e);
             }
+            
+            // 首次启动时在安装目录创建配置文件
+            match config::init_install_config(app.handle()) {
+                Ok(result) => {
+                    if result.created {
+                        println!("[Setup] 已创建安装配置文件: {}", result.config_path);
+                    } else {
+                        println!("[Setup] 配置文件已存在，跳过安装: {}", result.config_path);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[Setup] 安装配置初始化失败: {}", e);
+                }
+            }
+            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -38,6 +69,7 @@ pub fn run() {
             config::update_app_config,
             config::reset_app_config,
             config::get_config_file_path,
+            config::get_install_config_info,
             config::validate_config_paths,
             project::create_project,
             project::get_recent_projects,
@@ -61,11 +93,17 @@ pub fn run() {
             chapter::get_chapter_tree,
             chapter::update_chapter_word_count,
             chapter::update_chapter_summary,
+            chapter::update_chapter_status,
+            chapter::get_chapter_status_counts,
             writing::get_writing_goal,
             writing::save_writing_goal,
             writing::get_writing_stats,
             writing::upsert_writing_record,
             writing::get_today_words,
+            // 番茄钟专注会话命令
+            writing::record_focus_session,
+            writing::get_focus_sessions,
+            writing::get_focus_stats,
             names::generate_names,
             worldbuilding::create_character,
             worldbuilding::update_character,
@@ -111,6 +149,29 @@ pub fn run() {
             backup::delete_backup_record,
             backup::get_backup_logs,
             backup::get_backup_stats,
+            // 加密相关命令
+            encryption::encrypt_project,
+            encryption::decrypt_project,
+            encryption::verify_project_password,
+            encryption::change_project_password,
+            encryption::reencrypt_project,
+            encryption::is_project_encrypted_command,
+            // 灵感看板命令
+            inspiration::create_inspiration_item,
+            inspiration::update_inspiration_item,
+            inspiration::delete_inspiration_item,
+            inspiration::reorder_inspiration_items,
+            inspiration::get_inspiration_board,
+            inspiration::get_inspiration_items,
+            // 模板系统命令
+            template::get_builtin_templates,
+            template::get_user_templates,
+            template::save_user_template,
+            template::update_user_template,
+            template::delete_user_template,
+            template::get_all_templates,
+            // 图片处理命令
+            chapter::save_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
