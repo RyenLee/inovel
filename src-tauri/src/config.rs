@@ -274,63 +274,63 @@ impl Default for InstallConfig {
     }
 }
 
+/// 安装配置文件结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallConfigResult {
+    /// 配置文件路径
+    pub config_path: String,
+    /// 是否为新创建（true=新创建，false=已存在跳过）
+    pub created: bool,
+    /// 操作说明
+    pub message: String,
+}
+
 /// 初始化安装目录配置文件（首次启动时创建）
 /// 
-/// 在应用程序安装目录下创建 config.json，包含 ${APP_INSTALL_DIR} 变量说明
-pub fn init_install_config(app_handle: &AppHandle) -> Result<PathBuf, String> {
+/// 在应用程序安装目录下创建 config.json，包含 ${APP_INSTALL_DIR} 变量说明。
+/// 如果配置文件已存在，则跳过安装步骤，避免重复覆盖。
+pub fn init_install_config(app_handle: &AppHandle) -> Result<InstallConfigResult, String> {
     let install_dir = get_install_dir(app_handle);
     let config_path = install_dir.join("config.json");
 
-    // 检查配置文件是否已存在
+    // 校验配置文件是否已存在
     if config_path.exists() {
-        // 配置文件已存在，检查是否需要更新
-        let content = fs::read_to_string(&config_path)
-            .map_err(|e| format!("读取安装配置失败: {}", e))?;
-        
-        match serde_json::from_str::<InstallConfig>(&content) {
-            Ok(mut config) => {
-                // 更新安装目录（如果路径变化）
-                config.install_dir = install_dir.to_string_lossy().to_string();
-                
-                // 重新写入（确保路径是最新的）
-                let new_content = serde_json::to_string_pretty(&config)
-                    .map_err(|e| format!("序列化安装配置失败: {}", e))?;
-                fs::write(&config_path, &new_content)
-                    .map_err(|e| format!("更新安装配置文件失败: {}", e))?;
-            }
-            Err(_) => {
-                // 配置格式错误，重新创建
-                let config = InstallConfig {
-                    version: "1.0".to_string(),
-                    app_name: "小说工坊".to_string(),
-                    install_dir: install_dir.to_string_lossy().to_string(),
-                    settings: std::collections::HashMap::new(),
-                };
-                let new_content = serde_json::to_string_pretty(&config)
-                    .map_err(|e| format!("序列化安装配置失败: {}", e))?;
-                fs::write(&config_path, &new_content)
-                    .map_err(|e| format!("写入安装配置文件失败: {}", e))?;
-            }
-        }
-    } else {
-        // 首次启动，创建配置文件
-        let config = InstallConfig {
-            version: "1.0".to_string(),
-            app_name: "小说工坊".to_string(),
-            install_dir: install_dir.to_string_lossy().to_string(),
-            settings: std::collections::HashMap::new(),
-        };
-        
-        let content = serde_json::to_string_pretty(&config)
-            .map_err(|e| format!("序列化安装配置失败: {}", e))?;
-        
-        fs::write(&config_path, &content)
-            .map_err(|e| format!("创建安装配置文件失败: {}", e))?;
-        
-        println!("[Config] 首次启动，已在安装目录创建配置文件: {}", config_path.display());
+        // 文件已存在，跳过安装步骤
+        println!("[Config] 安装配置文件已存在，跳过安装: {}", config_path.display());
+        return Ok(InstallConfigResult {
+            config_path: config_path.to_string_lossy().to_string(),
+            created: false,
+            message: "配置文件已存在，跳过安装".to_string(),
+        });
     }
 
-    Ok(config_path)
+    // 确保安装目录存在
+    if !install_dir.exists() {
+        fs::create_dir_all(&install_dir)
+            .map_err(|e| format!("创建安装目录失败: {}", e))?;
+    }
+
+    // 首次启动，创建配置文件
+    let config = InstallConfig {
+        version: "1.0".to_string(),
+        app_name: "小说工坊".to_string(),
+        install_dir: install_dir.to_string_lossy().to_string(),
+        settings: std::collections::HashMap::new(),
+    };
+    
+    let content = serde_json::to_string_pretty(&config)
+        .map_err(|e| format!("序列化安装配置失败: {}", e))?;
+    
+    fs::write(&config_path, &content)
+        .map_err(|e| format!("创建安装配置文件失败: {}", e))?;
+    
+    println!("[Config] 首次启动，已在安装目录创建配置文件: {}", config_path.display());
+
+    Ok(InstallConfigResult {
+        config_path: config_path.to_string_lossy().to_string(),
+        created: true,
+        message: "配置文件创建成功".to_string(),
+    })
 }
 
 /// 获取配置（需先调用 init_config）

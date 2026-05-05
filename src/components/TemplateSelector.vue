@@ -36,7 +36,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: "update:show", value: boolean): void;
-  (e: "select", content: string): void;
+  (e: "select", payload: { content: string; mode: 'replace' | 'insert' }): void;
 }>();
 
 // 本地模式状态（用于预览）

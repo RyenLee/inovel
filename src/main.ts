@@ -5,6 +5,53 @@ import "./style.css";
 import App from "./App.vue";
 import router from "./router";
 
+// =====================
+// 禁用浏览器前进/后退功能
+// 
+// 拦截层次:
+// 1. Rust 端 (tauri-plugin-prevent-default): 禁用所有键盘快捷键
+//    - Alt+方向键 (浏览器导航)
+//    - F5 (刷新)
+//    - Ctrl+Shift+I (开发者工具)
+//    - 其他浏览器键盘快捷键
+//
+// 2. JavaScript 层: 禁用鼠标侧键
+//    - button 3 (鼠标前进键/XButton1)
+//    - button 4 (鼠标后退键/XButton2)
+// =====================
+
+// 禁用鼠标前进/后退按钮（JavaScript 层辅助拦截）
+// Windows: button 3 = XButton1(前进), button 4 = XButton2(后退)
+document.addEventListener('auxclick', (e: MouseEvent) => {
+  if (e.button === 3 || e.button === 4) {
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+  }
+}, { capture: true, passive: false });
+
+document.addEventListener('mousedown', (e: MouseEvent) => {
+  if (e.button === 3 || e.button === 4) {
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+  }
+}, { capture: true, passive: false });
+
+// 禁用浏览器默认的前进/后退键盘快捷键
+// 注: Alt+方向键等已由 Rust 插件处理，这里作为备用
+document.addEventListener('keydown', (e: KeyboardEvent) => {
+  if (e.altKey && (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Backspace')) {
+    e.preventDefault();
+    return false;
+  }
+  // 禁用 F5 刷新
+  if (e.key === 'F5') {
+    e.preventDefault();
+    return false;
+  }
+}, { capture: true, passive: false });
+
 // Global error handler - 捕获所有未处理的错误
 window.addEventListener("error", (event) => {
   console.error("[Global Error]", event.error);

@@ -23,10 +23,23 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    use tauri_plugin_prevent_default::Flags;
+    
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(
+            tauri_plugin_prevent_default::Builder::new()
+                // 禁用所有浏览器键盘快捷键
+                // 注: 鼠标侧键(前进/后退)需要通过 JavaScript 层拦截
+                .with_flags(
+                    Flags::keyboard() | 
+                    Flags::RELOAD | 
+                    Flags::DEV_TOOLS
+                )
+                .build()
+        )
         .setup(|app| {
             // 初始化配置系统（用户数据目录）
             if let Err(e) = config::init_config(app.handle()) {
@@ -35,8 +48,12 @@ pub fn run() {
             
             // 首次启动时在安装目录创建配置文件
             match config::init_install_config(app.handle()) {
-                Ok(config_path) => {
-                    println!("[Setup] 安装配置文件路径: {}", config_path.display());
+                Ok(result) => {
+                    if result.created {
+                        println!("[Setup] 已创建安装配置文件: {}", result.config_path);
+                    } else {
+                        println!("[Setup] 配置文件已存在，跳过安装: {}", result.config_path);
+                    }
                 }
                 Err(e) => {
                     eprintln!("[Setup] 安装配置初始化失败: {}", e);
