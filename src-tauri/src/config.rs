@@ -2,9 +2,10 @@
 //!
 //! 支持从 JSON 配置文件读取路径设置，支持环境变量替换。
 //!
-//! 配置文件路径: `{APP_DATA}/config.json`
+//! 配置文件路径: `{INSTALL_DIR}/config.json`
 //!
 //! 支持的环境变量格式: `${VAR_NAME}` 或 `$VAR_NAME`
+//! 内置变量: `${APP_INSTALL_DIR}` - 应用安装目录
 
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
@@ -27,25 +28,25 @@ pub fn default_config() -> AppConfig {
     AppConfig {
         version: CONFIG_VERSION.to_string(),
         database: DatabaseConfig {
-            path: "${APP_DATA}/inovel.db".to_string(),
-            backup_dir: "${APP_DATA}/backups".to_string(),
+            path: "${APP_INSTALL_DIR}/inovel.db".to_string(),
+            backup_dir: "${APP_INSTALL_DIR}/backups".to_string(),
             auto_backup: true,
             vacuum_on_close: false,
         },
         paths: PathsConfig {
-            projects_root: "${APP_DATA}/projects".to_string(),
-            exports_dir: "${APP_DATA}/exports".to_string(),
+            projects_root: "${APP_INSTALL_DIR}/projects".to_string(),
+            exports_dir: "${APP_INSTALL_DIR}/exports".to_string(),
         },
         logging: LoggingConfig {
             level: "info".to_string(),
-            directory: "${APP_DATA}/logs".to_string(),
+            directory: "${APP_INSTALL_DIR}/logs".to_string(),
             max_file_size_mb: 50,
             retention_days: 30,
             backup_log_enabled: true,
         },
         backup: BackupConfig {
             enabled: true,
-            backup_dir: "${APP_DATA}/backups".to_string(),
+            backup_dir: "${APP_INSTALL_DIR}/backups".to_string(),
             max_backups_per_project: 10,
             incremental_threshold_hours: 24,
         },
@@ -112,13 +113,9 @@ pub struct BackupConfig {
     pub incremental_threshold_hours: u32,
 }
 
-/// 解析配置文件路径（用户数据目录）
+/// 获取配置文件路径（安装目录）
 fn get_config_path(app_handle: &AppHandle) -> PathBuf {
-    let app_dir = app_handle
-        .path()
-        .app_data_dir()
-        .expect("Failed to get app data dir");
-    app_dir.join("config.json")
+    get_install_dir(app_handle).join("config.json")
 }
 
 /// 获取应用程序安装目录
@@ -140,25 +137,15 @@ fn get_install_dir(app_handle: &AppHandle) -> PathBuf {
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
-/// 获取安装目录下的配置文件路径
-fn get_install_config_path(app_handle: &AppHandle) -> PathBuf {
-    get_install_dir(app_handle).join("config.json")
-}
-
 /// 替换配置字符串中的环境变量
 ///
 /// 支持格式:
 /// - `${VAR_NAME}` - 标准格式
 /// - `$VAR_NAME` - 简写格式（仅大写字母、数字和下划线）
 /// - `${APP_INSTALL_DIR}` - 应用安装目录（自动替换）
-fn expand_env_vars(path: &str, app_data_dir: &Path, install_dir: &Path) -> String {
+fn expand_env_vars(path: &str, install_dir: &Path) -> String {
     let mut result = path.to_string();
 
-    // 替换 ${APP_DATA} 为实际的 app data 目录
-    result = result.replace("${APP_DATA}", &app_data_dir.to_string_lossy());
-    result = result.replace("$APP_DATA", &app_data_dir.to_string_lossy());
-
-    // 替换 ${APP_INSTALL_DIR} 为应用安装目录
     result = result.replace("${APP_INSTALL_DIR}", &install_dir.to_string_lossy());
     result = result.replace("$APP_INSTALL_DIR", &install_dir.to_string_lossy());
 
@@ -183,8 +170,7 @@ fn expand_env_vars(path: &str, app_data_dir: &Path, install_dir: &Path) -> Strin
     result = re_pattern
         .replace_all(&result, |caps: &regex_lite::Captures| {
             let var_name = &caps[1];
-            // 跳过已知变量
-            if var_name == "APP_DATA" || var_name == "APP_INSTALL_DIR" {
+            if var_name == "APP_INSTALL_DIR" {
                 return caps[0].to_string();
             }
             std::env::var(var_name).unwrap_or_else(|_| caps[0].to_string())
@@ -196,8 +182,7 @@ fn expand_env_vars(path: &str, app_data_dir: &Path, install_dir: &Path) -> Strin
     result = re_simple
         .replace_all(&result, |caps: &regex_lite::Captures| {
             let var_name = &caps[1];
-            // 跳过已知变量格式
-            if caps[0].starts_with("${") || var_name == "APP_DATA" || var_name == "APP_INSTALL_DIR" {
+            if caps[0].starts_with("${") || var_name == "APP_INSTALL_DIR" {
                 return caps[0].to_string();
             }
             std::env::var(var_name).unwrap_or_else(|_| caps[0].to_string())
@@ -209,127 +194,216 @@ fn expand_env_vars(path: &str, app_data_dir: &Path, install_dir: &Path) -> Strin
 
 /// 初始化配置系统
 ///
-/// 如果配置文件不存在，则创建默认配置。
+/// 从安装目录读取 config.json。如果配置文件不存在，则创建默认配置，
+/// 版本号从 tauri.conf.json 读取，`${APP_INSTALL_DIR}` 占位符替换为实际安装目录。
 pub fn init_config(app_handle: &AppHandle) -> Result<(), String> {
-    let config_path = get_config_path(app_handle);
-    let app_dir = config_path.parent().unwrap();
-
-    // 确保目录存在
-    fs::create_dir_all(app_dir).map_err(|e| format!("创建配置目录失败: {}", e))?;
+    let install_dir = get_install_dir(app_handle);
+    let config_path = install_dir.join("config.json");
 
     let config = if config_path.exists() {
-        // 读取现有配置
         let content = fs::read_to_string(&config_path)
-            .map_err(|e| format!("读取配置文件失败: {}", e))?;
+            .map_err(|e| format!("Failed to read config: {}", e))?;
 
-        // 解析配置（环境变量在 get_config_with_expanded_paths 中展开）
         let mut config: AppConfig = serde_json::from_str(&content)
-            .map_err(|e| format!("解析配置文件失败: {}", e))?;
+            .map_err(|e| format!("Failed to parse config: {}", e))?;
 
-        // 更新版本信息
         config.version = CONFIG_VERSION.to_string();
-
         config
     } else {
-        // 创建默认配置
-        let default = default_config();
-        let content = serde_json::to_string_pretty(&default)
-            .map_err(|e| format!("序列化配置失败: {}", e))?;
+        // 验证安装目录有效性
+        let validation = validate_install_dir(&install_dir);
+        if !validation.valid {
+            return Err(format!(
+                "Invalid install directory: {} (exists={}, readable={}, writable={}, absolute={})",
+                validation.error_message,
+                validation.exists,
+                validation.is_readable,
+                validation.is_writable,
+                validation.is_absolute
+            ));
+        }
+
+        if !install_dir.exists() {
+            fs::create_dir_all(&install_dir)
+                .map_err(|e| format!("Failed to create install directory: {}", e))?;
+        }
+
+        let mut config = default_config();
+        config.version = get_app_version_from_tauri_config();
+
+        // 将 ${APP_INSTALL_DIR} 占位符替换为实际安装目录
+        let install_dir_str = install_dir.to_string_lossy();
+        config.database.path = config.database.path.replace("${APP_INSTALL_DIR}", &install_dir_str);
+        config.database.backup_dir = config.database.backup_dir.replace("${APP_INSTALL_DIR}", &install_dir_str);
+        config.paths.projects_root = config.paths.projects_root.replace("${APP_INSTALL_DIR}", &install_dir_str);
+        config.paths.exports_dir = config.paths.exports_dir.replace("${APP_INSTALL_DIR}", &install_dir_str);
+        config.logging.directory = config.logging.directory.replace("${APP_INSTALL_DIR}", &install_dir_str);
+        config.backup.backup_dir = config.backup.backup_dir.replace("${APP_INSTALL_DIR}", &install_dir_str);
+
+        let content = serde_json::to_string_pretty(&config)
+            .map_err(|e| format!("Failed to serialize config: {}", e))?;
 
         fs::write(&config_path, &content)
-            .map_err(|e| format!("写入配置文件失败: {}", e))?;
+            .map_err(|e| format!("Failed to write config: {}", e))?;
 
-        default
+        println!("[Config] First launch, created config at: {}", config_path.display());
+        config
     };
 
-    // 保存到全局状态
-    let mut global_config = APP_CONFIG.write().map_err(|_| "配置锁中毒")?;
+    let mut global_config = APP_CONFIG.write().map_err(|_| "Config lock poisoned")?;
     *global_config = Some(config);
 
     Ok(())
 }
 
-/// 安装目录配置文件结构（用于生成 config.json）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InstallConfig {
-    /// 配置版本
-    pub version: String,
-    /// 应用名称
-    pub app_name: String,
-    /// 应用安装目录
-    pub install_dir: String,
-    /// 其他配置项（可扩展）
-    #[serde(default)]
-    pub settings: std::collections::HashMap<String, serde_json::Value>,
+/// 验证安装目录有效性的结果
+#[derive(Debug, Clone)]
+pub struct InstallDirValidationResult {
+    pub valid: bool,
+    pub exists: bool,
+    pub is_readable: bool,
+    pub is_writable: bool,
+    pub is_absolute: bool,
+    pub error_message: String,
 }
 
-impl Default for InstallConfig {
-    fn default() -> Self {
-        Self {
-            version: "1.0".to_string(),
-            app_name: "小说工坊".to_string(),
-            install_dir: String::new(),
-            settings: std::collections::HashMap::new(),
+/// 验证安装目录的有效性
+fn validate_install_dir(path: &Path) -> InstallDirValidationResult {
+    let mut result = InstallDirValidationResult {
+        valid: true,
+        exists: path.exists(),
+        is_readable: false,
+        is_writable: false,
+        is_absolute: path.is_absolute(),
+        error_message: String::new(),
+    };
+
+    // 检查路径是否为绝对路径
+    if !result.is_absolute {
+        result.valid = false;
+        result.error_message = "Path is not absolute".to_string();
+        return result;
+    }
+
+    // 检查路径是否存在
+    if !result.exists {
+        result.valid = false;
+        result.error_message = "Path does not exist".to_string();
+        return result;
+    }
+
+    // 检查是否为目录
+    if !path.is_dir() {
+        result.valid = false;
+        result.error_message = "Path is not a directory".to_string();
+        return result;
+    }
+
+    // 检查读权限
+    match std::fs::metadata(path) {
+        Ok(meta) => {
+            result.is_readable = meta.permissions().readonly() == false;
+            // 尝试写入测试文件检查写权限
+            let test_file = path.join(".write_test_tmp");
+            match fs::write(&test_file, "test") {
+                Ok(_) => {
+                    let _ = fs::remove_file(&test_file);
+                    result.is_writable = true;
+                }
+                Err(_) => {
+                    result.valid = false;
+                    result.error_message = "Directory is not writable".to_string();
+                }
+            }
+        }
+        Err(e) => {
+            result.valid = false;
+            result.error_message = format!("Failed to read metadata: {}", e);
         }
     }
+
+    result
 }
 
-/// 安装配置文件结果
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InstallConfigResult {
-    /// 配置文件路径
-    pub config_path: String,
-    /// 是否为新创建（true=新创建，false=已存在跳过）
+/// 从 tauri.conf.json 读取应用版本
+fn get_app_version_from_tauri_config() -> String {
+    // 优先从环境变量获取（CI/CD 注入）
+    if let Ok(version) = std::env::var("TAURI_APP_VERSION") {
+        return version;
+    }
+
+    // 回退到默认值
+    "1.0.0".to_string()
+}
+
+/// 数据库文件初始化结果
+#[derive(Debug, Clone)]
+pub struct DbInitResult {
+    pub db_path: String,
     pub created: bool,
-    /// 操作说明
+    pub connected: bool,
     pub message: String,
 }
 
-/// 初始化安装目录配置文件（首次启动时创建）
-/// 
-/// 在应用程序安装目录下创建 config.json，包含 ${APP_INSTALL_DIR} 变量说明。
-/// 如果配置文件已存在，则跳过安装步骤，避免重复覆盖。
-pub fn init_install_config(app_handle: &AppHandle) -> Result<InstallConfigResult, String> {
-    let install_dir = get_install_dir(app_handle);
-    let config_path = install_dir.join("config.json");
+/// 初始化数据库文件（首次启动时创建）
+///
+/// 根据 config.json 中 database.path 指定的路径创建 SQLite 数据库文件。
+/// 在创建前验证路径有效性（目录存在、可写），创建后进行连接测试。
+pub fn init_db_file(_app_handle: &AppHandle) -> Result<DbInitResult, String> {
+    let config = get_config()?;
+    let db_path_str = &config.database.path;
+    let db_path = Path::new(db_path_str);
 
-    // 校验配置文件是否已存在
-    if config_path.exists() {
-        // 文件已存在，跳过安装步骤
-        println!("[Config] 安装配置文件已存在，跳过安装: {}", config_path.display());
-        return Ok(InstallConfigResult {
-            config_path: config_path.to_string_lossy().to_string(),
-            created: false,
-            message: "配置文件已存在，跳过安装".to_string(),
-        });
+    // 验证父目录是否存在
+    let parent_dir = db_path.parent().ok_or_else(|| {
+        format!("Invalid database path: {} (no parent directory)", db_path_str)
+    })?;
+
+    if !parent_dir.exists() {
+        fs::create_dir_all(parent_dir)
+            .map_err(|e| format!("Failed to create database directory: {}", e))?;
     }
 
-    // 确保安装目录存在
-    if !install_dir.exists() {
-        fs::create_dir_all(&install_dir)
-            .map_err(|e| format!("创建安装目录失败: {}", e))?;
-    }
+    // 验证目录可写
+    let test_file = parent_dir.join(".write_test_db");
+    fs::write(&test_file, "test").map_err(|e| {
+        format!("Database directory is not writable: {}", e)
+    })?;
+    let _ = fs::remove_file(&test_file);
 
-    // 首次启动，创建配置文件
-    let config = InstallConfig {
-        version: "1.0".to_string(),
-        app_name: "小说工坊".to_string(),
-        install_dir: install_dir.to_string_lossy().to_string(),
-        settings: std::collections::HashMap::new(),
-    };
-    
-    let content = serde_json::to_string_pretty(&config)
-        .map_err(|e| format!("序列化安装配置失败: {}", e))?;
-    
-    fs::write(&config_path, &content)
-        .map_err(|e| format!("创建安装配置文件失败: {}", e))?;
-    
-    println!("[Config] 首次启动，已在安装目录创建配置文件: {}", config_path.display());
+    // 检查数据库文件是否已存在
+    let already_exists = db_path.exists();
 
-    Ok(InstallConfigResult {
-        config_path: config_path.to_string_lossy().to_string(),
-        created: true,
-        message: "配置文件创建成功".to_string(),
+    // 创建数据库连接（自动创建数据库文件）
+    let conn = rusqlite::Connection::open(db_path)
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+
+    // 连接测试：执行简单查询验证可读写
+    conn.execute("SELECT 1", [])
+        .map_err(|e| format!("Database connection test failed: {}", e))?;
+
+    // 创建基础表结构（如果不存在）
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS _db_init_check_ (
+            id INTEGER PRIMARY KEY
+        )",
+        [],
+    ).ok();
+
+    // 关闭连接
+    drop(conn);
+
+    println!("[DbInit] Database file initialized at: {}", db_path.display());
+
+    Ok(DbInitResult {
+        db_path: db_path_str.clone(),
+        created: !already_exists,
+        connected: true,
+        message: if already_exists {
+            "Database file already exists, connection verified".to_string()
+        } else {
+            "Database file created and connection verified".to_string()
+        },
     })
 }
 
@@ -342,34 +416,30 @@ pub fn get_config() -> Result<AppConfig, String> {
 /// 获取配置并解析路径中的环境变量
 pub fn get_config_with_expanded_paths(app_handle: &AppHandle) -> Result<ExpandedConfig, String> {
     let config = get_config()?;
-    let app_dir = app_handle
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("获取应用数据目录失败: {}", e))?;
     let install_dir = get_install_dir(app_handle);
 
     Ok(ExpandedConfig {
         version: config.version,
         database: ExpandedDatabaseConfig {
-            path: expand_path(&config.database.path, &app_dir, &install_dir),
-            backup_dir: expand_path(&config.database.backup_dir, &app_dir, &install_dir),
+            path: expand_path(&config.database.path, &install_dir),
+            backup_dir: expand_path(&config.database.backup_dir, &install_dir),
             auto_backup: config.database.auto_backup,
             vacuum_on_close: config.database.vacuum_on_close,
         },
         paths: ExpandedPathsConfig {
-            projects_root: expand_path(&config.paths.projects_root, &app_dir, &install_dir),
-            exports_dir: expand_path(&config.paths.exports_dir, &app_dir, &install_dir),
+            projects_root: expand_path(&config.paths.projects_root, &install_dir),
+            exports_dir: expand_path(&config.paths.exports_dir, &install_dir),
         },
         logging: ExpandedLoggingConfig {
             level: config.logging.level.clone(),
-            directory: expand_path(&config.logging.directory, &app_dir, &install_dir),
+            directory: expand_path(&config.logging.directory, &install_dir),
             max_file_size_mb: config.logging.max_file_size_mb,
             retention_days: config.logging.retention_days,
             backup_log_enabled: config.logging.backup_log_enabled,
         },
         backup: ExpandedBackupConfig {
             enabled: config.backup.enabled,
-            backup_dir: expand_path(&config.backup.backup_dir, &app_dir, &install_dir),
+            backup_dir: expand_path(&config.backup.backup_dir, &install_dir),
             max_backups_per_project: config.backup.max_backups_per_project,
             incremental_threshold_hours: config.backup.incremental_threshold_hours,
         },
@@ -377,8 +447,8 @@ pub fn get_config_with_expanded_paths(app_handle: &AppHandle) -> Result<Expanded
 }
 
 /// 展开路径中的环境变量
-fn expand_path(path: &str, app_data_dir: &Path, install_dir: &Path) -> PathBuf {
-    let expanded = expand_env_vars(path, app_data_dir, install_dir);
+fn expand_path(path: &str, install_dir: &Path) -> PathBuf {
+    let expanded = expand_env_vars(path, install_dir);
     PathBuf::from(expanded)
 }
 
@@ -666,8 +736,8 @@ pub struct InstallConfigInfo {
 #[tauri::command]
 pub async fn get_install_config_info(app_handle: AppHandle) -> Result<InstallConfigInfo, String> {
     let install_dir = get_install_dir(&app_handle);
-    let config_path = get_install_config_path(&app_handle);
-    
+    let config_path = get_config_path(&app_handle);
+
     Ok(InstallConfigInfo {
         install_dir: install_dir.to_string_lossy().to_string(),
         config_path: config_path.to_string_lossy().to_string(),

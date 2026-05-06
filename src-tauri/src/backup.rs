@@ -1,5 +1,5 @@
-use crate::config::{get_db_path as config_get_db_path, get_log_dir};
-use crate::db::init_db;
+use crate::config::get_log_dir;
+use crate::db::{get_db_path, init_db};
 use crate::git_snapshot::{get_project_folder_path, open_or_init_repo};
 use git2::{DiffFormat, Repository};
 use rusqlite::Connection;
@@ -7,7 +7,7 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Once;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tracing::{error, info, warn};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -22,17 +22,6 @@ use zip::ZipWriter;
 /// 获取备份日志目录（从配置读取）
 fn get_backup_log_dir(app_handle: &AppHandle) -> PathBuf {
     get_log_dir(app_handle).unwrap_or_else(|_| PathBuf::from("."))
-}
-
-/// 获取数据库路径（从配置读取）
-fn get_db_path(app_handle: &AppHandle) -> PathBuf {
-    config_get_db_path(app_handle).unwrap_or_else(|_| {
-        app_handle
-            .path()
-            .app_data_dir()
-            .unwrap_or_else(|_| PathBuf::from("."))
-            .join("inovel.db")
-    })
 }
 
 static INIT_LOGGING: Once = Once::new();

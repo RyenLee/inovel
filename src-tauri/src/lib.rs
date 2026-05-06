@@ -41,25 +41,11 @@ pub fn run() {
                 .build()
         )
         .setup(|app| {
-            // 初始化配置系统（用户数据目录）
+            // 初始化配置系统（安装目录）
             if let Err(e) = config::init_config(app.handle()) {
-                eprintln!("配置初始化失败: {}", e);
+                eprintln!("[Setup] Config init failed: {}", e);
             }
-            
-            // 首次启动时在安装目录创建配置文件
-            match config::init_install_config(app.handle()) {
-                Ok(result) => {
-                    if result.created {
-                        println!("[Setup] 已创建安装配置文件: {}", result.config_path);
-                    } else {
-                        println!("[Setup] 配置文件已存在，跳过安装: {}", result.config_path);
-                    }
-                }
-                Err(e) => {
-                    eprintln!("[Setup] 安装配置初始化失败: {}", e);
-                }
-            }
-            
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
