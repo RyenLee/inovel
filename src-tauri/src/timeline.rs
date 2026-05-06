@@ -51,7 +51,7 @@ pub async fn delete_event(app_handle: AppHandle, event_id: i64) -> Result<(), St
 pub async fn list_events(app_handle: AppHandle, project_id: i64) -> Result<Vec<Event>, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
-    let mut stmt = conn.prepare("SELECT id, project_id, title, story_time, description, chapter_id, created_at, updated_at FROM events WHERE project_id = ?1 ORDER BY story_time ASC")
+    let mut stmt = conn.prepare("SELECT id, project_id, title, story_time, description, chapter_id, created_at, updated_at FROM events WHERE project_id = ?1 ORDER BY story_time DESC")
         .map_err(|e| format!("查询失败: {}", e))?;
     let evs: Vec<Event> = stmt.query_map([project_id], |row| {
         Ok(Event {
