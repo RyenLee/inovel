@@ -1,6 +1,7 @@
 use crate::db::{get_db_path, init_db};
 use crate::git_snapshot::get_project_folder_path;
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
+use regex::Regex;
 use rusqlite::Connection;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -13,7 +14,6 @@ fn get_export_dir(app_handle: &AppHandle, project_id: i64) -> Result<PathBuf, St
     Ok(export_dir)
 }
 
-/// 获取项目的所有章节（按卷→章节排序）
 fn get_all_chapters(app_handle: &AppHandle, project_id: i64) -> Result<Vec<(String, String)>, String> {
     let db_path = get_db_path(app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -21,7 +21,6 @@ fn get_all_chapters(app_handle: &AppHandle, project_id: i64) -> Result<Vec<(Stri
 
     let _project_path = get_project_folder_path(app_handle, project_id)?;
 
-    // 先查卷
     let mut vol_stmt = conn
         .prepare("SELECT id, name FROM volumes WHERE project_id = ?1 ORDER BY sort_order")
         .map_err(|e| format!("查询卷失败: {}", e))?;
@@ -59,7 +58,206 @@ fn get_all_chapters(app_handle: &AppHandle, project_id: i64) -> Result<Vec<(Stri
     Ok(chapters)
 }
 
-/// 导出为纯文本
+// ======================== HTML 清洗工具函数 ========================
+
+fn decode_html_entities(s: &str) -> String {
+    s.replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'")
+        .replace("&#39;", "'")
+        .replace("&nbsp;", " ")
+}
+
+fn strip_html_tags(html: &str) -> String {
+    let mut result = String::with_capacity(html.len());
+    let mut in_tag = false;
+    let chars: Vec<char> = html.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        if !in_tag {
+            if chars[i] == '<' {
+                in_tag = true;
+            } else {
+                result.push(chars[i]);
+            }
+        } else if chars[i] == '>' {
+            in_tag = false;
+        }
+        i += 1;
+    }
+
+    result
+}
+
+fn normalize_whitespace(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut prev_newline = false;
+
+    for line in s.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            if !prev_newline {
+                result.push('\n');
+                prev_newline = true;
+            }
+        } else {
+            if !result.is_empty() {
+                result.push('\n');
+            }
+            result.push_str(trimmed);
+            prev_newline = false;
+        }
+    }
+
+    result.trim().to_string()
+}
+
+fn html_to_plain_text(html: &str) -> String {
+    let text = strip_html_tags(html);
+    let text = decode_html_entities(&text);
+    normalize_whitespace(&text)
+}
+
+fn html_to_markdown(html: &str) -> String {
+    let mut md = html.to_string();
+
+    // 换行标签
+    md = md.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n");
+
+    // 分割线
+    md = md.replace("<hr>", "\n---\n").replace("<hr/>", "\n---\n").replace("<hr />", "\n---\n");
+
+    // 标题: <h1> → # , <h2> → ## , ...
+    for level in (1..=6).rev() {
+        let open = format!("<h{}>", level);
+        let close = format!("</h{}>", level);
+        let prefix = "#".repeat(level) + " ";
+        md = replace_tag_content(&md, &open, &close, |inner| format!("{}{}", prefix, inner.trim()));
+    }
+
+    // 粗体/斜体
+    md = replace_tag_content(&md, "<strong>", "</strong>", |inner| format!("**{}**", inner));
+    md = replace_tag_content(&md, "<b>", "</b>", |inner| format!("**{}**", inner));
+    md = replace_tag_content(&md, "<em>", "</em>", |inner| format!("*{}*", inner));
+    md = replace_tag_content(&md, "<i>", "</i>", |inner| format!("*{}*", inner));
+
+    // 行内代码
+    md = replace_tag_content(&md, "<code>", "</code>", |inner| format!("`{}`", inner));
+
+    // 代码块
+    md = replace_tag_content(&md, "<pre>", "</pre>", |inner| {
+        let code = strip_html_tags(inner);
+        format!("\n```\n{}\n```\n", code.trim())
+    });
+
+    // 引用块
+    md = replace_tag_content(&md, "<blockquote>", "</blockquote>", |inner| {
+        let stripped = html_to_markdown(inner);
+        stripped.lines().map(|l| format!("> {}", l)).collect::<Vec<_>>().join("\n")
+    });
+
+    // 无序列表
+    md = replace_tag_content(&md, "<ul>", "</ul>", |inner| {
+        process_list_items(inner, "-")
+    });
+    // 有序列表
+    md = replace_tag_content(&md, "<ol>", "</ol>", |inner| {
+        process_list_items(inner, "1.")
+    });
+
+    // 列表项（独立出现时）
+    md = replace_tag_content(&md, "<li>", "</li>", |inner| format!("- {}", inner.trim()));
+
+    // 链接
+    let link_re = Regex::new(r#"<a\s+[^>]*href="([^"]*)"[^>]*>(.*?)</a>"#).unwrap();
+    md = link_re.replace_all(&md, |caps: &regex::Captures| {
+        format!("[{}]({})", &caps[2], &caps[1])
+    }).to_string();
+
+    // 图片
+    let img_re = Regex::new(r#"<img\s+[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*/?>"#).unwrap();
+    md = img_re.replace_all(&md, |caps: &regex::Captures| {
+        format!("![{}]({})", &caps[2], &caps[1])
+    }).to_string();
+    let img_re2 = Regex::new(r#"<img\s+[^>]*src="([^"]*)"[^>]*/?>"#).unwrap();
+    md = img_re2.replace_all(&md, |caps: &regex::Captures| {
+        format!("![]({})", &caps[1])
+    }).to_string();
+
+    // 段落: <p>...</p> → 内容 + 双换行
+    md = replace_tag_content(&md, "<p>", "</p>", |inner| format!("{}\n", inner.trim()));
+
+    // 清除所有残留 HTML 标签
+    md = strip_html_tags(&md);
+
+    // 解码 HTML 实体
+    md = decode_html_entities(&md);
+
+    // 规范化空白
+    normalize_whitespace(&md)
+}
+
+fn replace_tag_content<F>(html: &str, open: &str, close: &str, transform: F) -> String
+where
+    F: Fn(&str) -> String,
+{
+    let mut result = String::with_capacity(html.len());
+    let mut remaining = html;
+
+    loop {
+        match remaining.find(open) {
+            None => {
+                result.push_str(remaining);
+                break;
+            }
+            Some(start) => {
+                result.push_str(&remaining[..start]);
+                let after_open = &remaining[start + open.len()..];
+                match after_open.find(close) {
+                    None => {
+                        result.push_str(remaining);
+                        break;
+                    }
+                    Some(end) => {
+                        let inner = &after_open[..end];
+                        result.push_str(&transform(inner));
+                        remaining = &after_open[end + close.len()..];
+                    }
+                }
+            }
+        }
+    }
+
+    result
+}
+
+fn process_list_items(inner: &str, prefix: &str) -> String {
+    let mut result = String::new();
+    let mut counter = 1;
+    for item in inner.split("</li>") {
+        let item = item.trim();
+        if item.is_empty() {
+            continue;
+        }
+        let content = strip_html_tags(item).trim().to_string();
+        if content.is_empty() {
+            continue;
+        }
+        if prefix == "1." {
+            result.push_str(&format!("{}. {}\n", counter, content));
+            counter += 1;
+        } else {
+            result.push_str(&format!("{} {}\n", prefix, content));
+        }
+    }
+    result
+}
+
+// ======================== 导出命令 ========================
+
 #[tauri::command]
 pub async fn export_txt(app_handle: AppHandle, project_id: i64) -> Result<String, String> {
     let export_dir = get_export_dir(&app_handle, project_id)?;
@@ -71,7 +269,7 @@ pub async fn export_txt(app_handle: AppHandle, project_id: i64) -> Result<String
             text.push_str("\n\n\n==========\n\n\n");
         }
         text.push_str(&format!("# {}\n\n", title));
-        text.push_str(content);
+        text.push_str(&html_to_plain_text(content));
     }
 
     let output_path = export_dir.join("export.txt");
@@ -79,7 +277,6 @@ pub async fn export_txt(app_handle: AppHandle, project_id: i64) -> Result<String
     Ok(output_path.to_string_lossy().to_string())
 }
 
-/// 导出为 Markdown（含 TOC）
 #[tauri::command]
 pub async fn export_markdown(app_handle: AppHandle, project_id: i64) -> Result<String, String> {
     let export_dir = get_export_dir(&app_handle, project_id)?;
@@ -92,7 +289,7 @@ pub async fn export_markdown(app_handle: AppHandle, project_id: i64) -> Result<S
         if i > 0 {
             md.push_str("\n\n---\n\n");
         }
-        md.push_str(&format!("## {}\n\n{}", title, content));
+        md.push_str(&format!("## {}\n\n{}", title, html_to_markdown(content)));
     }
 
     let output_path = export_dir.join("export.md");
@@ -100,7 +297,6 @@ pub async fn export_markdown(app_handle: AppHandle, project_id: i64) -> Result<S
     Ok(output_path.to_string_lossy().to_string())
 }
 
-/// 获取导出用的 Markdown 内容（供前端 PDF 导出使用）
 #[tauri::command]
 pub async fn get_export_content(app_handle: AppHandle, project_id: i64) -> Result<String, String> {
     let chapters = get_all_chapters(&app_handle, project_id)?;
@@ -110,25 +306,28 @@ pub async fn get_export_content(app_handle: AppHandle, project_id: i64) -> Resul
         if i > 0 {
             md.push_str("\n\n---\n\n");
         }
-        md.push_str(&format!("## {}\n\n{}", title, content));
+        md.push_str(&format!("## {}\n\n{}", title, html_to_markdown(content)));
     }
     Ok(md)
 }
 
-/// 导出为 HTML（用于后续打印为 PDF）
 #[tauri::command]
 pub async fn export_html_for_print(app_handle: AppHandle, project_id: i64) -> Result<String, String> {
     let export_dir = get_export_dir(&app_handle, project_id)?;
-    let md = get_export_content(app_handle, project_id).await?;
+    let chapters = get_all_chapters(&app_handle, project_id)?;
 
-    // 简单 Markdown → HTML 转换（与前端保持一致）
-    let body = markdown_to_html_simple(&md);
+    let mut body = String::new();
+    for (i, (title, content)) in chapters.iter().enumerate() {
+        if i > 0 {
+            body.push_str("<hr>\n");
+        }
+        body.push_str(&format!("<h2>{}</h2>\n", title));
+        body.push_str(content);
+    }
 
-    // 提取标题
-    let title = md
-        .lines()
-        .find(|l| l.starts_with("## "))
-        .map(|l| l.trim_start_matches("## ").to_string())
+    let title = chapters
+        .first()
+        .map(|(t, _)| t.clone())
         .unwrap_or_else(|| "导出文档".to_string());
 
     let css = r#"
@@ -159,14 +358,12 @@ pub async fn export_html_for_print(app_handle: AppHandle, project_id: i64) -> Re
     Ok(output_path.to_string_lossy().to_string())
 }
 
-/// 导出为 EPUB
 #[tauri::command]
 pub async fn export_epub(app_handle: AppHandle, project_id: i64) -> Result<String, String> {
     let export_dir = get_export_dir(&app_handle, project_id)?;
     let project_path = get_project_folder_path(&app_handle, project_id)?;
     let chapters = get_all_chapters(&app_handle, project_id)?;
 
-    // 获取项目元数据
     let (project_name, author): (String, String) = {
         let db_path = get_db_path(&app_handle);
         let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -185,7 +382,6 @@ pub async fn export_epub(app_handle: AppHandle, project_id: i64) -> Result<Strin
     builder.metadata("title", &project_name).map_err(|e| format!("设置标题失败: {}", e))?;
     builder.metadata("author", &author).map_err(|e| format!("设置作者失败: {}", e))?;
 
-    // 添加封面图片
     let cover_path = project_path.join("cover.jpg");
     if cover_path.exists() {
         let cover_data = fs::read(&cover_path).map_err(|e| format!("读取封面失败: {}", e))?;
@@ -194,7 +390,6 @@ pub async fn export_epub(app_handle: AppHandle, project_id: i64) -> Result<Strin
             .map_err(|e| format!("添加封面失败: {}", e))?;
     }
 
-    // 添加 CSS 样式
     let css = r#"
         body { font-family: "Noto Serif SC", "Source Han Serif SC", serif; line-height: 1.8; padding: 1em; }
         h1, h2, h3, h4 { font-weight: bold; margin-top: 1.5em; margin-bottom: 0.5em; }
@@ -207,7 +402,6 @@ pub async fn export_epub(app_handle: AppHandle, project_id: i64) -> Result<Strin
         .stylesheet(css.as_bytes())
         .map_err(|e| format!("添加 CSS 失败: {}", e))?;
 
-    // 添加各章节
     for (i, (title, content)) in chapters.iter().enumerate() {
         let xhtml = format!(
             r#"<?xml version="1.0" encoding="utf-8"?>
@@ -216,19 +410,14 @@ pub async fn export_epub(app_handle: AppHandle, project_id: i64) -> Result<Strin
 <head><title>{}</title></head>
 <body><h1>{}</h1>{}</body>
 </html>"#,
-            title,
-            title,
-            markdown_to_html_simple(content)
+            title, title, content
         );
 
         builder
             .add_content(
-                EpubContent::new(
-                    format!("chapter_{}.xhtml", i),
-                    xhtml.as_bytes(),
-                )
-                .title(title)
-                .reftype(ReferenceType::Text),
+                EpubContent::new(format!("chapter_{}.xhtml", i), xhtml.as_bytes())
+                    .title(title)
+                    .reftype(ReferenceType::Text),
             )
             .map_err(|e| format!("添加章节失败: {}", e))?;
     }
@@ -241,54 +430,6 @@ pub async fn export_epub(app_handle: AppHandle, project_id: i64) -> Result<Strin
         .map_err(|e| format!("生成 EPUB 失败: {}", e))?;
 
     Ok(output_path.to_string_lossy().to_string())
-}
-
-/// 简单将 Markdown 转为 XHTML（用于 EPUB）
-fn markdown_to_html_simple(md: &str) -> String {
-    let mut html = String::new();
-    let mut in_code_block = false;
-
-    for line in md.lines() {
-        if line.starts_with("```") {
-            if in_code_block {
-                html.push_str("</code></pre>\n");
-            } else {
-                html.push_str("<pre><code>\n");
-            }
-            in_code_block = !in_code_block;
-            continue;
-        }
-        if in_code_block {
-            html.push_str(&escape_html(line));
-            html.push('\n');
-            continue;
-        }
-        if line.is_empty() {
-            html.push_str("<p></p>\n");
-            continue;
-        }
-        if line.starts_with("### ") {
-            html.push_str(&format!("<h3>{}</h3>\n", &line[4..]));
-        } else if line.starts_with("## ") {
-            html.push_str(&format!("<h2>{}</h2>\n", &line[3..]));
-        } else if line.starts_with("# ") {
-            html.push_str(&format!("<h1>{}</h1>\n", &line[2..]));
-        } else if line.starts_with("> ") {
-            html.push_str(&format!("<blockquote><p>{}</p></blockquote>\n", &line[2..]));
-        } else if line.starts_with("- ") || line.starts_with("* ") {
-            html.push_str(&format!("<li>{}</li>\n", &line[2..]));
-        } else {
-            html.push_str(&format!("<p>{}</p>\n", line));
-        }
-    }
-    html
-}
-
-fn escape_html(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
 }
 
 #[tauri::command]
