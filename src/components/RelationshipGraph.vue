@@ -6,8 +6,11 @@ import { Controls } from '@vue-flow/controls'
 import { NButton, NIcon, NModal, NSelect, NPopconfirm, useMessage, NEmpty, NDropdown } from 'naive-ui'
 import { Plus, Users } from 'lucide-vue-next'
 import { invoke } from '@tauri-apps/api/core'
+import { useTheme } from '../composables/useTheme'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
+
+const { isDark } = useTheme()
 
 // Types
 interface Character {
@@ -395,7 +398,7 @@ onMounted(() => {
         @edge-double-click="onEdgeDoubleClick"
         class="bg-gray-50 dark:bg-gray-900"
       >
-        <Background pattern-color="#aaa" :gap="16" />
+        <Background :pattern-color="isDark ? '#555' : '#aaa'" :gap="16" />
         <Controls />
       </VueFlow>
 

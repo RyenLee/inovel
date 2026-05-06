@@ -293,7 +293,7 @@ const doRestore = async (hash: string) => {
 }
 
 .history-item {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   padding: 10px 12px;
   transition: all 0.15s;
@@ -301,9 +301,16 @@ const doRestore = async (hash: string) => {
 }
 
 .history-item:hover { border-color: #bfdbfe; background: #f0f7ff; }
+.dark .history-item:hover { border-color: #1e3a5f; background: #0f1f33; }
+
 .history-item.selected-a { border-color: #3b82f6; background: #eff6ff; }
+.dark .history-item.selected-a { border-color: #60a5fa; background: #0f1f33; }
+
 .history-item.selected-b { border-color: #f59e0b; background: #fffbeb; }
+.dark .history-item.selected-b { border-color: #fbbf24; background: #1f1a0f; }
+
 .history-item.selected-pair { border-color: #8b5cf6; }
+.dark .history-item.selected-pair { border-color: #a78bfa; }
 
 .history-item-main {
   display: flex;
@@ -322,7 +329,7 @@ const doRestore = async (hash: string) => {
 
 .select-btn { min-width: 24px; font-size: 11px; font-weight: 700; flex-shrink: 0; }
 
-.history-item-msg { font-weight: 500; color: #1f2937; font-size: 14px; word-break: break-all; }
+.history-item-msg { font-weight: 500; color: var(--color-text-primary, #1f2937); font-size: 14px; word-break: break-all; }
 .history-item-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .history-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
 

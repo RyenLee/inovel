@@ -23,17 +23,15 @@ defineExpose({ toggleDark, isDark });
 </script>
 
 <template>
-  <div :class="{ dark: isDark }">
-    <n-config-provider :theme="theme" :theme-overrides="themeOverrides">
-      <n-loading-bar-provider>
-        <n-dialog-provider>
-          <n-message-provider>
-            <RouterView />
-          </n-message-provider>
-        </n-dialog-provider>
-      </n-loading-bar-provider>
-    </n-config-provider>
-  </div>
+  <n-config-provider :theme="theme" :theme-overrides="themeOverrides">
+    <n-loading-bar-provider>
+      <n-dialog-provider>
+        <n-message-provider>
+          <RouterView />
+        </n-message-provider>
+      </n-dialog-provider>
+    </n-loading-bar-provider>
+  </n-config-provider>
 </template>
 
 <style>
