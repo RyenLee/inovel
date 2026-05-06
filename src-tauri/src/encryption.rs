@@ -4,7 +4,7 @@ use aes_gcm::{
 };
 use argon2::{Argon2, Params};
 use base64::{engine::general_purpose, Engine as _};
-use rand::{thread_rng, RngCore};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{Read, Write};
@@ -64,14 +64,14 @@ pub fn derive_key(password: &str, salt: &[u8]) -> Result<[u8; KEY_SIZE], String>
 /// 生成随机盐
 pub fn generate_salt() -> [u8; SALT_SIZE] {
     let mut salt = [0u8; SALT_SIZE];
-    thread_rng().fill_bytes(&mut salt);
+    rand::rng().fill_bytes(&mut salt);
     salt
 }
 
 /// 生成随机 nonce
 pub fn generate_nonce() -> [u8; NONCE_SIZE] {
     let mut nonce = [0u8; NONCE_SIZE];
-    thread_rng().fill_bytes(&mut nonce);
+    rand::rng().fill_bytes(&mut nonce);
     nonce
 }
 

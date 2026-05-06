@@ -5,7 +5,7 @@ use crate::models::{
     CreateProjectParams, MigrateResult, MigrationDetail, ProjectMeta, RollbackParams,
     UpdateProjectParams,
 };
-use rand::Rng;
+use rand::RngExt;
 use rusqlite::Connection;
 use std::fs;
 use std::path::PathBuf;
@@ -15,10 +15,10 @@ use tauri::AppHandle;
 /// 格式：字母P开头 + 5位字母数字混合
 fn generate_project_id() -> String {
     const CHARSET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let id: String = (0..5)
         .map(|_| {
-            let idx = rng.gen_range(0..CHARSET.len());
+            let idx = rng.random_range(0..CHARSET.len());
             CHARSET[idx] as char
         })
         .collect();

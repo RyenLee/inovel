@@ -1,7 +1,7 @@
 use crate::models::NamesDatabase;
 use lazy_static::lazy_static;
-use rand::seq::SliceRandom;
-use rand::Rng;
+use rand::seq::IndexedRandom;
+use rand::RngExt;
 use std::fs;
 use std::path::PathBuf;
 
@@ -43,7 +43,7 @@ fn load_names_database() -> NamesDatabase {
 
 #[tauri::command]
 pub fn generate_names(category: String, gender: Option<String>, count: u32) -> Vec<String> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let count = count.min(100) as usize;
 
     match category.as_str() {
@@ -65,14 +65,14 @@ pub fn generate_names(category: String, gender: Option<String>, count: u32) -> V
                     &["王", "李", "张", "刘", "陈", "杨", "赵", "黄", "周", "吴",
                       "徐", "孙", "胡", "朱", "高", "林", "何", "郭", "马", "罗",
                       "梁", "宋", "郑", "谢", "韩", "唐", "冯", "于", "董", "萧"][..],
-                    if rng.gen_bool(0.5) { &NAMES_DB.chinese_name.male[..] } else { &NAMES_DB.chinese_name.female[..] },
+                    if rng.random_bool(0.5) { &NAMES_DB.chinese_name.male[..] } else { &NAMES_DB.chinese_name.female[..] },
                 ),
             };
             (0..count)
                 .map(|_| {
                     let surname = *surnames.choose(&mut rng).unwrap_or(&"李");
-                    let idx1 = rng.gen_range(0..given_names.len());
-                    let idx2 = rng.gen_range(0..given_names.len());
+                    let idx1 = rng.random_range(0..given_names.len());
+                    let idx2 = rng.random_range(0..given_names.len());
                     format!("{}{}{}", surname, given_names[idx1], given_names[idx2])
                 })
                 .collect()
@@ -82,13 +82,13 @@ pub fn generate_names(category: String, gender: Option<String>, count: u32) -> V
                 Some("male") => &NAMES_DB.western_name.male[..],
                 Some("female") => &NAMES_DB.western_name.female[..],
                 _ => {
-                    if rng.gen_bool(0.5) { &NAMES_DB.western_name.male[..] } else { &NAMES_DB.western_name.female[..] }
+                    if rng.random_bool(0.5) { &NAMES_DB.western_name.male[..] } else { &NAMES_DB.western_name.female[..] }
                 }
             };
-            names.choose_multiple(&mut rng, count).cloned().collect()
+            names.sample(&mut rng, count).cloned().collect()
         }
-        "chinese_place" => NAMES_DB.chinese_place.choose_multiple(&mut rng, count).cloned().collect(),
-        "western_place" => NAMES_DB.western_place.choose_multiple(&mut rng, count).cloned().collect(),
+        "chinese_place" => NAMES_DB.chinese_place.sample(&mut rng, count).cloned().collect(),
+        "western_place" => NAMES_DB.western_place.sample(&mut rng, count).cloned().collect(),
         _ => vec![],
     }
 }
