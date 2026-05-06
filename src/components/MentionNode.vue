@@ -182,14 +182,14 @@ function handleClick() {
   align-items: center;
   gap: 0.5rem;
   padding-bottom: 8px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
   margin-bottom: 8px;
 }
 
 .mention-card-name {
   font-weight: 600;
   font-size: 14px;
-  color: #1f2937;
+  color: var(--color-text-primary, #1f2937);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -206,19 +206,19 @@ function handleClick() {
 }
 
 .mention-label {
-  color: #6b7280;
+  color: var(--color-text-secondary, #6b7280);
   min-width: 3em;
   flex-shrink: 0;
 }
 
 .mention-value {
-  color: #374151;
+  color: var(--color-text-primary, #374151);
 }
 
 .mention-desc {
   margin-top: 4px;
   line-height: 1.4;
-  color: #6b7280;
+  color: var(--color-text-secondary, #6b7280);
   font-size: 12px;
   display: -webkit-box;
   -webkit-line-clamp: 4;
@@ -230,9 +230,9 @@ function handleClick() {
 .mention-card-footer {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border, #e5e7eb);
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-text-secondary, #9ca3af);
   text-align: center;
 }
 </style>

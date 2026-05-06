@@ -1,8 +1,8 @@
 [package]
 name = "inovel"
-version = "0.1.0"
+version = "1.0.0"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["ryenlii"]
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -41,4 +41,5 @@ base64 = "0.22.1"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 tracing-appender = "0.2.5"
+regex = "1.12.1"
 regex-lite = "0.1.9"

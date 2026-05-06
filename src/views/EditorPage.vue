@@ -377,11 +377,20 @@ const saveChapter = async () => {
 
   isSaving.value = true;
   try {
+    // 从编辑器获取实时内容（优先），回退到 currentContent
+    const contentToSave = editorRef.value?.getHTML() ?? currentContent.value;
+    
+    // 内容一致性检查
+    if (contentToSave !== currentContent.value) {
+      console.warn("编辑器内容与缓存不一致，使用编辑器实时内容");
+      currentContent.value = contentToSave;
+    }
+    
     // 保存内容
     await invoke("save_chapter_content", {
       projectId: String(projectId.value),
       chapterId: String(currentChapter.value.id),
-      content: currentContent.value,
+      content: contentToSave,
     });
     // Auto-commit to git after save
     try {

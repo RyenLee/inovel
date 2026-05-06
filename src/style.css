@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --color-bg-primary: #ffffff;
@@ -15,17 +17,14 @@ html {
   font-family: var(--font-sans);
 }
 
-/* 全局样式重置 - 基础背景色，确保页面加载时可见 */
 body {
-  background-color: var(--color-bg-primary, #ffffff);
-  color: var(--color-text-primary, #111827);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
   transition: background-color 0.2s, color 0.2s;
 }
 
-/* 深色模式变量覆盖 - 确保在基础背景之后定义 */
-.dark body,
 .dark {
-  background-color: var(--color-bg-primary, #1f2937);
+  --color-bg-primary: #1f2937;
   --color-bg-secondary: #111827;
   --color-bg-tertiary: #374151;
   --color-text-primary: #f9fafb;

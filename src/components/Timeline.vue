@@ -97,7 +97,7 @@ const chapterOptions = computed(() => [
 // Sorted events by story_time
 const sortedEvents = computed(() => {
   return [...events.value].sort((a, b) => {
-    return a.story_time - b.story_time
+    return b.story_time - a.story_time
   })
 })
 
@@ -404,6 +404,6 @@ function initSortable() {
 <style scoped>
 .sortable-ghost {
   opacity: 0.4;
-  background-color: #e0e7ff;
+  background-color: var(--color-hover, #e0e7ff);
 }
 </style>
