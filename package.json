@@ -1,7 +1,7 @@
 {
   "name": "inovel",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -29,13 +29,13 @@
     "naive-ui": "^2.44.1",
     "pinia": "^3.0.4",
     "sortablejs": "^1.15.7",
-    "vue": "^3.5.33",
+    "vue": "^3.5.34",
     "vue-router": "^5.0.6",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.4",
-    "@tauri-apps/cli": "^2.11.0",
+    "@tauri-apps/cli": "^2.11.1",
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@types/diff": "^7.0.2",
     "@types/node": "^25.6.0",
