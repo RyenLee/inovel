@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "小说工坊",
+  "productName": "iNovel",
   "version": "1.0.0",
   "identifier": "com.ryenl.inovel",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "小说工坊",
+        "title": "iNovel",
         "width": 1200,
         "height": 800,
         "minWidth": 900,
@@ -24,13 +24,22 @@
       "csp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": ["**"]
+        "scope": [
+          "**"
+        ]
       }
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "nsis", "dmg", "app", "deb", "appimage"],
+    "targets": [
+      "msi",
+      "nsis",
+      "dmg",
+      "app",
+      "deb",
+      "appimage"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -38,10 +47,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["resources/names.json", "builtin_templates.json"],
+    "resources": [
+      "resources/names.json",
+      "builtin_templates.json"
+    ],
     "category": "Productivity",
-    "shortDescription": "小说创作与管理工具",
-    "longDescription": "小说工坊是一款专为小说作者设计的桌面应用，提供项目管理、章节编辑、世界观设定等功能。",
+    "shortDescription": "Novel writing and management tool",
+    "longDescription": "iNovel is a desktop application designed for novel authors, providing project management, chapter editing, worldbuilding features, and more.",
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
