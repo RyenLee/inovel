@@ -102,11 +102,10 @@ const lineHeightPresets = [
   { label: '超大', value: 42 },
 ];
 
-// 切换信纸效果
+// 切换信纸效果（仅在开/关状态间切换）
 const togglePaperStyle = () => {
-  const styles: PaperStyle[] = ['none', 'lined', 'lined-margin', 'grid', 'dots'];
-  const currentIndex = styles.indexOf(paperStyle.value);
-  paperStyle.value = styles[(currentIndex + 1) % styles.length];
+  // 默认激活状态使用 lined 样式
+  paperStyle.value = paperStyle.value === 'none' ? 'lined' : 'none';
 };
 
 // 美化菜单选项
@@ -1357,20 +1356,6 @@ onUnmounted(() => {
           </template>
           打开模板库
         </NTooltip>
-        <NTooltip trigger="hover">
-          <template #trigger>
-            <div class="flex items-center">
-              <NButton size="tiny" quaternary class="px-1!" @click="toggleTemplateMode">
-                <template #icon>
-                  <NIcon size="12">
-                    <component :is="templateInsertMode === 'replace' ? Replace : Plus" />
-                  </NIcon>
-                </template>
-              </NButton>
-            </div>
-          </template>
-          {{ templateInsertMode === 'replace' ? '替换模式' : '插入模式' }}（点击切换）
-        </NTooltip>
 
         <!-- 美化菜单 -->
         <NDropdown trigger="hover" :options="beautifyDropdownOptions" @select="handleBeautifyDropdown">
@@ -1385,7 +1370,7 @@ onUnmounted(() => {
 
         <!-- 行间距控制面板 -->
         <div v-if="showLineHeightControl"
-          class="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 min-w-[240px]">
+          class="absolute top-full right-0 mt-2 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 min-w-[240px]">
           <div class="flex items-center justify-between mb-3">
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">行间距</span>
             <button @click="showLineHeightControl = false"
@@ -1415,10 +1400,10 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- 快速设置提示 -->
-          <div v-if="paperStyle !== 'none'" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <!-- 行高提示 -->
+          <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
             <p class="text-xs text-gray-500 dark:text-gray-400">
-              当前行高 {{ lineHeight }}px 与信纸背景完美对齐
+              当前行高：{{ lineHeight }}px
             </p>
           </div>
         </div>
@@ -1427,7 +1412,7 @@ onUnmounted(() => {
 
     <!-- Editor Content -->
     <div ref="editorContainerRef" class="flex-1 min-h-0">
-      <EditorContent :editor="editor" class="h-full min-h-0" :class="`paper-${paperStyle}`" />
+      <EditorContent :editor="editor" class="h-full min-h-0 editor-content-wrapper" :class="`paper-${paperStyle}`" />
     </div>
 
     <!-- Status Bar -->
@@ -1819,10 +1804,30 @@ onUnmounted(() => {
 }
 
 /* =====================
+   行间距设置（始终生效）
+   ===================== */
+
+/* 基础行高设置 - 强制覆盖所有子元素 */
+.editor-content-wrapper .tiptap {
+  line-height: v-bind(lineHeight + 'px') !important;
+}
+
+.editor-content-wrapper .tiptap p {
+  line-height: v-bind(lineHeight + 'px') !important;
+  margin-bottom: v-bind(lineHeight + 'px') !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.editor-content-wrapper .tiptap li {
+  line-height: v-bind(lineHeight + 'px') !important;
+}
+
+/* =====================
    信纸背景效果样式
    ===================== */
 
-/* 基础行高设置（与横线间距一致）- 强制覆盖所有子元素 */
+/* 信纸效果下的行高设置（与横线间距一致）- 强制覆盖所有子元素 */
 .paper-lined,
 .paper-lined-margin,
 .paper-grid,
