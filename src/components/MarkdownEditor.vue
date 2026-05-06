@@ -715,6 +715,10 @@ defineExpose({
   height: 0;
 }
 
+.dark .tiptap p.is-editor-empty:first-child::before {
+  color: #6b7280;
+}
+
 .dark .tiptap {
   color: #e5e7eb;
 }

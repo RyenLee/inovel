@@ -404,6 +404,6 @@ function initSortable() {
 <style scoped>
 .sortable-ghost {
   opacity: 0.4;
-  background-color: #e0e7ff;
+  background-color: var(--color-hover, #e0e7ff);
 }
 </style>

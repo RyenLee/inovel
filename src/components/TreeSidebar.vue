@@ -926,7 +926,7 @@ onMounted(async () => {
 <style scoped>
 .ghost {
   opacity: 0.5;
-  background: #cce5ff;
+  background: var(--color-hover, #cce5ff);
 }
 
 .volume-item,
