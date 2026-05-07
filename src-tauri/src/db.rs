@@ -1,11 +1,9 @@
-use crate::config::get_db_path as config_get_db_path;
 use rusqlite::{Connection, Result as SqliteResult};
 use std::path::PathBuf;
 use tauri::AppHandle;
 
-/// 获取数据库路径（从配置读取）
 pub(crate) fn get_db_path(app_handle: &AppHandle) -> PathBuf {
-    config_get_db_path(app_handle).expect("Failed to get database path from config")
+    crate::config::get_db_path(app_handle)
 }
 
 pub(crate) fn init_db(conn: &Connection) -> SqliteResult<()> {

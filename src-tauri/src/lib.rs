@@ -40,23 +40,11 @@ pub fn run() {
                 )
                 .build()
         )
-        .setup(|app| {
-            // 初始化配置系统（安装目录）
-            if let Err(e) = config::init_config(app.handle()) {
-                eprintln!("[Setup] Config init failed: {}", e);
-            }
-
+        .setup(|_app| {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             greet,
-            // 配置管理命令
-            config::get_app_config,
-            config::update_app_config,
-            config::reset_app_config,
-            config::get_config_file_path,
-            config::get_install_config_info,
-            config::validate_config_paths,
             project::create_project,
             project::get_recent_projects,
             project::open_project,

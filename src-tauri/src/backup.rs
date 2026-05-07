@@ -21,7 +21,7 @@ use zip::ZipWriter;
 
 /// 获取备份日志目录（从配置读取）
 fn get_backup_log_dir(app_handle: &AppHandle) -> PathBuf {
-    get_log_dir(app_handle).unwrap_or_else(|_| PathBuf::from("."))
+    get_log_dir(app_handle)
 }
 
 static INIT_LOGGING: Once = Once::new();
