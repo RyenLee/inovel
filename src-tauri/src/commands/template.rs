@@ -9,6 +9,14 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
 /// 获取内置模板文件路径
+///
+/// 尝试从应用资源目录获取内置模板路径，如果不存在则回退到 src-tauri/resources 目录。
+///
+/// # 参数
+/// - `app`: Tauri 应用句柄
+///
+/// # 返回值
+/// 内置模板文件路径
 fn get_builtin_templates_path(app: &AppHandle) -> PathBuf {
     // 尝试从应用资源目录获取
     if let Ok(resource_dir) = app.path().resource_dir() {
@@ -23,6 +31,14 @@ fn get_builtin_templates_path(app: &AppHandle) -> PathBuf {
 }
 
 /// 读取内置模板
+///
+/// 从内置模板文件读取所有预定义的写作模板。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+///
+/// # 返回值
+/// 成功返回内置模板列表，失败返回错误信息
 #[tauri::command]
 pub async fn get_builtin_templates(app_handle: AppHandle) -> Result<Vec<WritingTemplate>, String> {
     let path = get_builtin_templates_path(&app_handle);
@@ -40,6 +56,15 @@ pub async fn get_builtin_templates(app_handle: AppHandle) -> Result<Vec<WritingT
 }
 
 /// 获取用户自定义模板
+///
+/// 从数据库读取项目下所有用户自定义的写作模板。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+///
+/// # 返回值
+/// 成功返回用户模板列表，失败返回错误信息
 #[tauri::command]
 pub async fn get_user_templates(
     app_handle: AppHandle,
@@ -78,6 +103,15 @@ pub async fn get_user_templates(
 }
 
 /// 保存用户自定义模板
+///
+/// 在数据库中创建一条新的用户自定义模板记录。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `params`: 模板参数（包含 name, description, category, content 等）
+///
+/// # 返回值
+/// 成功返回创建的模板记录，失败返回错误信息
 #[tauri::command]
 pub async fn save_user_template(
     app_handle: AppHandle,
@@ -117,6 +151,16 @@ pub async fn save_user_template(
 }
 
 /// 更新用户自定义模板
+///
+/// 更新指定模板的名称、描述、分类或内容。仅更新提供的字段。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `template_id`: 模板 ID
+/// - `params`: 更新参数（可选字段）
+///
+/// # 返回值
+/// 成功返回更新后的模板记录，失败返回错误信息
 #[tauri::command]
 pub async fn update_user_template(
     app_handle: AppHandle,
@@ -201,6 +245,15 @@ pub async fn update_user_template(
 }
 
 /// 删除用户自定义模板
+///
+/// 从数据库中删除指定的用户自定义模板。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `template_id`: 模板 ID
+///
+/// # 返回值
+/// 成功返回 Ok(())，失败返回错误信息
 #[tauri::command]
 pub async fn delete_user_template(app_handle: AppHandle, template_id: i64) -> Result<(), String> {
     let db_path = get_db_path(&app_handle);
@@ -218,6 +271,15 @@ pub async fn delete_user_template(app_handle: AppHandle, template_id: i64) -> Re
 }
 
 /// 获取所有模板（内置 + 用户自定义）
+///
+/// 同时返回内置模板和用户自定义模板列表，方便前端一次性加载所有模板数据。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+///
+/// # 返回值
+/// 成功返回元组（内置模板列表，用户模板列表），失败返回错误信息
 #[tauri::command]
 pub async fn get_all_templates(
     app_handle: AppHandle,

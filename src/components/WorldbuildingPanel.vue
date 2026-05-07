@@ -8,7 +8,7 @@
         <h3 class="font-semibold text-gray-900 dark:text-white whitespace-nowrap text-sm">世界观设定</h3>
         <span
           class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap hidden sm:inline overflow-hidden text-ellipsis">
-          ({{store.characters.length }}/{{ store.locations.length }}/{{ store.organizations.length }})</span>
+          ({{ store.characters.length }}/{{ store.locations.length }}/{{ store.organizations.length }})</span>
       </div>
       <div class="shrink-0">
         <n-tabs v-model:value="activeTab" type="segment" size="small" class="shrink-0 worldbuilding-tabs">
@@ -443,7 +443,26 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { NIcon } from 'naive-ui'
+import {
+  NIcon,
+  NButton,
+  NTag,
+  NTabs,
+  NTabPane,
+  NEmpty,
+  NDivider,
+  NForm,
+  NFormItem,
+  NInput,
+  NSelect,
+  NRadioGroup,
+  NRadio,
+  NSpace,
+  NInputNumber,
+  NDynamicInput,
+  NDrawer,
+  NDrawerContent,
+} from 'naive-ui'
 import { Plus, Trash, BookOpen } from 'lucide-vue-next'
 import {
   useWorldbuildingStore,

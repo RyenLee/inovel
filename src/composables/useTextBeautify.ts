@@ -5,10 +5,10 @@ export type PaperStyle = "none" | "lined" | "lined-margin" | "grid" | "dots";
 
 // 行高预设选项
 export const lineHeightPresets = [
-  { label: "紧凑", value: 22 },
-  { label: "标准", value: 28 },
-  { label: "宽松", value: 34 },
-  { label: "超大", value: 42 },
+  { label: "紧凑", value: 12 },
+  { label: "标准", value: 18 },
+  { label: "宽松", value: 24 },
+  { label: "超大", value: 36 },
 ];
 
 // 全角空格缩进字符
@@ -24,7 +24,7 @@ export function useTextBeautify(options: UseTextBeautifyOptions) {
 
   // 状态
   const paperStyle = ref<PaperStyle>("none");
-  const lineHeight = ref(28);
+  const lineHeight = ref(12);
   const showLineHeightControl = ref(false);
   const showSplitDialog = ref(false);
   const splitThreshold = ref(200);

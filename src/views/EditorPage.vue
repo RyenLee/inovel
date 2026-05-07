@@ -98,6 +98,8 @@ const nameCategory = ref<string | null>("chinese_name");
 const nameGender = ref<string>("any");
 const nameCount = ref(10);
 const generatedNames = ref<string[]>([]);
+// 保存打开名称生成器时的光标位置
+const savedSelection = ref<{ from: number; to: number } | null>(null);
 
 const nameCategoryOptions = [
   { label: "中文姓名", value: "chinese_name" },
@@ -306,12 +308,42 @@ const handleGenerateNames = async () => {
   }
 };
 
+// 打开名称生成器
+const openNameGenerator = () => {
+  // 保存当前光标位置
+  if (editorRef.value?.editor) {
+    const selection = editorRef.value.editor.state.selection;
+    savedSelection.value = {
+      from: selection.from,
+      to: selection.to,
+    };
+  }
+  showNameGenerator.value = true;
+};
+
+// 名称生成器关闭时重置保存的光标位置
+const onNameGeneratorClose = (value: boolean) => {
+  if (!value) {
+    savedSelection.value = null;
+  }
+};
+
 // 插入名称到编辑器
 const handleInsertName = (name: string) => {
-  if (editorRef.value?.editor) {
-    editorRef.value.editor.commands.insertContent(name);
-    message.success(`已插入: ${name}`);
+  if (!editorRef.value?.editor) {
+    message.warning("编辑器未初始化");
+    return;
   }
+  
+  const editor = editorRef.value.editor;
+  
+  // 使用 Tiptap 的 chain API 进行链式操作
+  editor.chain()
+    .focus()
+    .insertContent(name)
+    .run();
+  
+  message.success(`已插入: ${name}`);
 };
 
 // 加载章节树（用于字数统计）
@@ -379,13 +411,6 @@ const saveChapter = async () => {
     // 从编辑器获取实时内容（优先），回退到 currentContent
     const contentToSave = editorRef.value?.getHTML() ?? currentContent.value;
 
-    // 内容一致性检查
-    if (contentToSave !== currentContent.value) {
-      console.warn("编辑器内容与缓存不一致，使用编辑器实时内容");
-      currentContent.value = contentToSave;
-    }
-
-    // 保存内容
     await invoke("save_chapter_content", {
       projectId: String(projectId.value),
       chapterId: String(currentChapter.value.id),
@@ -708,7 +733,7 @@ const todayNewWords = computed(() => {
           </n-button>
           <n-tooltip trigger="hover">
             <template #trigger>
-              <button @click="showNameGenerator = true" class="p-2 rounded-lg transition-colors duration-300"
+              <button @click="openNameGenerator" class="p-2 rounded-lg transition-colors duration-300"
                 :class="isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
                 <User class="w-5 h-5" />
               </button>
@@ -1001,7 +1026,8 @@ const todayNewWords = computed(() => {
     </footer>
 
     <!-- 名称生成模态框 -->
-    <n-modal v-model:show="showNameGenerator" preset="card" title="名称生成器" style="width: 480px" :mask-closable="true">
+    <n-modal v-model:show="showNameGenerator" preset="card" title="名称生成器" style="width: 480px" :mask-closable="true"
+      @update:show="onNameGeneratorClose">
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-2" :class="isDark ? 'text-gray-300' : 'text-gray-700'">类型</label>

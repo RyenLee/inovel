@@ -152,34 +152,34 @@ function handleClose() {
 // 简单 Markdown 转 HTML（用于预览）
 function markdownToHtml(md: string): string {
   if (!md) return "";
-  
+
   let html = md;
-  
+
   // 标题
   html = html.replace(/^### (.*$)/gim, "<h3>$1</h3>");
   html = html.replace(/^## (.*$)/gim, "<h2>$1</h2>");
   html = html.replace(/^# (.*$)/gim, "<h1>$1</h1>");
-  
+
   // 粗体
   html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-  
+
   // 斜体
   html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
-  
+
   // 引用
   html = html.replace(/^> (.*$)/gim, "<blockquote>$1</blockquote>");
-  
+
   // 无序列表
   html = html.replace(/^- (.*$)/gim, "<li>$1</li>");
   html = html.replace(/(<li>.*<\/li>)/gims, "<ul>$1</ul>");
-  
+
   // 有序列表
   html = html.replace(/^\d+\. (.*$)/gim, "<li>$1</li>");
-  
+
   // 段落
   html = html.replace(/\n\n/g, "</p><p>");
   html = "<p>" + html + "</p>";
-  
+
   // 清理
   html = html.replace(/<p><h/g, "<h");
   html = html.replace(/<\/h[123]><\/p>/g, "");
@@ -187,26 +187,15 @@ function markdownToHtml(md: string): string {
   html = html.replace(/<\/blockquote><\/p>/g, "</blockquote>");
   html = html.replace(/<p><ul>/g, "<ul>");
   html = html.replace(/<\/ul><\/p>/g, "</ul>");
-  
+
   return html;
 }
 </script>
 
 <template>
-  <n-modal
-    :show="show"
-    :mask-closable="false"
-    :close-on-esc="true"
-    @update:show="(val) => emit('update:show', val)"
-  >
-    <n-card
-      title="选择写作模板"
-      style="width: 800px; max-width: 90vw; max-height: 85vh"
-      :bordered="false"
-      size="large"
-      role="dialog"
-      aria-modal="true"
-    >
+  <n-modal :show="show" :mask-closable="false" :close-on-esc="true" @update:show="(val) => emit('update:show', val)">
+    <n-card title="选择写作模板" style="width: 1000px; max-width: 92vw; max-height: 88vh" :bordered="false" size="large"
+      role="dialog" aria-modal="true">
       <template #header-extra>
         <n-button text @click="handleClose">
           <template #icon>
@@ -218,18 +207,14 @@ function markdownToHtml(md: string): string {
       <div class="template-selector-content">
         <!-- 分类筛选和模式选择 -->
         <div class="flex items-center justify-between mb-4">
-          <n-tabs
-            v-model:value="activeCategory"
-            type="line"
-            style="flex: 1"
-          >
+          <n-tabs v-model:value="activeCategory" type="line" style="flex: 1">
             <n-tab-pane name="全部" tab="全部" />
             <n-tab-pane name="章节" tab="章节" />
             <n-tab-pane name="图文" tab="图文" />
             <n-tab-pane name="对话" tab="对话" />
             <n-tab-pane name="结构化" tab="结构化" />
           </n-tabs>
-          
+
           <!-- 插入模式选择 -->
           <div class="flex items-center gap-2 ml-4">
             <n-radio-group v-model:value="localInsertMode" name="insertMode" size="small">
@@ -254,76 +239,56 @@ function markdownToHtml(md: string): string {
         </div>
 
         <!-- 模板网格 -->
-        <div class="template-grid-container">
-          <n-grid
-            v-if="filteredTemplates.length > 0"
-            cols="2 m:2 l:3"
-            :x-gap="12"
-            :y-gap="12"
-          >
-            <n-grid-item
-              v-for="template in filteredTemplates"
-              :key="template.id"
-            >
-              <n-card
-                :class="{
+        <div class="template-grid-scroll">
+          <div class="template-grid-inner">
+            <n-grid v-if="filteredTemplates.length > 0" cols="2 m:2 l:3" :x-gap="12" :y-gap="12">
+              <n-grid-item v-for="template in filteredTemplates" :key="template.id">
+                <n-card :class="{
                   'template-card': true,
                   'template-card-selected': selectedTemplateId === template.id,
-                }"
-                size="small"
-                @click="selectTemplate(template)"
-              >
-                <template #header>
-                  <n-text strong style="font-size: 14px">
-                    {{ template.name }}
-                  </n-text>
-                </template>
-                
-                <template #default>
-                  <!-- 模板预览 -->
-                  <div class="template-preview">
-                    <div
-                      class="preview-content"
-                      v-html="markdownToHtml(template.content)"
-                    ></div>
-                  </div>
-                  
-                  <!-- 模板描述 -->
-                  <n-text
-                    depth="3"
-                    style="font-size: 11px; display: block; margin-top: 8px"
-                  >
-                    {{ template.description }}
-                  </n-text>
-                  
-                  <!-- 内置/自定义标签 -->
-                  <n-text
-                    :depth="3"
-                    style="font-size: 10px; display: block; margin-top: 4px"
-                  >
-                    {{ template.is_builtin ? "内置" : "自定义" }}
-                  </n-text>
-                </template>
-              </n-card>
-            </n-grid-item>
-          </n-grid>
+                }" size="small" @click="selectTemplate(template)">
+                  <template #header>
+                    <div class="flex items-center gap-2">
+                      <span class="template-card-icon">
+                        <FileText class="w-3.5 h-3.5" />
+                      </span>
+                      <n-text strong class="template-card-title">
+                        {{ template.name }}
+                      </n-text>
+                    </div>
+                  </template>
 
-          <!-- 加载状态 -->
-          <div v-else-if="templateStore.isLoading" class="flex flex-col items-center justify-center py-20">
-            <n-spin size="large" />
-            <n-text depth="3" style="margin-top: 12px">加载模板中...</n-text>
+                  <template #default>
+                    <div class="template-preview">
+                      <div class="preview-content" v-html="markdownToHtml(template.content)"></div>
+                    </div>
+
+                    <n-text depth="3" class="template-desc">
+                      {{ template.description }}
+                    </n-text>
+
+                    <div class="template-meta">
+                      <span class="template-badge" :class="template.is_builtin ? 'badge-builtin' : 'badge-custom'">
+                        {{ template.is_builtin ? '内置' : '自定义' }}
+                      </span>
+                      <span class="template-category">{{ template.category }}</span>
+                    </div>
+                  </template>
+                </n-card>
+              </n-grid-item>
+            </n-grid>
+
+            <div v-else-if="templateStore.isLoading" class="flex flex-col items-center justify-center py-20">
+              <n-spin size="large" />
+              <n-text depth="3" style="margin-top: 12px">加载模板中...</n-text>
+            </div>
+
+            <n-empty v-else description="暂无模板，请稍后重试" style="padding: 40px 0">
+              <template #extra>
+                <n-button size="small" @click="loadTemplates">重新加载</n-button>
+              </template>
+            </n-empty>
           </div>
-          
-          <!-- 空状态 -->
-          <n-empty
-            v-else
-            description="暂无模板，请稍后重试"
-            style="padding: 40px 0"
-          >
-            <template #extra>
-              <n-button size="small" @click="loadTemplates">重新加载</n-button>
-            </template>
-          </n-empty>
         </div>
       </div>
 
@@ -333,11 +298,7 @@ function markdownToHtml(md: string): string {
             模式：{{ localInsertMode === 'replace' ? '替换内容' : '插入内容' }}
           </n-text>
           <n-button @click="cancel">取消</n-button>
-          <n-button
-            type="primary"
-            :disabled="!selectedTemplate"
-            @click="confirmSelect"
-          >
+          <n-button type="primary" :disabled="!selectedTemplate" @click="confirmSelect">
             {{ localInsertMode === 'replace' ? '使用模板替换' : '插入模板内容' }}
           </n-button>
         </n-space>
@@ -350,38 +311,73 @@ function markdownToHtml(md: string): string {
 .template-selector-content {
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
-.template-grid-container {
-  max-height: 450px;
+.template-grid-scroll {
+  max-height: 520px;
   overflow-y: auto;
-  padding-right: 8px;
+  overflow-x: hidden;
+  margin: -6px;
+  padding: 6px;
+}
+
+.template-grid-inner {
+  min-height: 0;
 }
 
 .template-card {
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   border: 2px solid transparent;
+  border-radius: 10px;
+  overflow: visible;
+}
+
+.template-card :deep(.n-card__content) {
+  padding-top: 8px;
 }
 
 .template-card:hover {
-  transform: scale(1.02);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  border-color: #e2e8f0;
+  z-index: 10;
 }
 
 .template-card-selected {
-  border-color: var(--n-primary-color, #18a058);
-  box-shadow: 0 0 0 2px rgba(24, 160, 88, 0.3);
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), 0 4px 16px rgba(59, 130, 246, 0.15);
+  background-color: #f8faff;
 }
 
-/* 模板预览区域 - 使用深色背景确保文字清晰可见 */
+.template-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.template-card-title {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .template-preview {
-  max-height: 100px;
+  max-height: 130px;
   overflow: hidden;
   position: relative;
-  background-color: #1e1e2e;
-  border-radius: 4px;
-  padding: 8px;
+  background-color: #1a1a2e;
+  border-radius: 6px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .template-preview::after {
@@ -390,25 +386,23 @@ function markdownToHtml(md: string): string {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 30px;
-  background: linear-gradient(transparent, #1e1e2e);
+  height: 36px;
+  background: linear-gradient(transparent, #1a1a2e);
   pointer-events: none;
 }
 
-/* 预览内容样式 - 高对比度配色 */
 .preview-content {
   font-size: 12px;
-  line-height: 1.5;
-  color: #e4e4e7;
+  line-height: 1.6;
+  color: #d4d4d8;
 }
 
-/* 标题样式 */
 .preview-content:deep(h1),
 .preview-content:deep(h2),
 .preview-content:deep(h3) {
-  margin: 4px 0;
+  margin: 6px 0 4px;
   font-weight: 600;
-  color: #fafafa;
+  line-height: 1.3;
 }
 
 .preview-content:deep(h1) {
@@ -427,7 +421,7 @@ function markdownToHtml(md: string): string {
 }
 
 .preview-content:deep(p) {
-  margin: 2px 0;
+  margin: 3px 0;
   color: #d4d4d8;
 }
 
@@ -443,31 +437,140 @@ function markdownToHtml(md: string): string {
 
 .preview-content:deep(blockquote) {
   border-left: 3px solid #6366f1;
-  padding-left: 8px;
-  margin: 4px 0;
+  padding: 4px 10px;
+  margin: 6px 0;
   color: #a1a1aa;
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: rgba(99, 102, 241, 0.12);
   border-radius: 0 4px 4px 0;
 }
 
 .preview-content:deep(ul),
 .preview-content:deep(ol) {
-  margin: 2px 0;
-  padding-left: 16px;
+  margin: 4px 0;
+  padding-left: 18px;
   color: #d4d4d8;
 }
 
 .preview-content:deep(li) {
-  margin: 1px 0;
+  margin: 2px 0;
   color: #d4d4d8;
 }
 
-/* 列表项标记颜色 */
 .preview-content:deep(ul) {
   list-style-type: disc;
 }
 
 .preview-content:deep(ul li)::marker {
   color: #22d3ee;
+}
+
+.template-desc {
+  font-size: 12px;
+  display: block;
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
+.template-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.template-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.badge-builtin {
+  background-color: #eff6ff;
+  color: #3b82f6;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-custom {
+  background-color: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.template-category {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+/* ===== 暗色主题 ===== */
+:root.dark .template-card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  border-color: #374151;
+}
+
+:root.dark .template-card-selected {
+  border-color: #60a5fa !important;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25), 0 4px 16px rgba(96, 165, 250, 0.15);
+  background-color: #111827;
+}
+
+:root.dark .template-card-icon {
+  background: linear-gradient(135deg, #60a5fa, #818cf8);
+}
+
+:root.dark .template-preview {
+  background-color: #0f0f1a;
+  border-color: rgba(255, 255, 255, 0.04);
+}
+
+:root.dark .template-preview::after {
+  background: linear-gradient(transparent, #0f0f1a);
+}
+
+:root.dark .badge-builtin {
+  background-color: #1e3a5f;
+  color: #60a5fa;
+  border-color: #1e40af;
+}
+
+:root.dark .badge-custom {
+  background-color: #422006;
+  color: #fbbf24;
+  border-color: #78350f;
+}
+
+:root.dark .template-category {
+  color: #6b7280;
+}
+
+/* ===== 响应式 ===== */
+@media screen and (max-width: 768px) {
+  .template-grid-scroll {
+    max-height: 420px;
+  }
+
+  .template-preview {
+    max-height: 100px;
+  }
+
+  .template-card-title {
+    font-size: 13px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .template-grid-scroll {
+    max-height: 360px;
+  }
+
+  .template-preview {
+    max-height: 80px;
+    padding: 6px;
+  }
+
+  .preview-content {
+    font-size: 11px;
+  }
 }
 </style>

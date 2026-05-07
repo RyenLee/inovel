@@ -41,6 +41,7 @@ export function useEditorComposable(options: UseEditorOptions) {
     const currentParagraphIndex = ref(-1);
     const scanTimer = ref<ReturnType<typeof setTimeout> | null>(null);
     const smartSymbolsEnabled = ref(initialSmartSymbolsEnabled);
+    const isInternalUpdate = ref(false);
 
     // 创建编辑器配置
     const createEditorConfig = (symbolsEnabled: boolean) => ({
@@ -63,14 +64,17 @@ export function useEditorComposable(options: UseEditorOptions) {
         editorProps: {
             attributes: {
                 class:
-                    "prose prose-sm sm:prose lg:prose-lg dark:prose-invert max-w-none focus:outline-none min-h-full p-4",
+                    "prose dark:prose-invert max-w-none focus:outline-none min-h-full p-4",
             },
         },
         onUpdate: ({ editor: editorInstance }: { editor: any }) => {
             const html = editorInstance.getHTML();
+            isInternalUpdate.value = true;
             onContentChange?.(html);
+            requestAnimationFrame(() => {
+                isInternalUpdate.value = false;
+            });
 
-            // 字数统计
             const text = editorInstance.getText();
             const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
             const englishLetters = (text.match(/[a-zA-Z]/g) || []).length;
@@ -78,9 +82,8 @@ export function useEditorComposable(options: UseEditorOptions) {
             wordCount.value = chineseChars + englishLetters + digits;
             onWordCountUpdate?.(wordCount.value);
 
-            // 更新段落样式（特殊模式）
             if (editorModeRef.value === "typewriter" || editorModeRef.value === "focus") {
-                nextTick(() => updateParagraphStyles(editorInstance));
+                requestAnimationFrame(() => updateParagraphStyles(editorInstance));
             }
 
             // 敏感词扫描
@@ -146,10 +149,7 @@ export function useEditorComposable(options: UseEditorOptions) {
         currentParagraphIndex.value = paragraphIndex;
 
         if (editorModeRef.value === "typewriter" || editorModeRef.value === "focus") {
-            const editorContent = view.dom.querySelector(".tiptap");
-            if (!editorContent) return;
-
-            const paragraphs = editorContent.querySelectorAll("p, h1, h2, h3, li, blockquote");
+            const paragraphs = view.dom.querySelectorAll("p, h1, h2, h3, li, blockquote");
             let currentIndex = 0;
 
             paragraphs.forEach((p: HTMLElement) => {
@@ -192,7 +192,6 @@ export function useEditorComposable(options: UseEditorOptions) {
 
     // 监听外部内容变化（章节切换）
     let lastSyncedContent = "";
-    let isUpdatingFromExternal = false;
 
     watch(
         modelValueRef,
@@ -200,7 +199,10 @@ export function useEditorComposable(options: UseEditorOptions) {
             const content = (newValue as string) || "";
             contentRef.value = content;
 
-            isUpdatingFromExternal = true;
+            if (isInternalUpdate.value) {
+                isInternalUpdate.value = false;
+                return;
+            }
 
             nextTick(() => {
                 if (!editor.value) return;
@@ -223,9 +225,6 @@ export function useEditorComposable(options: UseEditorOptions) {
                         }
                     });
                 }
-
-                // 重置外部更新标记
-                isUpdatingFromExternal = false;
             });
         },
         { immediate: true }
@@ -238,37 +237,38 @@ export function useEditorComposable(options: UseEditorOptions) {
             if (!editor.value) return;
 
             if (newMode === "normal") {
-                const editorContent = editor.value.view.dom.querySelector(".tiptap");
-                if (editorContent) {
-                    editorContent.querySelectorAll("p, h1, h2, h3, li, blockquote").forEach((p: Element) => {
-                        (p as HTMLElement).classList.remove("typewriter-dim", "focus-dim", "focus-active");
-                    });
-                }
+                const paragraphs = editor.value.view.dom.querySelectorAll("p, h1, h2, h3, li, blockquote");
+                paragraphs.forEach((p: Element) => {
+                    (p as HTMLElement).classList.remove("typewriter-dim", "focus-dim", "focus-active");
+                });
             } else {
-                nextTick(() => updateParagraphStyles(editor.value));
+                requestAnimationFrame(() => updateParagraphStyles(editor.value));
             }
         }
     );
 
-    // 打字机滚动
+    // 打字机滚动 - 只在打字机模式下滚动，且只有当光标接近视口边缘时才滚动
     const scrollToCursor = () => {
-        if (!editor.value) return;
+        if (!editor.value || editorModeRef.value !== "typewriter") return;
 
         const { view } = editor.value;
         const { from } = view.state.selection;
-        const container = view.dom.parentElement;
-        if (!container) return;
+        const scrollContainer = view.dom;
+        if (!scrollContainer) return;
 
         const coords = view.coordsAtPos(from);
-        const containerRect = container.getBoundingClientRect();
-        const relativeTop = coords.top - containerRect.top + container.scrollTop;
-        const containerHeight = container.clientHeight;
-        const targetScrollTop = relativeTop - containerHeight / 2;
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const cursorTop = coords.top - containerRect.top;
+        const containerHeight = containerRect.height;
 
-        container.scrollTo({
-            top: Math.max(0, targetScrollTop),
-            behavior: "smooth",
-        });
+        const threshold = containerHeight / 4;
+        if (cursorTop < threshold || cursorTop > containerHeight - threshold) {
+            const targetScrollTop = scrollContainer.scrollTop + cursorTop - containerHeight / 2;
+            scrollContainer.scrollTo({
+                top: Math.max(0, targetScrollTop),
+                behavior: "smooth",
+            });
+        }
     };
 
     // 监听选择更新
@@ -276,10 +276,10 @@ export function useEditorComposable(options: UseEditorOptions) {
         if (editor.value) {
             editor.value.on("selectionUpdate", () => {
                 if (editorModeRef.value === "typewriter") {
-                    nextTick(() => scrollToCursor());
+                    requestAnimationFrame(() => scrollToCursor());
                 }
                 if (editorModeRef.value === "typewriter" || editorModeRef.value === "focus") {
-                    nextTick(() => updateParagraphStyles(editor.value!));
+                    requestAnimationFrame(() => updateParagraphStyles(editor.value!));
                 }
             });
 

@@ -15,6 +15,16 @@ pub struct BoardData {
     pub columns: Vec<ColumnInfo>,
 }
 
+/// 创建灵感条目
+///
+/// 在指定列中创建一条新的灵感条目，自动计算排序顺序。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `params`: 创建参数（包含 project_id, column_name, content）
+///
+/// # 返回值
+/// 成功返回创建的灵感条目，失败返回错误信息
 #[tauri::command]
 pub async fn create_inspiration_item(
     app_handle: AppHandle,
@@ -54,6 +64,17 @@ pub async fn create_inspiration_item(
     })
 }
 
+/// 更新灵感条目
+///
+/// 更新指定灵感条目的内容。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `item_id`: 条目 ID
+/// - `params`: 更新参数（包含 content）
+///
+/// # 返回值
+/// 成功返回更新后的灵感条目，失败返回错误信息
 #[tauri::command]
 pub async fn update_inspiration_item(
     app_handle: AppHandle,
@@ -91,6 +112,16 @@ pub async fn update_inspiration_item(
     Ok(item)
 }
 
+/// 删除灵感条目
+///
+/// 从数据库中删除指定的灵感条目。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `item_id`: 条目 ID
+///
+/// # 返回值
+/// 成功返回 Ok(())，失败返回错误信息
 #[tauri::command]
 pub async fn delete_inspiration_item(
     app_handle: AppHandle,
@@ -103,6 +134,17 @@ pub async fn delete_inspiration_item(
     Ok(())
 }
 
+/// 重新排序灵感条目
+///
+/// 批量更新灵感条目的列归属和排序顺序，使用事务保证原子性。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `_project_id`: 项目 ID（保留参数，用于后续扩展）
+/// - `updates`: 排序更新列表
+///
+/// # 返回值
+/// 成功返回 Ok(())，失败返回错误信息
 #[tauri::command]
 pub async fn reorder_inspiration_items(
     app_handle: AppHandle,
@@ -131,13 +173,29 @@ pub async fn reorder_inspiration_items(
     Ok(())
 }
 
+/// 重新排序参数
+///
+/// 用于批量更新灵感条目的排序信息。
 #[derive(Debug, Deserialize)]
 pub struct ReorderItem {
+    /// 条目 ID
     pub id: i64,
+    /// 目标列名
     pub column_name: String,
+    /// 新的排序值
     pub sort_order: i32,
 }
 
+/// 获取灵感看板数据
+///
+/// 获取项目的完整灵感看板数据，包含默认列和用户自定义列。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+///
+/// # 返回值
+/// 成功返回看板数据（包含所有列及其条目），失败返回错误信息
 #[tauri::command]
 pub async fn get_inspiration_board(
     app_handle: AppHandle,
@@ -208,6 +266,17 @@ pub async fn get_inspiration_board(
     Ok(BoardData { columns })
 }
 
+/// 获取指定列的灵感条目
+///
+/// 获取指定列下的所有灵感条目，按排序顺序排列。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `column_name`: 列名
+///
+/// # 返回值
+/// 成功返回灵感条目列表，失败返回错误信息
 #[tauri::command]
 pub async fn get_inspiration_items(
     app_handle: AppHandle,

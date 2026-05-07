@@ -1,6 +1,6 @@
-use crate::db::{get_db_path, init_db, check_project_exists};
-use crate::git_snapshot::init_git_repo;
-use crate::encryption::is_project_encrypted;
+use crate::commands::encryption::is_project_encrypted;
+use crate::commands::git_snapshot::init_git_repo;
+use crate::db::{check_project_exists, get_db_path, init_db};
 use crate::models::{
     CreateProjectParams, MigrateResult, MigrationDetail, ProjectMeta, RollbackParams,
     UpdateProjectParams,
@@ -11,8 +11,10 @@ use std::fs;
 use std::path::PathBuf;
 use tauri::AppHandle;
 
-/// 生成字母数字组合的项目ID（如 "P7K3M9"）
-/// 格式：字母P开头 + 5位字母数字混合
+/// 生成字母数字组合的项目ID
+///
+/// 格式：字母P开头 + 5位字母数字混合（如 "P7K3M9"）
+/// 排除了容易混淆的字符：O, I, 0, 1
 fn generate_project_id() -> String {
     const CHARSET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let mut rng = rand::rng();
@@ -25,7 +27,14 @@ fn generate_project_id() -> String {
     format!("P{}", id)
 }
 
-/// 检查项目ID是否已存在
+/// 检查项目ID是否已存在于数据库中
+///
+/// # 参数
+/// - `conn`: SQLite 数据库连接
+/// - `project_id`: 要检查的项目ID
+///
+/// # 返回值
+/// 如果存在返回 `true`，否则返回 `false`
 fn check_project_id_exists(conn: &Connection, project_id: &str) -> bool {
     conn.query_row(
         "SELECT COUNT(*) FROM projects WHERE project_id = ?1",
@@ -37,6 +46,14 @@ fn check_project_id_exists(conn: &Connection, project_id: &str) -> bool {
 }
 
 /// 生成唯一的项目ID
+///
+/// 循环生成项目ID直到找到一个不存在于数据库中的ID，最多尝试100次。
+///
+/// # 参数
+/// - `conn`: SQLite 数据库连接
+///
+/// # 返回值
+/// 成功返回唯一的项目ID `Ok(String)`，失败返回错误信息 `Err(String)`
 fn generate_unique_project_id(conn: &Connection) -> Result<String, String> {
     let mut max_attempts = 100;
     while max_attempts > 0 {
@@ -49,6 +66,22 @@ fn generate_unique_project_id(conn: &Connection) -> Result<String, String> {
     Err("无法生成唯一项目ID".to_string())
 }
 
+/// 创建新项目
+///
+/// 创建一个新的小说项目，包括：
+/// 1. 验证路径有效性
+/// 2. 生成唯一项目ID
+/// 3. 创建项目目录结构
+/// 4. 初始化 Git 仓库
+/// 5. 创建项目配置文件
+/// 6. 记录到数据库
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `params`: 创建项目的参数（名称、作者、描述、路径）
+///
+/// # 返回值
+/// 创建成功返回项目元数据 `Ok(ProjectMeta)`，失败返回错误信息 `Err(String)`
 #[tauri::command]
 pub async fn create_project(
     app_handle: AppHandle,
@@ -75,13 +108,15 @@ pub async fn create_project(
         return Err("项目文件夹已存在".to_string());
     }
 
+    // 创建项目目录和章节目录
     fs::create_dir_all(&project_folder).map_err(|e| format!("创建项目目录失败: {}", e))?;
     let chapters_dir = project_folder.join("chapters");
     fs::create_dir_all(&chapters_dir).map_err(|e| format!("创建章节目录失败: {}", e))?;
 
-    // Initialize git repo (silent if it fails)
+    // 初始化 Git 仓库（失败时静默处理）
     let _ = init_git_repo(&project_folder);
 
+    // 创建项目配置文件
     let now = chrono::Utc::now().to_rfc3339();
     let project_json = serde_json::json!({
         "name": params.name,
@@ -91,10 +126,14 @@ pub async fn create_project(
         "project_id": project_id.clone()
     });
     let project_json_path = project_folder.join("project.json");
-    fs::write(&project_json_path, serde_json::to_string_pretty(&project_json)
-        .map_err(|e| format!("序列化项目配置失败: {}", e))?)
-        .map_err(|e| format!("写入项目配置文件失败: {}", e))?;
+    fs::write(
+        &project_json_path,
+        serde_json::to_string_pretty(&project_json)
+            .map_err(|e| format!("序列化项目配置失败: {}", e))?,
+    )
+    .map_err(|e| format!("写入项目配置文件失败: {}", e))?;
 
+    // 插入数据库记录
     let full_project_path = project_folder.to_string_lossy().to_string();
     conn.execute(
         "INSERT INTO projects (project_id, name, author, description, path, created_at, last_opened_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -104,17 +143,35 @@ pub async fn create_project(
     let id = conn.last_insert_rowid();
 
     Ok(ProjectMeta {
-        id, project_id: project_id.clone(), name: params.name, author: params.author,
-        description: params.description, path: project_folder.to_string_lossy().to_string(),
-        created_at: now.clone(), last_opened_at: Some(now), is_valid: true,
-        cover_path: None, encrypted: false,
+        id,
+        project_id: project_id.clone(),
+        name: params.name,
+        author: params.author,
+        description: params.description,
+        path: project_folder.to_string_lossy().to_string(),
+        created_at: now.clone(),
+        last_opened_at: Some(now),
+        is_valid: true,
+        cover_path: None,
+        encrypted: false,
     })
 }
 
+/// 获取最近打开的项目列表
+///
+/// 查询最近打开的项目（按最后打开时间倒序），最多返回20个。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+///
+/// # 返回值
+/// 项目列表 `Ok(Vec<ProjectMeta>)`，失败返回错误信息 `Err(String)`
 #[tauri::command]
 pub async fn get_recent_projects(app_handle: AppHandle) -> Result<Vec<ProjectMeta>, String> {
     let db_path = get_db_path(&app_handle);
-    if !db_path.exists() { return Ok(vec![]); }
+    if !db_path.exists() {
+        return Ok(vec![]);
+    }
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
     let _ = init_db(&conn);
 
@@ -127,11 +184,17 @@ pub async fn get_recent_projects(app_handle: AppHandle) -> Result<Vec<ProjectMet
             let path: String = row.get(5)?;
             let project_id: String = row.get::<_, Option<String>>(1)?.unwrap_or_default();
             Ok(ProjectMeta {
-                id: row.get(0)?, project_id, name: row.get(2)?, author: row.get(3)?,
-                description: row.get(4)?, path: path.clone(),
-                created_at: row.get(6)?, last_opened_at: row.get(7)?,
+                id: row.get(0)?,
+                project_id,
+                name: row.get(2)?,
+                author: row.get(3)?,
+                description: row.get(4)?,
+                path: path.clone(),
+                created_at: row.get(6)?,
+                last_opened_at: row.get(7)?,
                 is_valid: check_project_exists(&path),
-                cover_path: None, encrypted: false,
+                cover_path: None,
+                encrypted: false,
             })
         })
         .map_err(|e| format!("查询执行失败: {}", e))?
@@ -140,44 +203,66 @@ pub async fn get_recent_projects(app_handle: AppHandle) -> Result<Vec<ProjectMet
     Ok(projects)
 }
 
+/// 打开项目
+///
+/// 打开指定项目并更新最后打开时间。同时读取封面路径和加密状态。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `id`: 项目数据库 ID
+///
+/// # 返回值
+/// 项目元数据 `Ok(ProjectMeta)`，失败返回错误信息 `Err(String)`
 #[tauri::command]
 pub async fn open_project(app_handle: AppHandle, id: i64) -> Result<ProjectMeta, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
     let now = chrono::Utc::now().to_rfc3339();
-    conn.execute("UPDATE projects SET last_opened_at = ?1 WHERE id = ?2", (&now, id))
-        .map_err(|e| format!("更新失败: {}", e))?;
 
+    // 更新最后打开时间
+    conn.execute(
+        "UPDATE projects SET last_opened_at = ?1 WHERE id = ?2",
+        (&now, id),
+    )
+    .map_err(|e| format!("更新失败: {}", e))?;
+
+    // 查询项目信息
     let mut stmt = conn
         .prepare("SELECT id, project_id, name, author, description, path, created_at, last_opened_at FROM projects WHERE id = ?1")
         .map_err(|e| format!("查询准备失败: {}", e))?;
-    let project = stmt.query_row([id], |row| {
-        let path: String = row.get(5)?;
-        let project_id: String = row.get::<_, Option<String>>(1)?.unwrap_or_default();
-        Ok(ProjectMeta {
-            id: row.get(0)?, project_id, name: row.get(2)?, author: row.get(3)?,
-            description: row.get(4)?, path: path.clone(),
-            created_at: row.get(6)?, last_opened_at: row.get(7)?,
-            is_valid: check_project_exists(&path),
-            cover_path: None, encrypted: false,
+    let project = stmt
+        .query_row([id], |row| {
+            let path: String = row.get(5)?;
+            let project_id: String = row.get::<_, Option<String>>(1)?.unwrap_or_default();
+            Ok(ProjectMeta {
+                id: row.get(0)?,
+                project_id,
+                name: row.get(2)?,
+                author: row.get(3)?,
+                description: row.get(4)?,
+                path: path.clone(),
+                created_at: row.get(6)?,
+                last_opened_at: row.get(7)?,
+                is_valid: check_project_exists(&path),
+                cover_path: None,
+                encrypted: false,
+            })
         })
-    }).map_err(|e| format!("项目不存在: {}", e))?;
+        .map_err(|e| format!("项目不存在: {}", e))?;
 
-    // Read cover_path from project.json if it exists
-    // cover_path 现在是相对于项目根目录的路径，需要转换为绝对路径
+    // 从 project.json 读取封面路径（相对路径转绝对路径）
     let project_json_path = std::path::Path::new(&project.path).join("project.json");
     let cover_path = if project_json_path.exists() {
         let content = fs::read_to_string(&project_json_path).ok();
-        content.and_then(|c| {
-            serde_json::from_str::<serde_json::Value>(&c).ok()
-        }).and_then(|json| {
-            json.get("cover_path")?.as_str().map(|s| {
-                // 将相对路径转换为绝对路径
-                let project_dir = std::path::Path::new(&project.path);
-                let full_path = project_dir.join(s);
-                full_path.to_string_lossy().to_string()
+        content
+            .and_then(|c| serde_json::from_str::<serde_json::Value>(&c).ok())
+            .and_then(|json| {
+                json.get("cover_path")?.as_str().map(|s| {
+                    let project_dir = std::path::Path::new(&project.path);
+                    let full_path = project_dir.join(s);
+                    full_path.to_string_lossy().to_string()
+                })
             })
-        })
     } else {
         None
     };
@@ -185,16 +270,24 @@ pub async fn open_project(app_handle: AppHandle, id: i64) -> Result<ProjectMeta,
     // 检查项目是否加密
     let encrypted = is_project_encrypted(&PathBuf::from(&project.path));
 
-    Ok(ProjectMeta { cover_path, encrypted, ..project })
+    Ok(ProjectMeta {
+        cover_path,
+        encrypted,
+        ..project
+    })
 }
 
 /// 从列表中移除项目（可选删除本地文件）
 ///
 /// # 参数
+/// - `app_handle`: Tauri 应用句柄
 /// - `id`: 项目数据库 ID
 /// - `keep_files`: 是否保留本地文件
 ///   - `true` (默认): 仅从数据库删除记录，保留本地文件夹
 ///   - `false`: 同时删除数据库记录和本地文件夹
+///
+/// # 返回值
+/// 成功返回 `Ok(())`，失败返回错误信息 `Err(String)`
 #[tauri::command]
 pub async fn remove_project_from_list(
     app_handle: AppHandle,
@@ -207,11 +300,9 @@ pub async fn remove_project_from_list(
 
     // 获取项目路径（用于可能删除文件夹）
     let project_path: Option<String> = if !keep_files {
-        conn.query_row(
-            "SELECT path FROM projects WHERE id = ?1",
-            [id],
-            |row| row.get(0),
-        )
+        conn.query_row("SELECT path FROM projects WHERE id = ?1", [id], |row| {
+            row.get(0)
+        })
         .ok()
     } else {
         None
@@ -235,70 +326,112 @@ pub async fn remove_project_from_list(
     Ok(())
 }
 
+/// 更新项目信息
+///
+/// 更新项目的名称、作者和描述信息，同时更新项目配置文件。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `id`: 项目数据库 ID
+/// - `params`: 更新项目的参数（名称、作者、描述）
+///
+/// # 返回值
+/// 更新后的项目元数据 `Ok(ProjectMeta)`，失败返回错误信息 `Err(String)`
 #[tauri::command]
 pub async fn update_project(
-    app_handle: AppHandle, id: i64, params: UpdateProjectParams,
+    app_handle: AppHandle,
+    id: i64,
+    params: UpdateProjectParams,
 ) -> Result<ProjectMeta, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
+
+    // 更新数据库记录
     conn.execute(
         "UPDATE projects SET name = ?1, author = ?2, description = ?3 WHERE id = ?4",
         (&params.name, &params.author, &params.description, id),
-    ).map_err(|e| format!("更新项目失败: {}", e))?;
+    )
+    .map_err(|e| format!("更新项目失败: {}", e))?;
 
+    // 获取项目路径并更新 project.json
     let path: String = conn
-        .query_row("SELECT path FROM projects WHERE id = ?1", [id], |row| row.get(0))
+        .query_row("SELECT path FROM projects WHERE id = ?1", [id], |row| {
+            row.get(0)
+        })
         .map_err(|e| format!("项目不存在: {}", e))?;
     let project_json_path = std::path::Path::new(&path).join("project.json");
-    
-    // Preserve existing fields (like cover_path) when updating project.json
-    // cover_path 现在是相对路径，需要转换为绝对路径
+
+    // 更新 project.json（保留现有字段如 cover_path）
     let cover_path = if project_json_path.exists() {
         let content = fs::read_to_string(&project_json_path).ok();
-        content.and_then(|c| {
-            serde_json::from_str::<serde_json::Value>(&c).ok()
-        }).and_then(|json| {
-            let mut updated = json.clone();
-            updated["name"] = serde_json::Value::String(params.name.clone());
-            updated["author"] = serde_json::Value::String(params.author.clone());
-            updated["description"] = serde_json::Value::String(params.description.clone());
-            fs::write(&project_json_path, serde_json::to_string_pretty(&updated).unwrap_or_default()).ok();
-            // 将相对路径转换为绝对路径
-            json.get("cover_path")?.as_str().map(|s| {
-                let project_dir = std::path::Path::new(&path);
-                let full_path = project_dir.join(s);
-                full_path.to_string_lossy().to_string()
+        content
+            .and_then(|c| serde_json::from_str::<serde_json::Value>(&c).ok())
+            .and_then(|json| {
+                let mut updated = json.clone();
+                updated["name"] = serde_json::Value::String(params.name.clone());
+                updated["author"] = serde_json::Value::String(params.author.clone());
+                updated["description"] = serde_json::Value::String(params.description.clone());
+                fs::write(
+                    &project_json_path,
+                    serde_json::to_string_pretty(&updated).unwrap_or_default(),
+                )
+                .ok();
+                // 将相对路径转换为绝对路径
+                json.get("cover_path")?.as_str().map(|s| {
+                    let project_dir = std::path::Path::new(&path);
+                    let full_path = project_dir.join(s);
+                    full_path.to_string_lossy().to_string()
+                })
             })
-        })
     } else {
         None
     };
 
+    // 查询更新后的项目信息
     let mut stmt = conn
         .prepare("SELECT id, project_id, name, author, description, path, created_at, last_opened_at FROM projects WHERE id = ?1")
         .map_err(|e| format!("查询准备失败: {}", e))?;
-    let project = stmt.query_row([id], |row| {
-        let path: String = row.get(5)?;
-        let project_id: String = row.get::<_, Option<String>>(1)?.unwrap_or_default();
-        Ok(ProjectMeta {
-            id: row.get(0)?, project_id, name: row.get(2)?, author: row.get(3)?,
-            description: row.get(4)?, path: path.clone(),
-            created_at: row.get(6)?, last_opened_at: row.get(7)?,
-            is_valid: check_project_exists(&path),
-            cover_path: None, encrypted: false,
+    let project = stmt
+        .query_row([id], |row| {
+            let path: String = row.get(5)?;
+            let project_id: String = row.get::<_, Option<String>>(1)?.unwrap_or_default();
+            Ok(ProjectMeta {
+                id: row.get(0)?,
+                project_id,
+                name: row.get(2)?,
+                author: row.get(3)?,
+                description: row.get(4)?,
+                path: path.clone(),
+                created_at: row.get(6)?,
+                last_opened_at: row.get(7)?,
+                is_valid: check_project_exists(&path),
+                cover_path: None,
+                encrypted: false,
+            })
         })
-    }).map_err(|e| format!("查询项目失败: {}", e))?;
-    Ok(ProjectMeta { cover_path, ..project })
+        .map_err(|e| format!("查询项目失败: {}", e))?;
+
+    Ok(ProjectMeta {
+        cover_path,
+        ..project
+    })
 }
 
 /// 清理文件名中的非法字符
+///
+/// 将文件名中的非法字符替换为下划线，确保文件名符合文件系统规范。
+/// 非法字符包括：/, \, :, *, ?, ", <, >, |
+///
+/// # 参数
+/// - `name`: 原始文件名
+///
+/// # 返回值
+/// 清理后的文件名
 fn sanitize_filename(name: &str) -> String {
     name.chars()
-        .map(|c| {
-            match c {
-                '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
-                _ => c,
-            }
+        .map(|c| match c {
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
+            _ => c,
         })
         .collect::<String>()
         .trim()
@@ -306,8 +439,17 @@ fn sanitize_filename(name: &str) -> String {
 }
 
 /// 设置项目封面
-/// 封面将保存到项目目录下的 covers/{书名}_cover.{扩展名}
-/// 路径存储为相对于项目根目录的路径
+///
+/// 将指定图片设置为项目封面，封面将保存到项目目录下的 `covers/{书名}_cover.{扩展名}`。
+/// 路径存储为相对于项目根目录的路径，便于项目迁移。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目数据库 ID
+/// - `image_path`: 源图片文件路径
+///
+/// # 返回值
+/// 封面文件的完整路径 `Ok(String)`，失败返回错误信息 `Err(String)`
 #[tauri::command]
 pub async fn set_cover(
     app_handle: AppHandle,
@@ -317,47 +459,47 @@ pub async fn set_cover(
     // 获取项目路径和书名
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
-    
+
     let (project_path, book_name): (String, String) = conn
         .query_row(
-            "SELECT path, name FROM projects WHERE id = ?1", 
-            [project_id], 
-            |row| Ok((row.get(0)?, row.get(1)?))
+            "SELECT path, name FROM projects WHERE id = ?1",
+            [project_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .map_err(|e| format!("项目不存在: {}", e))?;
-    
+
     let project_dir = PathBuf::from(&project_path);
-    
+
     // 验证源图片存在
     let source_path = PathBuf::from(&image_path);
     if !source_path.exists() {
         return Err("图片文件不存在".to_string());
     }
-    
+
     // 获取原图扩展名
-    let extension = source_path.extension()
+    let extension = source_path
+        .extension()
         .and_then(|ext| ext.to_str())
         .unwrap_or("jpg")
         .to_lowercase();
-    
+
     // 清理书名作为文件名的一部分
     let sanitized_name = sanitize_filename(&book_name);
     if sanitized_name.is_empty() {
         return Err("书名不能为空".to_string());
     }
-    
-    // 创建 covers 目录
+
+    // 创建 covers 目录（如果不存在）
     let covers_dir = project_dir.join("covers");
     if !covers_dir.exists() {
-        fs::create_dir_all(&covers_dir)
-            .map_err(|e| format!("创建封面目录失败: {}", e))?;
+        fs::create_dir_all(&covers_dir).map_err(|e| format!("创建封面目录失败: {}", e))?;
     }
-    
+
     // 生成新的封面文件名：{书名}_cover.{扩展名}
     let cover_filename = format!("{}_cover.{}", sanitized_name, extension);
     let new_cover_path = covers_dir.join(&cover_filename);
-    
-    // 读取项目配置获取旧的封面路径
+
+    // 读取项目配置获取旧的封面路径（用于清理旧文件）
     let project_json_path = project_dir.join("project.json");
     let old_cover_path: Option<String> = if project_json_path.exists() {
         fs::read_to_string(&project_json_path)
@@ -367,54 +509,62 @@ pub async fn set_cover(
     } else {
         None
     };
-    
+
     // 删除旧的封面文件（如果存在且与新封面路径不同）
     if let Some(old_path) = old_cover_path {
         let old_full_path = if PathBuf::from(&old_path).is_absolute() {
             PathBuf::from(&old_path)
         } else {
-            // 相对路径，拼接项目目录
             project_dir.join(&old_path)
         };
         if old_full_path.exists() && old_full_path != new_cover_path {
             let _ = fs::remove_file(&old_full_path);
         }
     }
-    
+
     // 处理文件名冲突：如果文件已存在，先删除
     if new_cover_path.exists() {
-        fs::remove_file(&new_cover_path)
-            .map_err(|e| format!("删除旧封面失败: {}", e))?;
+        fs::remove_file(&new_cover_path).map_err(|e| format!("删除旧封面失败: {}", e))?;
     }
-    
+
     // 复制图片到目标位置
-    fs::copy(&image_path, &new_cover_path)
-        .map_err(|e| format!("复制图片失败: {}", e))?;
-    
+    fs::copy(&image_path, &new_cover_path).map_err(|e| format!("复制图片失败: {}", e))?;
+
     // 使用相对路径存储（相对于项目根目录）
     let relative_cover_path = format!("covers/{}", cover_filename);
-    
+
     // 更新 project.json
     if project_json_path.exists() {
         let content = fs::read_to_string(&project_json_path)
             .map_err(|e| format!("读取项目配置失败: {}", e))?;
-        
-        let mut json: serde_json::Value = serde_json::from_str(&content)
-            .map_err(|e| format!("解析项目配置失败: {}", e))?;
-        
+
+        let mut json: serde_json::Value =
+            serde_json::from_str(&content).map_err(|e| format!("解析项目配置失败: {}", e))?;
+
         json["cover_path"] = serde_json::Value::String(relative_cover_path.clone());
-        
-        fs::write(&project_json_path, serde_json::to_string_pretty(&json)
-            .map_err(|e| format!("序列化项目配置失败: {}", e))?)
-            .map_err(|e| format!("写入项目配置失败: {}", e))?;
+
+        fs::write(
+            &project_json_path,
+            serde_json::to_string_pretty(&json)
+                .map_err(|e| format!("序列化项目配置失败: {}", e))?,
+        )
+        .map_err(|e| format!("写入项目配置失败: {}", e))?;
     }
-    
+
     // 返回完整路径供前端使用
     let full_cover_path = new_cover_path.to_string_lossy().to_string();
     Ok(full_cover_path)
 }
 
-/// 检查是否需要迁移 — 返回待迁移项目数
+/// 检查是否需要迁移
+///
+/// 查询数据库中没有 project_id 的项目数量，用于判断是否需要执行数据迁移。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+///
+/// # 返回值
+/// 待迁移项目数量 `Ok(i32)`，失败返回错误信息 `Err(String)`
 #[tauri::command]
 pub async fn check_migration_needed(app_handle: AppHandle) -> Result<i32, String> {
     let db_path = get_db_path(&app_handle);
@@ -434,7 +584,16 @@ pub async fn check_migration_needed(app_handle: AppHandle) -> Result<i32, String
     Ok(count)
 }
 
-/// 执行数据库备份（VACUUM INTO），返回备份文件路径
+/// 执行数据库备份
+///
+/// 使用 SQLite 的 VACUUM INTO 命令创建数据库快照，返回备份文件路径。
+/// 备份文件存储在数据库目录下的 backups 子目录中。
+///
+/// # 参数
+/// - `db_path`: 数据库文件路径
+///
+/// # 返回值
+/// 备份文件路径 `Ok(String)`，失败返回错误信息 `Err(String)`
 fn backup_database(db_path: &PathBuf) -> Result<String, String> {
     let backup_dir = db_path
         .parent()
@@ -458,6 +617,19 @@ fn backup_database(db_path: &PathBuf) -> Result<String, String> {
 }
 
 /// 记录迁移日志到 migration_logs 表
+///
+/// 记录每次迁移或回滚操作的详细信息，便于追踪和审计。
+///
+/// # 参数
+/// - `conn`: SQLite 数据库连接
+/// - `operation`: 操作类型（"migrate" 或 "rollback"）
+/// - `project_db_id`: 项目数据库 ID
+/// - `old_project_id`: 旧的项目 ID（迁移前）
+/// - `new_project_id`: 新的项目 ID（迁移后）
+/// - `old_path`: 旧的项目路径
+/// - `new_path`: 新的项目路径
+/// - `status`: 操作状态（"success", "failed", "warning"）
+/// - `error_message`: 错误信息（如果失败）
 fn log_migration(
     conn: &Connection,
     operation: &str,
@@ -478,6 +650,15 @@ fn log_migration(
 }
 
 /// 验证 Git 仓库在重命名后是否可访问
+///
+/// 检查重命名后的项目目录中的 Git 仓库是否仍然可用。
+/// 如果没有 Git 仓库，视为验证通过。
+///
+/// # 参数
+/// - `repo_path`: Git 仓库路径
+///
+/// # 返回值
+/// 验证通过返回 `true`，失败返回 `false`
 fn verify_git_repo(repo_path: &PathBuf) -> bool {
     let git_dir = repo_path.join(".git");
     if !git_dir.exists() {
@@ -536,7 +717,9 @@ pub async fn migrate_existing_projects(
             .iter()
             .map(|(id, name, old_path)| {
                 let old_path_buf = PathBuf::from(old_path);
-                let parent_dir = old_path_buf.parent().map(|p| p.to_string_lossy().to_string());
+                let parent_dir = old_path_buf
+                    .parent()
+                    .map(|p| p.to_string_lossy().to_string());
                 MigrationDetail {
                     project_db_id: *id,
                     old_name: name.clone(),
@@ -801,9 +984,13 @@ pub async fn rollback_migration(
                  )",
                 placeholders.join(",")
             );
-            let mut stmt = conn.prepare(&sql).map_err(|e| format!("查询准备失败: {}", e))?;
-            let params_refs: Vec<&dyn rusqlite::types::ToSql> =
-                ids.iter().map(|id| id as &dyn rusqlite::types::ToSql).collect();
+            let mut stmt = conn
+                .prepare(&sql)
+                .map_err(|e| format!("查询准备失败: {}", e))?;
+            let params_refs: Vec<&dyn rusqlite::types::ToSql> = ids
+                .iter()
+                .map(|id| id as &dyn rusqlite::types::ToSql)
+                .collect();
             stmt.query_map(params_refs.as_slice(), |row| {
                 Ok((row.get(0)?, row.get(1)?, row.get(2)?))
             })

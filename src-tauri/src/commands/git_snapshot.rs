@@ -5,6 +5,16 @@ use std::fs;
 use std::path::Path;
 use tauri::AppHandle;
 
+/// 获取项目文件夹路径
+///
+/// 根据项目 ID 从数据库查询项目的根目录路径。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+///
+/// # 返回值
+/// 成功返回项目路径，失败返回错误信息
 pub fn get_project_folder_path(app_handle: &AppHandle, project_id: i64) -> Result<std::path::PathBuf, String> {
     let db_path = get_db_path(app_handle);
     let conn = rusqlite::Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -14,10 +24,30 @@ pub fn get_project_folder_path(app_handle: &AppHandle, project_id: i64) -> Resul
     Ok(std::path::PathBuf::from(path))
 }
 
+/// 初始化 Git 仓库（使用默认的 .gitignore）
+///
+/// 在项目目录下初始化 Git 仓库，创建初始提交。
+/// 默认忽略：metadata.db、exports/、cover.jpg、node_modules/
+///
+/// # 参数
+/// - `project_path`: 项目根目录路径
+///
+/// # 返回值
+/// 成功返回 Ok(())，失败返回错误信息
 pub fn init_git_repo(project_path: &Path) -> Result<(), String> {
     init_git_repo_with_ignore(project_path, "metadata.db\nexports/\ncover.jpg\nnode_modules/\n")
 }
 
+/// 初始化 Git 仓库（使用自定义的 .gitignore）
+///
+/// 在项目目录下初始化 Git 仓库，创建 .gitignore 文件和初始提交。
+///
+/// # 参数
+/// - `project_path`: 项目根目录路径
+/// - `gitignore_content`: .gitignore 文件内容
+///
+/// # 返回值
+/// 成功返回 Ok(())，失败返回错误信息
 pub fn init_git_repo_with_ignore(project_path: &Path, gitignore_content: &str) -> Result<(), String> {
     let repo = Repository::init(project_path).map_err(|e| format!("Git 初始化失败: {}", e))?;
     let gitignore_path = project_path.join(".gitignore");
@@ -35,6 +65,17 @@ pub fn init_git_repo_with_ignore(project_path: &Path, gitignore_content: &str) -
     Ok(())
 }
 
+/// 为项目初始化 Git 仓库
+///
+/// 懒加载初始化：如果仓库已存在则跳过，不存在则创建新仓库。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `gitignore`: 自定义的 .gitignore 内容（可选）
+///
+/// # 返回值
+/// 成功返回 Ok(())，失败返回错误信息
 #[tauri::command]
 pub async fn init_project_git(app_handle: AppHandle, project_id: i64, gitignore: Option<String>) -> Result<(), String> {
     let path = get_project_folder_path(&app_handle, project_id)?;
@@ -45,7 +86,16 @@ pub async fn init_project_git(app_handle: AppHandle, project_id: i64, gitignore:
     Ok(())
 }
 
-// Try to open existing repo; if not found, initialize a new one (lazy init)
+/// 打开或初始化 Git 仓库（懒加载）
+///
+/// 尝试打开现有仓库，如果不存在则初始化新仓库。
+/// 用于确保操作时仓库已存在。
+///
+/// # 参数
+/// - `project_path`: 项目根目录路径
+///
+/// # 返回值
+/// 成功返回 Repository 实例，失败返回错误信息
 pub(crate) fn open_or_init_repo(project_path: &std::path::Path) -> Result<Repository, String> {
     match Repository::open(project_path) {
         Ok(repo) => Ok(repo),
@@ -57,6 +107,18 @@ pub(crate) fn open_or_init_repo(project_path: &std::path::Path) -> Result<Reposi
     }
 }
 
+/// 创建快照（Git 提交）
+///
+/// 将项目当前状态作为新的 Git 提交保存。
+/// 使用 "inovel" 作为提交者签名。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `message`: 提交消息
+///
+/// # 返回值
+/// 成功返回快照信息（包含哈希、消息、日期），失败返回错误信息
 #[tauri::command]
 pub async fn create_snapshot(app_handle: AppHandle, project_id: i64, message: String) -> Result<Snapshot, String> {
     let project_path = get_project_folder_path(&app_handle, project_id)?;
@@ -89,6 +151,16 @@ pub async fn create_snapshot(app_handle: AppHandle, project_id: i64, message: St
     })
 }
 
+/// 获取项目的所有快照（Git 提交历史）
+///
+/// 按时间倒序返回项目中所有 Git 提交记录。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+///
+/// # 返回值
+/// 成功返回快照列表，失败返回错误信息
 #[tauri::command]
 pub async fn get_snapshots(app_handle: AppHandle, project_id: i64) -> Result<Vec<Snapshot>, String> {
     let project_path = get_project_folder_path(&app_handle, project_id)?;
@@ -113,6 +185,17 @@ pub async fn get_snapshots(app_handle: AppHandle, project_id: i64) -> Result<Vec
     Ok(snapshots)
 }
 
+/// 恢复快照（将项目重置到指定版本）
+///
+/// 执行 Git 硬重置到指定提交，然后创建一个新的提交记录恢复操作。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `commit_hash`: 要恢复到的提交哈希
+///
+/// # 返回值
+/// 成功返回 Ok(())，失败返回错误信息
 #[tauri::command]
 pub async fn restore_snapshot(app_handle: AppHandle, project_id: i64, commit_hash: String) -> Result<(), String> {
     let project_path = get_project_folder_path(&app_handle, project_id)?;
@@ -139,6 +222,18 @@ pub async fn restore_snapshot(app_handle: AppHandle, project_id: i64, commit_has
     Ok(())
 }
 
+/// 获取两个快照之间的差异
+///
+/// 计算并返回两个 Git 提交之间的文件差异，以标准 diff 格式输出。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `from_hash`: 起始提交哈希
+/// - `to_hash`: 目标提交哈希
+///
+/// # 返回值
+/// 成功返回差异内容（标准 diff 格式），失败返回错误信息
 #[tauri::command]
 pub async fn get_snapshot_diff(
     app_handle: AppHandle, project_id: i64, from_hash: String, to_hash: String,

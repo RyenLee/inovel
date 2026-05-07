@@ -19,7 +19,6 @@ const naiveUiImportPlugin = {
           const importStatements: string[] = [];
           const fallbackImports: string[] = [];
 
-          // 已知存在的目录组件列表
           const knownComponents = [
             'button', 'icon', 'config-provider', 'input', 'select', 'modal', 'card',
             'progress', 'tooltip', 'tag', 'radio', 'input-number', 'empty', 'popover',
@@ -27,25 +26,28 @@ const naiveUiImportPlugin = {
             'upload', 'date-picker', 'button-group', 'confirm', 'divider',
             'timeline', 'statistic', 'grid', 'layout', 'tabs', 'badge', 'breadcrumb',
             'avatar', 'drawer', 'rate', 'steps', 'table', 'pagination', 'form',
-            'transfer', 'cascader', 'checkbox', 'time-picker', 'color-picker'
+            'transfer', 'cascader', 'checkbox', 'time-picker', 'color-picker',
+            'dynamic-input', 'drawer-content'
           ];
+
+          const componentDirOverrides: Record<string, string> = {
+            'drawer-content': 'drawer',
+          };
 
           imports.split(',').forEach(item => {
             const name = item.trim();
             if (name.startsWith('N')) {
-              // 将 NButton 转换为 button，NConfigProvider 转换为 config-provider
               let dirName = name.slice(1)
                 .replace(/([A-Z])/g, '-$1')
                 .toLowerCase()
                 .replace(/^-/, '');
-              // 如果是已知组件，使用按需导入；否则回退到主包
+              dirName = componentDirOverrides[dirName] || dirName;
               if (knownComponents.includes(dirName)) {
                 importStatements.push(`import { ${name} } from 'naive-ui/es/${dirName}'`);
               } else {
                 fallbackImports.push(name);
               }
             } else {
-              // useMessage 等 composables 回退到主包导入
               fallbackImports.push(name);
             }
           });

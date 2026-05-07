@@ -3,6 +3,16 @@ use crate::models::{CreateRelationshipParams, Relationship, UpdateRelationshipPa
 use rusqlite::{params, Connection};
 use tauri::AppHandle;
 
+/// 创建角色关系
+///
+/// 在数据库中创建一个新的角色关系记录。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `params`: 创建关系参数（包含 project_id, source_id, target_id, relation_type）
+///
+/// # 返回值
+/// 成功返回创建的关系记录，失败返回错误信息
 #[tauri::command]
 pub async fn create_relationship(app_handle: AppHandle, params: CreateRelationshipParams) -> Result<Relationship, String> {
     let db_path = get_db_path(&app_handle);
@@ -17,6 +27,15 @@ pub async fn create_relationship(app_handle: AppHandle, params: CreateRelationsh
     Ok(Relationship { id, project_id: params.project_id, source_id: params.source_id, target_id: params.target_id, relation_type: params.relation_type, created_at: now })
 }
 
+/// 更新角色关系类型
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `relationship_id`: 关系 ID
+/// - `params`: 更新参数（包含新的 relation_type）
+///
+/// # 返回值
+/// 成功返回更新后的关系记录，失败返回错误信息
 #[tauri::command]
 pub async fn update_relationship(app_handle: AppHandle, relationship_id: i64, params: UpdateRelationshipParams) -> Result<Relationship, String> {
     let db_path = get_db_path(&app_handle);
@@ -30,6 +49,14 @@ pub async fn update_relationship(app_handle: AppHandle, relationship_id: i64, pa
     Ok(r)
 }
 
+/// 删除角色关系
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `relationship_id`: 关系 ID
+///
+/// # 返回值
+/// 成功返回 Ok(())，失败返回错误信息
 #[tauri::command]
 pub async fn delete_relationship(app_handle: AppHandle, relationship_id: i64) -> Result<(), String> {
     let db_path = get_db_path(&app_handle);
@@ -38,6 +65,14 @@ pub async fn delete_relationship(app_handle: AppHandle, relationship_id: i64) ->
     Ok(())
 }
 
+/// 获取项目的所有角色关系
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+///
+/// # 返回值
+/// 成功返回关系列表，失败返回错误信息
 #[tauri::command]
 pub async fn get_relationships(app_handle: AppHandle, project_id: i64) -> Result<Vec<Relationship>, String> {
     let db_path = get_db_path(&app_handle);

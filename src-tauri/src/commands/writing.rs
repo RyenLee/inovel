@@ -3,6 +3,16 @@ use crate::models::{FocusSession, FocusStats, WritingGoal, WritingRecord};
 use rusqlite::{params, Connection};
 use tauri::AppHandle;
 
+/// 获取写作目标
+///
+/// 获取指定项目的每日写作目标设置。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+///
+/// # 返回值
+/// 成功返回写作目标（可能为 None），失败返回错误信息
 #[tauri::command]
 pub async fn get_writing_goal(app_handle: AppHandle, project_id: i64) -> Result<Option<WritingGoal>, String> {
     let db_path = get_db_path(&app_handle);
@@ -16,6 +26,17 @@ pub async fn get_writing_goal(app_handle: AppHandle, project_id: i64) -> Result<
     Ok(result)
 }
 
+/// 保存写作目标
+///
+/// 创建或更新项目的每日写作目标。使用 INSERT OR UPDATE 语义，确保每个项目只有一条记录。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `daily_goal`: 每日目标字数
+///
+/// # 返回值
+/// 成功返回保存的写作目标，失败返回错误信息
 #[tauri::command]
 pub async fn save_writing_goal(app_handle: AppHandle, project_id: i64, daily_goal: i32) -> Result<WritingGoal, String> {
     let db_path = get_db_path(&app_handle);
@@ -35,6 +56,17 @@ pub async fn save_writing_goal(app_handle: AppHandle, project_id: i64, daily_goa
     Ok(result)
 }
 
+/// 获取写作统计数据
+///
+/// 获取指定天数内的写作记录统计。当 project_id 为 0 时返回所有项目的汇总数据。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID（0 表示所有项目）
+/// - `days`: 查询天数
+///
+/// # 返回值
+/// 成功返回写作记录列表，失败返回错误信息
 #[tauri::command]
 pub async fn get_writing_stats(app_handle: AppHandle, project_id: i64, days: i32) -> Result<Vec<WritingRecord>, String> {
     let db_path = get_db_path(&app_handle);
@@ -59,6 +91,18 @@ pub async fn get_writing_stats(app_handle: AppHandle, project_id: i64, days: i32
     Ok(records)
 }
 
+/// 更新或插入写作记录
+///
+/// 使用 INSERT OR UPDATE 语义，为当前日期创建或更新写作记录。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `total_words`: 写作字数
+/// - `duration`: 写作时长（分钟）
+///
+/// # 返回值
+/// 成功返回写作记录，失败返回错误信息
 #[tauri::command]
 pub async fn upsert_writing_record(app_handle: AppHandle, project_id: i64, total_words: i32, duration: i32) -> Result<WritingRecord, String> {
     let db_path = get_db_path(&app_handle);
@@ -78,6 +122,16 @@ pub async fn upsert_writing_record(app_handle: AppHandle, project_id: i64, total
     Ok(result)
 }
 
+/// 获取今日写作记录
+///
+/// 获取指定项目今日的写作字数和时长。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+///
+/// # 返回值
+/// 成功返回今日写作记录（可能为 None），失败返回错误信息
 #[tauri::command]
 pub async fn get_today_words(app_handle: AppHandle, project_id: i64) -> Result<Option<WritingRecord>, String> {
     let db_path = get_db_path(&app_handle);
@@ -94,6 +148,20 @@ pub async fn get_today_words(app_handle: AppHandle, project_id: i64) -> Result<O
 
 // ==================== 番茄钟专注会话相关命令 ====================
 
+/// 记录专注会话
+///
+/// 创建一条新的番茄钟专注会话记录。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `session_type`: 会话类型（work/short_break/long_break）
+/// - `duration_minutes`: 会话时长（分钟）
+/// - `started_at`: 开始时间
+/// - `completed`: 是否完成
+///
+/// # 返回值
+/// 成功返回专注会话记录，失败返回错误信息
 #[tauri::command]
 pub async fn record_focus_session(
     app_handle: AppHandle,
@@ -127,6 +195,17 @@ pub async fn record_focus_session(
     })
 }
 
+/// 获取专注会话列表
+///
+/// 获取指定天数内的所有专注会话记录。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `days`: 查询天数
+///
+/// # 返回值
+/// 成功返回专注会话列表，失败返回错误信息
 #[tauri::command]
 pub async fn get_focus_sessions(
     app_handle: AppHandle,
@@ -161,6 +240,17 @@ pub async fn get_focus_sessions(
     Ok(sessions)
 }
 
+/// 获取专注统计数据
+///
+/// 获取指定天数内的专注会话统计汇总。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `days`: 查询天数
+///
+/// # 返回值
+/// 成功返回统计数据（包含总会话数、总时长、完成数等），失败返回错误信息
 #[tauri::command]
 pub async fn get_focus_stats(
     app_handle: AppHandle,

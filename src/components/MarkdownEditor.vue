@@ -1,5 +1,5 @@
 <script setup lang="ts">import { ref, toRef, toRefs, computed } from "vue";
-import { NButton, NIcon, NSpace, NTooltip, NDropdown, DropdownOption, NModal, NCard, NSlider, NText, NSpace as NSpaceVertical } from "naive-ui";
+import { NButton, NIcon, NSpace, NTooltip, NDropdown, NModal, NSlider, NText } from "naive-ui";
 import { useEditorComposable } from "../composables/useEditor";
 import { useWordCount } from "../composables/useWordCount";
 import { useTextBeautify } from "../composables/useTextBeautify";
@@ -23,6 +23,7 @@ import {
   Replace,
   Wand2,
   Eye,
+  Upload,
   X,
 } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
@@ -30,6 +31,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { readFile } from "@tauri-apps/plugin-fs";
 import type { EditorMode } from "../stores/editor";
 import TemplateSelector from "./TemplateSelector.vue";
+import TextImportDialog from "./TextImportDialog.vue";
 const props = defineProps<{
   modelValue: string;
   chapterId: number | null;
@@ -70,7 +72,7 @@ const { editor, wordCount: editorWordCount, EditorContent, toggleBold, toggleIta
 });
 const chapterIdRef = toRef(props, 'chapterId');
 
-const { wordCount, updateWordCount, cleanup: cleanupWordCount } = useWordCount({
+const { wordCount } = useWordCount({
   chapterId: chapterIdRef,
   onWordCountUpdated: (count) => {
     emit("word-count-updated", count);
@@ -93,6 +95,10 @@ const {
   beautifyDropdownOptions,
 } = toRefs(beautify);
 
+const lineHeightRatio = computed(() => {
+    const fontSize = 16;
+    return lineHeight.value / fontSize;
+});
 const lineHeightPx = computed(() => `${lineHeight.value}px`);
 const lineHeightNum = computed(() => lineHeight.value);
 useEditorLayout({
@@ -100,6 +106,7 @@ useEditorLayout({
   editor,
 });
 const showTemplateSelector = ref(false);
+const showTextImportDialog = ref(false);
 const templateInsertMode = ref<'replace' | 'insert'>('replace');
 const isApplyingTemplate = ref(false);
 const markdownToHtml = (markdown: string): string => {
@@ -107,7 +114,7 @@ const markdownToHtml = (markdown: string): string => {
     return '';
   let html = markdown;
   const tableRegex = /^\|(.+)\|\s*\n\|[-:\s|]+\|\s*\n((?:\|.+\|\s*\n?)+)/gm;
-  html = html.replace(tableRegex, (match, headerRow, bodyRows) => {
+  html = html.replace(tableRegex, (_match, headerRow, bodyRows) => {
     const headers = headerRow.split('|').map((h: string) => h.trim()).filter(Boolean);
     const rows = bodyRows.trim().split('\n').map((row: string) => row.split('|').map((cell: string) => cell.trim()).filter(Boolean));
     let tableHtml = '<table><thead><tr>';
@@ -298,20 +305,21 @@ const handleTemplateSelect = async (payload: string | {
 const handleTemplateSelectorClose = () => {
   showTemplateSelector.value = false;
 };
-const showTemplate = () => {
-  showTemplateSelector.value = true;
+const handleTextImport = (payload: { content: string; mode: "insert" | "replace" }) => {
+  if (!editor.value) return;
+
+  if (payload.mode === "replace") {
+    editor.value.commands.setContent(payload.content, { emitUpdate: false });
+  } else {
+    editor.value.commands.insertContent(payload.content);
+  }
+
+  const newHtml = editor.value.getHTML();
+  emit("update:modelValue", newHtml);
+  emit("requestSave");
 };
 const toggleTemplateMode = () => {
   templateInsertMode.value = templateInsertMode.value === 'replace' ? 'insert' : 'replace';
-};
-const handleEditorClick = (event: MouseEvent) => {
-  const target = event.target as HTMLElement;
-  if (target.tagName === 'IMG') {
-    const img = target as HTMLImageElement;
-    if (!img.src || img.src.includes('在此插入图片') || img.src === window.location.href || img.src.endsWith('()')) {
-      selectImageForImg(img);
-    }
-  }
 };
 const selectImageForImg = async (img: HTMLImageElement) => {
   try {
@@ -356,7 +364,7 @@ defineExpose({
 <template>
   <div ref="editorRootRef" class="flex flex-col h-full rounded-lg border transition-colors duration-300 overflow-hidden"
     :class="editor ? (isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200') : ''">
-    <div v-if="editor" class="relative flex items-center gap-1 px-3 py-2 border-b flex-wrap"
+    <div v-if="editor" data-editor-toolbar class="relative flex items-center gap-1 px-3 py-2 border-b flex-wrap"
       :class="isDark ? 'border-gray-700' : 'border-gray-200'">
       <NSpace :size="4">
         <NTooltip trigger="hover">
@@ -530,7 +538,8 @@ defineExpose({
           </template>
           打开模板库
         </NTooltip>
-        <NTooltip trigger="hover">
+
+        <!-- <NTooltip trigger="hover">
           <template #trigger>
             <div class="flex items-center">
               <NButton size="tiny" quaternary class="px-1!" @click="toggleTemplateMode">
@@ -543,7 +552,7 @@ defineExpose({
             </div>
           </template>
           {{ templateInsertMode === 'replace' ? '替换模式' : '插入模式' }}（点击切换）
-        </NTooltip>
+        </NTooltip> -->
 
         <NDropdown trigger="hover" :options="beautifyDropdownOptions" @select="beautify.handleBeautifyDropdown">
           <NButton size="small" tertiary>
@@ -554,6 +563,19 @@ defineExpose({
             </template>
           </NButton>
         </NDropdown>
+
+        <NTooltip trigger="hover">
+          <template #trigger>
+            <NButton size="small" tertiary @click="showTextImportDialog = true">
+              <template #icon>
+                <NIcon>
+                  <Upload />
+                </NIcon>
+              </template>
+            </NButton>
+          </template>
+          导入文本文件 (.txt)
+        </NTooltip>
 
         <div v-if="showLineHeightControl"
           class="absolute top-full right-0 mt-2 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 min-w-[240px]">
@@ -576,7 +598,7 @@ defineExpose({
           </div>
 
           <div class="space-y-2">
-            <NSlider v-model:value="lineHeight" :min="18" :max="50" :step="1" :tooltip="false" />
+            <NSlider v-model:value="lineHeight" :min="10" :max="50" :step="1" :tooltip="false" />
             <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>紧凑</span>
               <span class="font-medium text-blue-500">{{ lineHeight }}px</span>
@@ -599,7 +621,7 @@ defineExpose({
       </div>
     </div>
 
-    <div class="flex items-center justify-between px-4 py-2 text-sm border-t"
+    <div data-editor-statusbar class="flex items-center justify-between px-4 py-2 text-sm border-t"
       :class="isDark ? 'border-gray-700 text-gray-400 bg-gray-800' : 'border-gray-200 text-gray-500 bg-gray-50'">
       <div class="flex items-center gap-4">
         <div class="flex items-center gap-1">
@@ -622,6 +644,9 @@ defineExpose({
 
     <TemplateSelector v-model:show="showTemplateSelector" :project-id="projectId || 0" :insert-mode="templateInsertMode"
       @select="handleTemplateSelect" @update:show="handleTemplateSelectorClose" />
+
+    <TextImportDialog v-model:show="showTextImportDialog" :is-dark="isDark"
+      @import="handleTextImport" />
 
     <NModal v-model:show="showSplitDialog" preset="card" title="段落拆分" style="width: 600px; max-width: 90vw"
       :segmented="{ content: true, footer: true }">
@@ -684,15 +709,51 @@ defineExpose({
   height: 100%;
   overflow-y: auto;
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
   box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.tiptap::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tiptap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tiptap::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.tiptap::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+.dark .tiptap {
+  scrollbar-color: #4b5563 transparent;
+  scrollbar-width: thin;
+}
+
+.dark .tiptap::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+
+.dark .tiptap::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
 }
 
 .tiptap .ProseMirror {
   min-height: calc(100% - 16px);
-  height: 100%;
   padding: 8px;
   outline: none;
   box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .editor-content-wrapper {
@@ -763,8 +824,10 @@ defineExpose({
 }
 
 .tiptap p {
-  margin-bottom: 1.25em;
-  line-height: 1.75;
+  margin-bottom: 1em;
+  line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .tiptap h1 {
@@ -772,6 +835,8 @@ defineExpose({
   font-weight: 700;
   margin-bottom: 0.5em;
   line-height: 1.2;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .tiptap h2 {
@@ -779,6 +844,8 @@ defineExpose({
   font-weight: 600;
   margin-bottom: 0.5em;
   line-height: 1.3;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .tiptap h3 {
@@ -786,6 +853,8 @@ defineExpose({
   font-weight: 600;
   margin-bottom: 0.5em;
   line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .tiptap ul,
@@ -796,6 +865,8 @@ defineExpose({
 
 .tiptap li {
   margin-bottom: 0.25em;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .tiptap blockquote {
@@ -805,6 +876,8 @@ defineExpose({
   margin-bottom: 1.25em;
   color: #6b7280;
   font-style: italic;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .tiptap hr {
@@ -863,32 +936,36 @@ defineExpose({
 }
 
 .editor-content-wrapper .tiptap {
-  line-height: v-bind(lineHeightPx) !important;
+  line-height: v-bind(lineHeightRatio) !important;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .editor-content-wrapper .tiptap p {
-  line-height: v-bind(lineHeightPx) !important;
-  margin-bottom: v-bind(lineHeightPx) !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  /* line-height: v-bind(lineHeightRatio) !important; */
+  margin-bottom: 0.75em !important;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .editor-content-wrapper .tiptap li {
-  line-height: v-bind(lineHeightPx) !important;
+  line-height: v-bind(lineHeightRatio) !important;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .paper-lined,
 .paper-lined-margin,
 .paper-grid,
 .paper-dots {
-  line-height: v-bind(lineHeightPx) !important;
+  line-height: v-bind(lineHeightRatio) !important;
 }
 
 .paper-lined .tiptap,
 .paper-lined-margin .tiptap,
 .paper-grid .tiptap,
 .paper-dots .tiptap {
-  line-height: v-bind(lineHeightPx) !important;
+  line-height: v-bind(lineHeightRatio) !important;
 }
 
 .paper-lined .ProseMirror {
@@ -990,53 +1067,51 @@ defineExpose({
 .paper-lined-margin .tiptap p,
 .paper-grid .tiptap p,
 .paper-dots .tiptap p {
-  line-height: v-bind(lineHeightPx) !important;
-  margin-bottom: v-bind(lineHeightPx) !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  line-height: v-bind(lineHeightRatio) !important;
+  margin-bottom: 0.75em !important;
 }
 
 .paper-lined .tiptap li,
 .paper-lined-margin .tiptap li,
 .paper-grid .tiptap li,
 .paper-dots .tiptap li {
-  line-height: v-bind(lineHeightPx) !important;
+  line-height: v-bind(lineHeightRatio) !important;
 }
 
 .paper-lined .tiptap h1,
 .paper-lined-margin .tiptap h1,
 .paper-grid .tiptap h1,
 .paper-dots .tiptap h1 {
-  margin-bottom: calc(v-bind(lineHeightNum) * 0.5px) !important;
+  margin-bottom: 0.5em !important;
 }
 
 .paper-lined .tiptap h2,
 .paper-lined-margin .tiptap h2,
 .paper-grid .tiptap h2,
 .paper-dots .tiptap h2 {
-  margin-bottom: calc(v-bind(lineHeightNum) * 0.5px) !important;
+  margin-bottom: 0.5em !important;
 }
 
 .paper-lined .tiptap h3,
 .paper-lined-margin .tiptap h3,
 .paper-grid .tiptap h3,
 .paper-dots .tiptap h3 {
-  margin-bottom: calc(v-bind(lineHeightNum) * 0.5px) !important;
+  margin-bottom: 0.5em !important;
 }
 
 .paper-lined .tiptap blockquote,
 .paper-lined-margin .tiptap blockquote,
 .paper-grid .tiptap blockquote,
 .paper-dots .tiptap blockquote {
-  margin-top: v-bind(lineHeightPx) !important;
-  margin-bottom: v-bind(lineHeightPx) !important;
+  margin-top: 0.75em !important;
+  margin-bottom: 0.75em !important;
 }
 
 .paper-lined .tiptap hr,
 .paper-lined-margin .tiptap hr,
 .paper-grid .tiptap hr,
 .paper-dots .tiptap hr {
-  margin-top: v-bind(lineHeightPx) !important;
-  margin-bottom: v-bind(lineHeightPx) !important;
+  margin-top: 0.75em !important;
+  margin-bottom: 0.75em !important;
 }
 </style>

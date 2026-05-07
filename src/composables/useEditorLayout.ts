@@ -24,12 +24,12 @@ export function useEditorLayout(options: UseEditorLayoutOptions) {
       const rootRect = root.getBoundingClientRect();
 
       const toolbar = root.querySelector(
-        '[class*="border-b"]'
+        '[data-editor-toolbar]'
       ) as HTMLElement;
       const toolbarHeight = toolbar ? toolbar.offsetHeight : 0;
 
       const statusBar = root.querySelector(
-        '[class*="border-t"]'
+        '[data-editor-statusbar]'
       ) as HTMLElement;
       const statusBarHeight = statusBar ? statusBar.offsetHeight : 0;
 

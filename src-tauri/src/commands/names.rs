@@ -9,6 +9,14 @@ lazy_static! {
     pub static ref NAMES_DB: NamesDatabase = load_names_database();
 }
 
+/// 加载姓名数据库
+///
+/// 从多个可能的位置查找并加载 names.json 资源文件：
+/// 1. 可执行文件所在目录的 resources/names.json
+/// 2. 可执行文件所在目录的上级目录的 resources/names.json
+/// 3. 当前工作目录的 resources/names.json
+///
+/// 如果所有位置都找不到，则返回内置的默认数据。
 fn load_names_database() -> NamesDatabase {
     let exe_path = std::env::current_exe().unwrap_or_default();
     let resource_paths = vec![
@@ -41,6 +49,21 @@ fn load_names_database() -> NamesDatabase {
     }
 }
 
+/// 生成随机姓名或地名
+///
+/// 根据类别和性别生成随机姓名或地名：
+/// - `chinese_name`: 中文姓名（姓氏+名字）
+/// - `western_name`: 西方姓名
+/// - `chinese_place`: 中文地名
+/// - `western_place`: 西方地名
+///
+/// # 参数
+/// - `category`: 类别（chinese_name, western_name, chinese_place, western_place）
+/// - `gender`: 性别筛选（male, female, None 表示混合）
+/// - `count`: 生成数量（最大100）
+///
+/// # 返回值
+/// 生成的随机名称列表
 #[tauri::command]
 pub fn generate_names(category: String, gender: Option<String>, count: u32) -> Vec<String> {
     let mut rng = rand::rng();

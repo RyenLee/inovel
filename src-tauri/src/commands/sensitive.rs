@@ -6,6 +6,16 @@ use std::fs;
 use tauri::AppHandle;
 
 /// 添加敏感词
+///
+/// 向项目的敏感词列表中添加一个新的敏感词。如果敏感词已存在则不重复添加。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `word`: 敏感词
+///
+/// # 返回值
+/// 成功返回添加的敏感词记录，失败返回错误信息
 #[tauri::command]
 pub async fn add_sensitive_word(
     app_handle: AppHandle,
@@ -47,6 +57,16 @@ pub async fn add_sensitive_word(
 }
 
 /// 删除敏感词
+///
+/// 从项目的敏感词列表中移除指定的敏感词。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `word`: 要删除的敏感词
+///
+/// # 返回值
+/// 成功返回 Ok(())，失败返回错误信息
 #[tauri::command]
 pub async fn remove_sensitive_word(
     app_handle: AppHandle,
@@ -66,6 +86,15 @@ pub async fn remove_sensitive_word(
 }
 
 /// 列出项目的所有敏感词
+///
+/// 返回指定项目下所有已添加的敏感词列表。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+///
+/// # 返回值
+/// 成功返回敏感词列表，失败返回错误信息
 #[tauri::command]
 pub async fn list_sensitive_words(
     app_handle: AppHandle,
@@ -94,7 +123,17 @@ pub async fn list_sensitive_words(
     Ok(words)
 }
 
-/// 从文件导入敏感词（每行一个）
+/// 从文件导入敏感词
+///
+/// 从文本文件中批量导入敏感词，每行一个。已存在的敏感词不会重复导入。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `file_path`: 敏感词文件路径
+///
+/// # 返回值
+/// 成功返回成功导入的敏感词列表，失败返回错误信息
 #[tauri::command]
 pub async fn import_sensitive_words(
     app_handle: AppHandle,
@@ -140,7 +179,17 @@ pub async fn import_sensitive_words(
     Ok(imported)
 }
 
-/// 扫描内容中的敏感词，返回匹配位置
+/// 扫描内容中的敏感词
+///
+/// 使用 Aho-Corasick 算法高效扫描文本内容，返回所有匹配的敏感词及其位置。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+/// - `content`: 要扫描的文本内容
+///
+/// # 返回值
+/// 成功返回匹配结果列表（包含敏感词和起止位置），失败返回错误信息
 #[tauri::command]
 pub async fn scan_sensitive_words(
     app_handle: AppHandle,

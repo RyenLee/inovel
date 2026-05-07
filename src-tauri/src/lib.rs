@@ -1,20 +1,17 @@
-pub mod backup;
-pub mod chapter;
+pub mod commands;
 pub mod config;
 pub mod db;
-pub mod encryption;
-pub mod export;
-pub mod git_snapshot;
-pub mod inspiration;
+pub mod error;
+pub mod logging;
 pub mod models;
-pub mod names;
-pub mod project;
-pub mod relationship;
-pub mod sensitive;
-pub mod template;
-pub mod timeline;
-pub mod worldbuilding;
-pub mod writing;
+pub mod optimization;
+pub mod services;
+pub mod settings;
+pub mod state;
+pub mod utils;
+
+use tauri::Manager;
+use tracing::info;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -30,6 +27,10 @@ pub fn run() {
     let webview_data_dir = config::get_data_dir_for_webview();
     std::fs::create_dir_all(&webview_data_dir).expect("failed to create webview data directory");
 
+    let (shared_config, _config_watcher) = settings::init_config();
+    let optimization = optimization::OptimizationEngine::new(&shared_config);
+    let app_state = state::AppState::new(shared_config.clone(), optimization);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -39,7 +40,16 @@ pub fn run() {
                 .with_flags(Flags::keyboard() | Flags::RELOAD | Flags::DEV_TOOLS)
                 .build(),
         )
+        .manage(app_state)
+        .manage(shared_config)
         .setup(move |app| {
+            app.state::<state::AppState>()
+                .set_app_handle(app.handle().clone());
+
+            logging::init_logging_with_app(app.handle())?;
+
+            info!("应用启动中...");
+
             let _window =
                 WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                     .title("iNovel")
@@ -48,106 +58,123 @@ pub fn run() {
                     .data_directory(webview_data_dir.clone())
                     .build()?;
 
+            info!("应用启动完成");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             greet,
-            project::create_project,
-            project::get_recent_projects,
-            project::open_project,
-            project::remove_project_from_list,
-            project::update_project,
-            project::set_cover,
-            project::migrate_existing_projects,
-            project::check_migration_needed,
-            project::rollback_migration,
-            chapter::get_chapter_content,
-            chapter::save_chapter_content,
-            chapter::create_volume,
-            chapter::create_chapter,
-            chapter::update_volume_name,
-            chapter::update_chapter_title,
-            chapter::delete_volume,
-            chapter::delete_chapter,
-            chapter::reorder_volumes,
-            chapter::reorder_chapters,
-            chapter::get_chapter_tree,
-            chapter::update_chapter_word_count,
-            chapter::update_chapter_summary,
-            chapter::update_chapter_status,
-            chapter::get_chapter_status_counts,
-            writing::get_writing_goal,
-            writing::save_writing_goal,
-            writing::get_writing_stats,
-            writing::upsert_writing_record,
-            writing::get_today_words,
-            writing::record_focus_session,
-            writing::get_focus_sessions,
-            writing::get_focus_stats,
-            names::generate_names,
-            worldbuilding::create_character,
-            worldbuilding::update_character,
-            worldbuilding::delete_character,
-            worldbuilding::list_characters,
-            worldbuilding::create_location,
-            worldbuilding::update_location,
-            worldbuilding::delete_location,
-            worldbuilding::list_locations,
-            worldbuilding::create_organization,
-            worldbuilding::update_organization,
-            worldbuilding::delete_organization,
-            worldbuilding::list_organizations,
-            relationship::create_relationship,
-            relationship::update_relationship,
-            relationship::delete_relationship,
-            relationship::get_relationships,
-            timeline::create_event,
-            timeline::update_event,
-            timeline::delete_event,
-            timeline::list_events,
-            git_snapshot::init_project_git,
-            git_snapshot::create_snapshot,
-            git_snapshot::get_snapshots,
-            git_snapshot::restore_snapshot,
-            git_snapshot::get_snapshot_diff,
-            sensitive::add_sensitive_word,
-            sensitive::remove_sensitive_word,
-            sensitive::list_sensitive_words,
-            sensitive::import_sensitive_words,
-            sensitive::scan_sensitive_words,
-            export::export_txt,
-            export::export_markdown,
-            export::export_epub,
-            export::get_export_content,
-            export::export_html_for_print,
-            export::get_exports_dir,
-            export::open_folder_in_explorer,
-            backup::backup_project,
-            backup::create_incremental_backup,
-            backup::list_backups,
-            backup::restore_backup,
-            backup::delete_backup_record,
-            backup::get_backup_logs,
-            backup::get_backup_stats,
-            encryption::encrypt_project,
-            encryption::decrypt_project,
-            encryption::verify_project_password,
-            encryption::change_project_password,
-            encryption::reencrypt_project,
-            encryption::is_project_encrypted_command,
-            inspiration::create_inspiration_item,
-            inspiration::update_inspiration_item,
-            inspiration::delete_inspiration_item,
-            inspiration::reorder_inspiration_items,
-            inspiration::get_inspiration_board,
-            inspiration::get_inspiration_items,
-            template::get_builtin_templates,
-            template::get_user_templates,
-            template::save_user_template,
-            template::update_user_template,
-            template::delete_user_template,
-            template::get_all_templates,
-            chapter::save_image,
+            commands::project::create_project,
+            commands::project::get_recent_projects,
+            commands::project::open_project,
+            commands::project::remove_project_from_list,
+            commands::project::update_project,
+            commands::project::set_cover,
+            commands::project::migrate_existing_projects,
+            commands::project::check_migration_needed,
+            commands::project::rollback_migration,
+            commands::chapter::get_chapter_content,
+            commands::chapter::save_chapter_content,
+            commands::chapter::create_volume,
+            commands::chapter::create_chapter,
+            commands::chapter::update_volume_name,
+            commands::chapter::update_chapter_title,
+            commands::chapter::delete_volume,
+            commands::chapter::delete_chapter,
+            commands::chapter::reorder_volumes,
+            commands::chapter::reorder_chapters,
+            commands::chapter::get_chapter_tree,
+            commands::chapter::update_chapter_word_count,
+            commands::chapter::update_chapter_summary,
+            commands::chapter::update_chapter_status,
+            commands::chapter::get_chapter_status_counts,
+            commands::chapter::save_image,
+            commands::writing::get_writing_goal,
+            commands::writing::save_writing_goal,
+            commands::writing::get_writing_stats,
+            commands::writing::upsert_writing_record,
+            commands::writing::get_today_words,
+            commands::writing::record_focus_session,
+            commands::writing::get_focus_sessions,
+            commands::writing::get_focus_stats,
+            commands::names::generate_names,
+            commands::worldbuilding::create_character,
+            commands::worldbuilding::update_character,
+            commands::worldbuilding::delete_character,
+            commands::worldbuilding::list_characters,
+            commands::worldbuilding::create_location,
+            commands::worldbuilding::update_location,
+            commands::worldbuilding::delete_location,
+            commands::worldbuilding::list_locations,
+            commands::worldbuilding::create_organization,
+            commands::worldbuilding::update_organization,
+            commands::worldbuilding::delete_organization,
+            commands::worldbuilding::list_organizations,
+            commands::relationship::create_relationship,
+            commands::relationship::update_relationship,
+            commands::relationship::delete_relationship,
+            commands::relationship::get_relationships,
+            commands::timeline::create_event,
+            commands::timeline::update_event,
+            commands::timeline::delete_event,
+            commands::timeline::list_events,
+            commands::git_snapshot::init_project_git,
+            commands::git_snapshot::create_snapshot,
+            commands::git_snapshot::get_snapshots,
+            commands::git_snapshot::restore_snapshot,
+            commands::git_snapshot::get_snapshot_diff,
+            commands::sensitive::add_sensitive_word,
+            commands::sensitive::remove_sensitive_word,
+            commands::sensitive::list_sensitive_words,
+            commands::sensitive::import_sensitive_words,
+            commands::sensitive::scan_sensitive_words,
+            commands::export::export_txt,
+            commands::export::export_markdown,
+            commands::export::export_epub,
+            commands::export::get_export_content,
+            commands::export::export_html_for_print,
+            commands::export::get_exports_dir,
+            commands::export::open_folder_in_explorer,
+            commands::backup::backup_project,
+            commands::backup::create_incremental_backup,
+            commands::backup::list_backups,
+            commands::backup::restore_backup,
+            commands::backup::delete_backup_record,
+            commands::backup::get_backup_logs,
+            commands::backup::get_backup_stats,
+            commands::encryption::encrypt_project,
+            commands::encryption::decrypt_project,
+            commands::encryption::verify_project_password,
+            commands::encryption::change_project_password,
+            commands::encryption::reencrypt_project,
+            commands::encryption::is_project_encrypted_command,
+            commands::inspiration::create_inspiration_item,
+            commands::inspiration::update_inspiration_item,
+            commands::inspiration::delete_inspiration_item,
+            commands::inspiration::reorder_inspiration_items,
+            commands::inspiration::get_inspiration_board,
+            commands::inspiration::get_inspiration_items,
+            commands::template::get_builtin_templates,
+            commands::template::get_user_templates,
+            commands::template::save_user_template,
+            commands::template::update_user_template,
+            commands::template::delete_user_template,
+            commands::template::get_all_templates,
+            commands::file::read_text_file,
+            commands::file::check_file_exists,
+            commands::file::get_file_size,
+            commands::optimization::get_app_config,
+            commands::optimization::update_app_config,
+            commands::optimization::reset_app_config,
+            commands::optimization::get_cache_stats,
+            commands::optimization::clear_cache,
+            commands::optimization::get_performance_report,
+            commands::optimization::clear_performance_metrics,
+            commands::optimization::test_gzip_compression,
+            logging::commands::record_operation_log,
+            logging::commands::query_operation_logs,
+            logging::commands::get_operation_stats,
+            logging::commands::get_error_logs,
+            logging::commands::clear_error_logs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

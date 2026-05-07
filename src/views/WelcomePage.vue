@@ -509,7 +509,7 @@ const closeModal = () => {
                 </div>
 
                 <n-empty v-else-if="projectStore.recentProjects.length === 0" description="暂无项目，点击上方按钮创建新项目"
-                    class="py-12">
+                    class="empty-no-project">
                     <template #icon>
                         <FileText class="w-16 h-16 text-gray-300 dark:text-gray-600" />
                     </template>
@@ -735,5 +735,17 @@ const closeModal = () => {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+:deep(.empty-no-project) {
+    padding: 48px 0;
+}
+
+:deep(.empty-no-project .n-empty__icon) {
+    margin-bottom: 16px;
+}
+
+:deep(.empty-no-project .n-empty__description) {
+    margin-top: 8px;
 }
 </style>

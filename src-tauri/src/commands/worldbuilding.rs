@@ -9,6 +9,16 @@ use tauri::AppHandle;
 
 // ============== Character ==============
 
+/// 创建角色
+///
+/// 在项目中创建一个新的角色记录，用于世界观构建。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `params`: 创建角色参数（包含 name, gender, age, appearance, personality, background）
+///
+/// # 返回值
+/// 成功返回创建的角色记录，失败返回错误信息
 #[tauri::command]
 pub async fn create_character(app_handle: AppHandle, params: CreateCharacterParams) -> Result<Character, String> {
     let db_path = get_db_path(&app_handle);
@@ -24,6 +34,17 @@ pub async fn create_character(app_handle: AppHandle, params: CreateCharacterPara
     Ok(Character { id, project_id: params.project_id, name: params.name, gender: params.gender, age: params.age, appearance: params.appearance, personality: params.personality, background: params.background, custom_fields: cf, created_at: now.clone(), updated_at: now })
 }
 
+/// 更新角色信息
+///
+/// 更新指定角色的各项属性信息。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `character_id`: 角色 ID
+/// - `params`: 更新参数（包含 name, gender, age, appearance, personality, background）
+///
+/// # 返回值
+/// 成功返回更新后的角色记录，失败返回错误信息
 #[tauri::command]
 pub async fn update_character(app_handle: AppHandle, character_id: i64, params: UpdateCharacterParams) -> Result<Character, String> {
     let db_path = get_db_path(&app_handle);
@@ -45,6 +66,16 @@ pub async fn update_character(app_handle: AppHandle, character_id: i64, params: 
     Ok(c)
 }
 
+/// 删除角色
+///
+/// 从数据库中删除指定的角色记录。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `character_id`: 角色 ID
+///
+/// # 返回值
+/// 成功返回 Ok(())，失败返回错误信息
 #[tauri::command]
 pub async fn delete_character(app_handle: AppHandle, character_id: i64) -> Result<(), String> {
     let db_path = get_db_path(&app_handle);
@@ -53,6 +84,16 @@ pub async fn delete_character(app_handle: AppHandle, character_id: i64) -> Resul
     Ok(())
 }
 
+/// 列出项目的所有角色
+///
+/// 返回指定项目下所有角色列表，按创建时间倒序排列。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+///
+/// # 返回值
+/// 成功返回角色列表，失败返回错误信息
 #[tauri::command]
 pub async fn list_characters(app_handle: AppHandle, project_id: i64) -> Result<Vec<Character>, String> {
     let db_path = get_db_path(&app_handle);
@@ -71,6 +112,16 @@ pub async fn list_characters(app_handle: AppHandle, project_id: i64) -> Result<V
 
 // ============== Location ==============
 
+/// 创建地点
+///
+/// 在项目中创建一个新的地点记录，用于世界观构建。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `params`: 创建地点参数（包含 name, location_type, description, climate, population, notable_features）
+///
+/// # 返回值
+/// 成功返回创建的地点记录，失败返回错误信息
 #[tauri::command]
 pub async fn create_location(app_handle: AppHandle, params: CreateLocationParams) -> Result<Location, String> {
     let db_path = get_db_path(&app_handle);
@@ -86,6 +137,17 @@ pub async fn create_location(app_handle: AppHandle, params: CreateLocationParams
     Ok(Location { id, project_id: params.project_id, name: params.name, location_type: params.location_type, description: params.description, climate: params.climate, population: params.population, notable_features: params.notable_features, custom_fields: cf, created_at: now.clone(), updated_at: now })
 }
 
+/// 更新地点信息
+///
+/// 更新指定地点的各项属性信息。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `location_id`: 地点 ID
+/// - `params`: 更新参数（包含 name, location_type, description, climate, population, notable_features）
+///
+/// # 返回值
+/// 成功返回更新后的地点记录，失败返回错误信息
 #[tauri::command]
 pub async fn update_location(app_handle: AppHandle, location_id: i64, params: UpdateLocationParams) -> Result<Location, String> {
     let db_path = get_db_path(&app_handle);
@@ -107,6 +169,16 @@ pub async fn update_location(app_handle: AppHandle, location_id: i64, params: Up
     Ok(l)
 }
 
+/// 删除地点
+///
+/// 从数据库中删除指定的地点记录。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `location_id`: 地点 ID
+///
+/// # 返回值
+/// 成功返回 Ok(())，失败返回错误信息
 #[tauri::command]
 pub async fn delete_location(app_handle: AppHandle, location_id: i64) -> Result<(), String> {
     let db_path = get_db_path(&app_handle);
@@ -115,6 +187,16 @@ pub async fn delete_location(app_handle: AppHandle, location_id: i64) -> Result<
     Ok(())
 }
 
+/// 列出项目的所有地点
+///
+/// 返回指定项目下所有地点列表，按创建时间倒序排列。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+///
+/// # 返回值
+/// 成功返回地点列表，失败返回错误信息
 #[tauri::command]
 pub async fn list_locations(app_handle: AppHandle, project_id: i64) -> Result<Vec<Location>, String> {
     let db_path = get_db_path(&app_handle);
@@ -129,6 +211,16 @@ pub async fn list_locations(app_handle: AppHandle, project_id: i64) -> Result<Ve
 
 // ============== Organization ==============
 
+/// 创建组织
+///
+/// 在项目中创建一个新的组织记录，用于世界观构建。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `params`: 创建组织参数（包含 name, org_type, description, leader, headquarters, member_count）
+///
+/// # 返回值
+/// 成功返回创建的组织记录，失败返回错误信息
 #[tauri::command]
 pub async fn create_organization(app_handle: AppHandle, params: CreateOrganizationParams) -> Result<Organization, String> {
     let db_path = get_db_path(&app_handle);
@@ -144,6 +236,17 @@ pub async fn create_organization(app_handle: AppHandle, params: CreateOrganizati
     Ok(Organization { id, project_id: params.project_id, name: params.name, org_type: params.org_type, description: params.description, leader: params.leader, headquarters: params.headquarters, member_count: params.member_count, custom_fields: cf, created_at: now.clone(), updated_at: now })
 }
 
+/// 更新组织信息
+///
+/// 更新指定组织的各项属性信息。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `organization_id`: 组织 ID
+/// - `params`: 更新参数（包含 name, org_type, description, leader, headquarters, member_count）
+///
+/// # 返回值
+/// 成功返回更新后的组织记录，失败返回错误信息
 #[tauri::command]
 pub async fn update_organization(app_handle: AppHandle, organization_id: i64, params: UpdateOrganizationParams) -> Result<Organization, String> {
     let db_path = get_db_path(&app_handle);
@@ -165,6 +268,16 @@ pub async fn update_organization(app_handle: AppHandle, organization_id: i64, pa
     Ok(o)
 }
 
+/// 删除组织
+///
+/// 从数据库中删除指定的组织记录。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `organization_id`: 组织 ID
+///
+/// # 返回值
+/// 成功返回 Ok(())，失败返回错误信息
 #[tauri::command]
 pub async fn delete_organization(app_handle: AppHandle, organization_id: i64) -> Result<(), String> {
     let db_path = get_db_path(&app_handle);
@@ -173,6 +286,16 @@ pub async fn delete_organization(app_handle: AppHandle, organization_id: i64) ->
     Ok(())
 }
 
+/// 列出项目的所有组织
+///
+/// 返回指定项目下所有组织列表，按创建时间倒序排列。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `project_id`: 项目 ID
+///
+/// # 返回值
+/// 成功返回组织列表，失败返回错误信息
 #[tauri::command]
 pub async fn list_organizations(app_handle: AppHandle, project_id: i64) -> Result<Vec<Organization>, String> {
     let db_path = get_db_path(&app_handle);
