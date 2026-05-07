@@ -703,6 +703,7 @@ defineExpose({
 </template>
 
 <style>
+/* ===== Base Editor Layout ===== */
 .tiptap {
   min-height: 100%;
   max-height: 100%;
@@ -715,6 +716,26 @@ defineExpose({
   overflow-wrap: break-word;
 }
 
+.tiptap .ProseMirror {
+  min-height: calc(100% - 16px);
+  padding: 8px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.editor-content-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-v-editor-content] {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+/* ===== Scrollbar ===== */
 .tiptap::-webkit-scrollbar {
   width: 8px;
 }
@@ -734,40 +755,7 @@ defineExpose({
   background-color: #9ca3af;
 }
 
-.dark .tiptap {
-  scrollbar-color: #4b5563 transparent;
-  scrollbar-width: thin;
-}
-
-.dark .tiptap::-webkit-scrollbar-thumb {
-  background-color: #4b5563;
-}
-
-.dark .tiptap::-webkit-scrollbar-thumb:hover {
-  background-color: #6b7280;
-}
-
-.tiptap .ProseMirror {
-  min-height: calc(100% - 16px);
-  padding: 8px;
-  outline: none;
-  box-sizing: border-box;
-  word-break: break-word;
-  overflow-wrap: break-word;
-}
-
-.editor-content-wrapper {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-[data-v-editor-content] {
-  flex: 1;
-  min-height: 0;
-  height: 100%;
-}
-
+/* ===== Placeholder ===== */
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
@@ -776,58 +764,10 @@ defineExpose({
   height: 0;
 }
 
-.dark .tiptap p.is-editor-empty:first-child::before {
-  color: #6b7280;
-}
-
-.dark .tiptap {
-  color: #e5e7eb;
-}
-
-.dark .tiptap h1,
-.dark .tiptap h2,
-.dark .tiptap h3 {
-  color: #f3f4f6;
-}
-
-.dark .tiptap blockquote {
-  border-left-color: #4b5563;
-  color: #9ca3af;
-}
-
-.dark .tiptap code {
-  background-color: #374151;
-  color: #f3f4f6;
-}
-
-.dark .tiptap pre {
-  background-color: #1f2937;
-}
-
-.dark .tiptap a {
-  color: #60a5fa;
-}
-
-.typewriter-dim {
-  opacity: 0.3;
-  transition: opacity 0.3s ease;
-}
-
-.focus-dim {
-  opacity: 0.2;
-  transition: opacity 0.3s ease;
-}
-
-.focus-active {
-  background-color: rgba(59, 130, 246, 0.1);
-  border-radius: 4px;
-}
-
+/* ===== Typography ===== */
 .tiptap p {
   margin-bottom: 1em;
   line-height: 1.5;
-  word-break: break-word;
-  overflow-wrap: break-word;
 }
 
 .tiptap h1 {
@@ -835,8 +775,6 @@ defineExpose({
   font-weight: 700;
   margin-bottom: 0.5em;
   line-height: 1.2;
-  word-break: break-word;
-  overflow-wrap: break-word;
 }
 
 .tiptap h2 {
@@ -844,8 +782,6 @@ defineExpose({
   font-weight: 600;
   margin-bottom: 0.5em;
   line-height: 1.3;
-  word-break: break-word;
-  overflow-wrap: break-word;
 }
 
 .tiptap h3 {
@@ -853,8 +789,6 @@ defineExpose({
   font-weight: 600;
   margin-bottom: 0.5em;
   line-height: 1.4;
-  word-break: break-word;
-  overflow-wrap: break-word;
 }
 
 .tiptap ul,
@@ -865,8 +799,6 @@ defineExpose({
 
 .tiptap li {
   margin-bottom: 0.25em;
-  word-break: break-word;
-  overflow-wrap: break-word;
 }
 
 .tiptap blockquote {
@@ -876,8 +808,6 @@ defineExpose({
   margin-bottom: 1.25em;
   color: #6b7280;
   font-style: italic;
-  word-break: break-word;
-  overflow-wrap: break-word;
 }
 
 .tiptap hr {
@@ -935,36 +865,40 @@ defineExpose({
   font-weight: 600;
 }
 
+/* ===== Editor Modes ===== */
+.typewriter-dim {
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+.focus-dim {
+  opacity: 0.2;
+  transition: opacity 0.3s ease;
+}
+
+.focus-active {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-radius: 4px;
+}
+
+/* ===== Dynamic Line Height Override ===== */
 .editor-content-wrapper .tiptap {
   line-height: v-bind(lineHeightRatio) !important;
-  word-break: break-word;
-  overflow-wrap: break-word;
 }
 
 .editor-content-wrapper .tiptap p {
-  /* line-height: v-bind(lineHeightRatio) !important; */
   margin-bottom: 0.75em !important;
-  word-break: break-word;
-  overflow-wrap: break-word;
 }
 
 .editor-content-wrapper .tiptap li {
   line-height: v-bind(lineHeightRatio) !important;
-  word-break: break-word;
-  overflow-wrap: break-word;
 }
 
+/* ===== Paper Styles ===== */
 .paper-lined,
 .paper-lined-margin,
 .paper-grid,
 .paper-dots {
-  line-height: v-bind(lineHeightRatio) !important;
-}
-
-.paper-lined .tiptap,
-.paper-lined-margin .tiptap,
-.paper-grid .tiptap,
-.paper-dots .tiptap {
   line-height: v-bind(lineHeightRatio) !important;
 }
 
@@ -994,7 +928,7 @@ defineExpose({
   top: 0;
   bottom: 0;
   width: 1px;
-  background: linear-gradient(to bottom, #fca5a5 0%, #fca5a5 100%);
+  background: #fca5a5;
   pointer-events: none;
   z-index: 1;
 }
@@ -1027,42 +961,7 @@ defineExpose({
   background-attachment: local;
 }
 
-.dark .paper-lined .ProseMirror {
-  background-image: repeating-linear-gradient(transparent,
-      transparent calc(v-bind(lineHeightNum) * 1px - 9px),
-      #374151 calc(v-bind(lineHeightNum) * 1px - 9px),
-      #374151 calc(v-bind(lineHeightNum) * 1px));
-}
-
-.dark .paper-lined-margin .ProseMirror {
-  background-image:
-    repeating-linear-gradient(transparent,
-      transparent calc(v-bind(lineHeightNum) * 1px - 9px),
-      #374151 calc(v-bind(lineHeightNum) * 1px - 9px),
-      #374151 calc(v-bind(lineHeightNum) * 1px));
-}
-
-.dark .paper-lined-margin .tiptap::before {
-  background: linear-gradient(to bottom, #7f1d1d 0%, #7f1d1d 100%);
-}
-
-.dark .paper-grid .ProseMirror {
-  background-image:
-    repeating-linear-gradient(transparent,
-      transparent calc(v-bind(lineHeightNum) * 1px - 9px),
-      #374151 calc(v-bind(lineHeightNum) * 1px - 9px),
-      #374151 calc(v-bind(lineHeightNum) * 1px)),
-    repeating-linear-gradient(to right,
-      #374151 1px,
-      transparent 1px);
-}
-
-.dark .paper-dots .ProseMirror {
-  background-image: radial-gradient(circle,
-      #4b5563 1px,
-      transparent 1px);
-}
-
+/* ===== Paper Mode Element Spacing ===== */
 .paper-lined .tiptap p,
 .paper-lined-margin .tiptap p,
 .paper-grid .tiptap p,
@@ -1081,17 +980,11 @@ defineExpose({
 .paper-lined .tiptap h1,
 .paper-lined-margin .tiptap h1,
 .paper-grid .tiptap h1,
-.paper-dots .tiptap h1 {
-  margin-bottom: 0.5em !important;
-}
-
+.paper-dots .tiptap h1,
 .paper-lined .tiptap h2,
 .paper-lined-margin .tiptap h2,
 .paper-grid .tiptap h2,
-.paper-dots .tiptap h2 {
-  margin-bottom: 0.5em !important;
-}
-
+.paper-dots .tiptap h2,
 .paper-lined .tiptap h3,
 .paper-lined-margin .tiptap h3,
 .paper-grid .tiptap h3,
@@ -1113,5 +1006,84 @@ defineExpose({
 .paper-dots .tiptap hr {
   margin-top: 0.75em !important;
   margin-bottom: 0.75em !important;
+}
+
+/* ===== Dark Theme ===== */
+.dark .tiptap {
+  color: #e5e7eb;
+  scrollbar-color: #4b5563 transparent;
+  scrollbar-width: thin;
+}
+
+.dark .tiptap::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+
+.dark .tiptap::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+}
+
+.dark .tiptap p.is-editor-empty:first-child::before {
+  color: #6b7280;
+}
+
+.dark .tiptap h1,
+.dark .tiptap h2,
+.dark .tiptap h3 {
+  color: #f3f4f6;
+}
+
+.dark .tiptap blockquote {
+  border-left-color: #4b5563;
+  color: #9ca3af;
+}
+
+.dark .tiptap code {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
+.dark .tiptap pre {
+  background-color: #1f2937;
+}
+
+.dark .tiptap a {
+  color: #60a5fa;
+}
+
+.dark .paper-lined .ProseMirror {
+  background-image: repeating-linear-gradient(transparent,
+      transparent calc(v-bind(lineHeightNum) * 1px - 9px),
+      #374151 calc(v-bind(lineHeightNum) * 1px - 9px),
+      #374151 calc(v-bind(lineHeightNum) * 1px));
+}
+
+.dark .paper-lined-margin .ProseMirror {
+  background-image:
+    repeating-linear-gradient(transparent,
+      transparent calc(v-bind(lineHeightNum) * 1px - 9px),
+      #374151 calc(v-bind(lineHeightNum) * 1px - 9px),
+      #374151 calc(v-bind(lineHeightNum) * 1px));
+}
+
+.dark .paper-lined-margin .tiptap::before {
+  background: #7f1d1d;
+}
+
+.dark .paper-grid .ProseMirror {
+  background-image:
+    repeating-linear-gradient(transparent,
+      transparent calc(v-bind(lineHeightNum) * 1px - 9px),
+      #374151 calc(v-bind(lineHeightNum) * 1px - 9px),
+      #374151 calc(v-bind(lineHeightNum) * 1px)),
+    repeating-linear-gradient(to right,
+      #374151 1px,
+      transparent 1px);
+}
+
+.dark .paper-dots .ProseMirror {
+  background-image: radial-gradient(circle,
+      #4b5563 1px,
+      transparent 1px);
 }
 </style>

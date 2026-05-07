@@ -23,6 +23,8 @@
 - **写作模式** — 普通/打字机/专注三种模式
 - **写作目标** — 每日字数目标，进度追踪
 - **番茄钟** — 专注计时器，记录专注会话
+- **纸张样式** — 横线纸/带边距横线纸/方格纸/点阵纸四种背景样式
+- **文本导入** — 导入 .txt 文本文件，支持替换或插入模式
 
 ### 内容管理
 
@@ -94,6 +96,7 @@ inovel/
 │   │   ├── ShortcutSettings.vue   # 快捷键设置
 │   │   ├── SmartSymbolsExtension.ts # 智能符号扩展
 │   │   ├── TemplateSelector.vue   # 模板选择器
+│   │   ├── TextImportDialog.vue   # 文本导入对话框
 │   │   ├── Timeline.vue           # 故事时间轴
 │   │   ├── TreeSidebar.vue        # 章节树侧栏
 │   │   └── WorldbuildingPanel.vue # 世界观管理
@@ -103,6 +106,7 @@ inovel/
 │   │   ├── useEditorLayout.ts    # 编辑器布局
 │   │   ├── useGlobalShortcuts.ts # 全局快捷键
 │   │   ├── useTextBeautify.ts    # 文本美化
+│   │   ├── useTextImport.ts      # 文本导入
 │   │   ├── useTheme.ts           # 主题管理
 │   │   └── useWordCount.ts       # 字数统计
 │   ├── router/                   # 路由
@@ -139,25 +143,66 @@ inovel/
 │   ├── resources/                 # 资源文件
 │   │   └── names.json            # 名称生成数据
 │   ├── src/                       # Rust 源码
-│   │   ├── backup.rs             # 数据备份
-│   │   ├── chapter.rs            # 卷/章节 CRUD
+│   │   ├── commands/             # Tauri 命令层
+│   │   │   ├── backup.rs         # 备份命令
+│   │   │   ├── chapter.rs        # 章节 CRUD 命令
+│   │   │   ├── encryption.rs     # 加密命令
+│   │   │   ├── export.rs         # 导出命令
+│   │   │   ├── file.rs           # 文件操作命令
+│   │   │   ├── git_snapshot.rs   # Git 版本控制命令
+│   │   │   ├── inspiration.rs    # 灵感看板命令
+│   │   │   ├── names.rs          # 名称生成器命令
+│   │   │   ├── optimization.rs   # 性能优化命令
+│   │   │   ├── project.rs        # 项目 CRUD 命令
+│   │   │   ├── relationship.rs   # 关系图谱命令
+│   │   │   ├── sensitive.rs      # 敏感词检测命令
+│   │   │   ├── template.rs       # 模板系统命令
+│   │   │   ├── timeline.rs       # 时间轴命令
+│   │   │   ├── worldbuilding.rs  # 世界观命令
+│   │   │   └── writing.rs        # 写作目标/统计/番茄钟命令
+│   │   ├── db/                   # 数据访问层
+│   │   │   ├── backups.rs        # 备份数据访问
+│   │   │   ├── chapters.rs       # 章节数据访问
+│   │   │   ├── common.rs         # 公共数据库工具
+│   │   │   ├── init.rs           # 数据库初始化
+│   │   │   ├── inspiration.rs    # 灵感数据访问
+│   │   │   ├── projects.rs       # 项目数据访问
+│   │   │   ├── relationships.rs  # 关系数据访问
+│   │   │   ├── sensitive.rs      # 敏感词数据访问
+│   │   │   ├── templates.rs      # 模板数据访问
+│   │   │   ├── timeline.rs       # 时间轴数据访问
+│   │   │   ├── worldbuilding.rs  # 世界观数据访问
+│   │   │   └── writing.rs        # 写作统计数据访问
+│   │   ├── logging/              # 日志模块
+│   │   │   ├── commands.rs       # 日志命令
+│   │   │   ├── error_log.rs      # 错误日志
+│   │   │   ├── init.rs           # 日志初始化
+│   │   │   └── operation.rs      # 操作日志
+│   │   ├── optimization/         # 性能优化模块
+│   │   │   ├── cache.rs          # 响应缓存
+│   │   │   ├── gzip.rs           # Gzip 压缩
+│   │   │   ├── merger.rs         # 请求合并
+│   │   │   └── pagination.rs     # 分页支持
+│   │   ├── services/             # 业务逻辑层
+│   │   │   ├── chapter.rs        # 章节业务逻辑
+│   │   │   ├── project.rs        # 项目业务逻辑
+│   │   │   └── writing.rs        # 写作业务逻辑
+│   │   ├── utils/                # 工具函数
+│   │   │   ├── time.rs           # 时间处理
+│   │   │   └── validation.rs     # 数据验证
+│   │   ├── commands.rs           # 命令模块入口
 │   │   ├── config.rs             # 应用配置管理
-│   │   ├── db.rs                 # 数据库初始化
-│   │   ├── encryption.rs         # 项目加密
-│   │   ├── export.rs             # 导出功能
-│   │   ├── git_snapshot.rs       # Git 版本控制
-│   │   ├── inspiration.rs       # 灵感看板
+│   │   ├── db.rs                 # 数据库模块入口
+│   │   ├── error.rs              # 统一错误类型
 │   │   ├── lib.rs                # 入口：模块声明 + 命令注册
+│   │   ├── logging.rs            # 日志模块入口
 │   │   ├── main.rs               # Tauri 入口
 │   │   ├── models.rs             # 数据结构定义
-│   │   ├── names.rs              # 名称生成器
-│   │   ├── project.rs            # 项目 CRUD
-│   │   ├── relationship.rs       # 关系图谱
-│   │   ├── sensitive.rs          # 敏感词检测
-│   │   ├── template.rs            # 模板系统
-│   │   ├── timeline.rs           # 时间轴事件
-│   │   ├── worldbuilding.rs      # 人物/地点/组织
-│   │   └── writing.rs            # 写作目标/统计/番茄钟
+│   │   ├── optimization.rs       # 优化模块入口
+│   │   ├── services.rs           # 服务模块入口
+│   │   ├── settings.rs           # 设置管理
+│   │   ├── state.rs              # 应用状态
+│   │   └── utils.rs              # 工具模块入口
 │   ├── build.rs                   # 构建配置
 │   ├── builtin_templates.json     # 内置模板
 │   ├── Cargo.lock                 # Rust 依赖锁定
@@ -166,9 +211,29 @@ inovel/
 └── package.json
 ```
 
+## 后端架构
+
+后端采用分层架构设计，模块组织遵循 Rust 最新惯例（不使用 `mod.rs`）：
+
+```
+src-tauri/src/
+├── commands/      # Tauri 命令层 — 对前端暴露的 API
+├── services/      # 业务逻辑层 — 核心业务处理
+├── db/            # 数据访问层 — SQLite 操作
+├── optimization/  # 性能优化 — Gzip 压缩/缓存/分页/请求合并
+├── logging/       # 日志模块 — 错误日志/操作日志
+├── utils/         # 工具函数 — 时间处理/数据验证
+├── config.rs      # 配置管理（支持热加载）
+├── models.rs      # 数据结构定义
+├── error.rs       # 统一错误类型
+├── settings.rs    # 设置管理
+├── state.rs       # 应用状态
+└── lib.rs         # 入口：模块声明 + 命令注册
+```
+
 ## 后端命令一览
 
-所有命令通过 `@tauri-apps/api/core` 的 `invoke()` 调用，约 **60+ 个** Tauri command，覆盖：
+所有命令通过 `@tauri-apps/api/core` 的 `invoke()` 调用，约 **70+ 个** Tauri command，覆盖：
 
 ### 项目管理
 
@@ -236,6 +301,18 @@ inovel/
 - 获取/更新/重置应用配置
 - 配置文件路径
 - 路径验证
+
+### 性能优化
+
+- Gzip 压缩响应
+- 响应缓存
+- 请求合并
+- 分页查询
+
+### 文件操作
+
+- 图片保存
+- 文件读取
 
 ## 数据存储
 
