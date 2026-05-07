@@ -82,6 +82,7 @@ pub fn run() {
             commands::chapter::delete_chapter,
             commands::chapter::reorder_volumes,
             commands::chapter::reorder_chapters,
+            commands::chapter::move_chapter_to_volume,
             commands::chapter::get_chapter_tree,
             commands::chapter::update_chapter_word_count,
             commands::chapter::update_chapter_summary,

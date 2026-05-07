@@ -406,6 +406,35 @@ pub async fn reorder_chapters(
     Ok(())
 }
 
+/// 将章节移动到另一个卷
+///
+/// 更新章节所属的卷 ID 和排序位置，实现跨卷拖拽移动。
+///
+/// # 参数
+/// - `app_handle`: Tauri 应用句柄
+/// - `chapter_id`: 要移动的章节 ID
+/// - `target_volume_id`: 目标卷 ID
+/// - `sort_order`: 在目标卷中的排序位置
+///
+/// # 返回值
+/// 成功返回 Ok(()), 失败返回错误信息
+#[tauri::command]
+pub async fn move_chapter_to_volume(
+    app_handle: AppHandle,
+    chapter_id: i64,
+    target_volume_id: i64,
+    sort_order: i32,
+) -> Result<(), String> {
+    let db_path = get_db_path(&app_handle);
+    let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
+    conn.execute(
+        "UPDATE chapters SET volume_id = ?1, sort_order = ?2 WHERE id = ?3",
+        (target_volume_id, sort_order, chapter_id),
+    )
+    .map_err(|e| format!("移动章节失败: {}", e))?;
+    Ok(())
+}
+
 /// 获取项目的章节树结构
 ///
 /// 查询指定项目下所有卷及其包含的章节，返回树形结构。

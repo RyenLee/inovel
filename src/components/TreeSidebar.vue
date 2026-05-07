@@ -369,7 +369,7 @@ const onVolumeReorder = async () => {
     });
   } catch (error) {
     console.error("排序卷失败:", error);
-    loadChapterTree(); // Reload on error
+    loadChapterTree();
   }
 };
 
@@ -386,7 +386,47 @@ const onChapterReorder = async (volumeId: number) => {
     }
   } catch (error) {
     console.error("排序章节失败:", error);
-    loadChapterTree(); // Reload on error
+    loadChapterTree();
+  }
+};
+
+// Handle chapter added from another volume (cross-volume drag)
+const onChapterAdd = async (evt: { item: HTMLElement; from: HTMLElement; to: HTMLElement; newIndex: number }, targetVolumeId: number) => {
+  try {
+    const targetVolume = volumes.value.find((v) => v.id === targetVolumeId);
+    if (!targetVolume || evt.newIndex >= targetVolume.chapters.length) return;
+
+    const movedChapter = targetVolume.chapters[evt.newIndex];
+    const sourceVolumeId = movedChapter.volume_id;
+
+    if (sourceVolumeId !== targetVolumeId) {
+      await invoke("move_chapter_to_volume", {
+        chapterId: movedChapter.id,
+        targetVolumeId,
+        sortOrder: evt.newIndex,
+      });
+      movedChapter.volume_id = targetVolumeId;
+
+      const sourceVolume = volumes.value.find((v) => v.id === sourceVolumeId);
+      if (sourceVolume) {
+        const sourceOrderedIds = sourceVolume.chapters.map((c) => c.id);
+        if (sourceOrderedIds.length > 0) {
+          await invoke("reorder_chapters", {
+            volumeId: sourceVolumeId,
+            orderedIds: sourceOrderedIds,
+          });
+        }
+      }
+    }
+
+    const orderedIds = targetVolume.chapters.map((c) => c.id);
+    await invoke("reorder_chapters", {
+      volumeId: targetVolumeId,
+      orderedIds,
+    });
+  } catch (error) {
+    console.error("移动章节失败:", error);
+    loadChapterTree();
   }
 };
 
@@ -653,7 +693,10 @@ onMounted(async () => {
         v-model="volumes"
         item-key="id"
         handle=".volume-handle"
-        ghost-class="ghost"
+        ghost-class="drag-ghost"
+        chosen-class="drag-chosen"
+        drag-class="drag-dragging"
+        animation="200"
         @end="onVolumeReorder"
         class="space-y-1"
         v-if="statusFilter === 'all'"
@@ -666,7 +709,7 @@ onMounted(async () => {
               @contextmenu="showContextMenu($event, 'volume', volume.id)"
               @click="toggleVolume(volume.id)"
             >
-              <GripVertical class="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab volume-handle" />
+              <GripVertical class="w-3.5 h-3.5 text-gray-400 opacity-40 group-hover:opacity-100 cursor-grab volume-handle transition-opacity" />
               
               <component
                 :is="expandedVolumes.includes(volume.id) ? ChevronDown : ChevronRight"
@@ -722,9 +765,13 @@ onMounted(async () => {
                 v-model="volume.chapters"
                 item-key="id"
                 handle=".chapter-handle"
-                ghost-class="ghost"
+                ghost-class="drag-ghost"
+                chosen-class="drag-chosen"
+                drag-class="drag-dragging"
                 group="chapters"
+                animation="200"
                 @end="onChapterReorder(volume.id)"
+                @add="onChapterAdd($event, volume.id)"
                 class="space-y-0.5"
               >
                 <template #item="{ element: chapter }">
@@ -734,7 +781,7 @@ onMounted(async () => {
                     @contextmenu="showContextMenu($event, 'chapter', volume.id, chapter.id)"
                     @click="selectChapter(chapter)"
                   >
-                    <GripVertical class="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab chapter-handle" />
+                    <GripVertical class="w-3.5 h-3.5 text-gray-400 opacity-40 group-hover:opacity-100 cursor-grab chapter-handle transition-opacity" />
                     
                     <FileText class="w-4 h-4 text-gray-400 shrink-0" />
 
@@ -924,13 +971,40 @@ onMounted(async () => {
   </template>
 
 <style scoped>
-.ghost {
-  opacity: 0.5;
-  background: var(--color-hover, #cce5ff);
+.drag-ghost {
+  opacity: 0.3;
+  background: #e0e7ff;
+  border: 1px dashed #6366f1;
+  border-radius: 6px;
+}
+
+.drag-chosen {
+  background: #ede9fe;
+  border-radius: 6px;
+}
+
+.drag-dragging {
+  opacity: 0.85;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  z-index: 9999;
+}
+
+:deep(.dark) .drag-ghost {
+  background: #312e81;
+  border-color: #818cf8;
+}
+
+:deep(.dark) .drag-chosen {
+  background: #4c1d95;
 }
 
 .volume-item,
 .chapter-item {
   user-select: none;
+}
+
+.sortable-ghost {
+  opacity: 0.3;
 }
 </style>

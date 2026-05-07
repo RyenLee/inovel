@@ -43,7 +43,7 @@ tracing-appender = "0.2.5"
 regex = "1.12.3"
 thiserror = "2.0.18"
 anyhow = "1.0.102"
-toml = "1.1.2+spec-1.1.0"
+toml = "1.1.2"
 flate2 = "1.1.9"
 notify = { version = "8.2.0", default-features = false, features = ["macos_kqueue"] }
 lru = "0.18.0"
