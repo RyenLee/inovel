@@ -5,14 +5,13 @@
 //! 文件结构:
 //! ```text
 //! {INSTALL_DIR}/                  (应用程序安装目录)
-//! ├── database/                   (数据库相关文件夹)
+//! ├── data/                        (应用数据目录)
+//! │   ├── inovel.db               (SQLite 数据库文件)
 //! ├── projects/                   (项目文件夹)
 //! ├── logs/                       (日志文件夹)
 //! ├── backups/                    (备份文件夹)
-//! └── ...
-//!
-//! {PARENT_OF_INSTALL_DIR}/data/   (安装目录同级 data 目录)
-//! └── inovel.db                   (SQLite 数据库文件)
+//! └── database/                   (数据库相关文件夹)
+//!     └── backups/                (数据库备份)
 //! ```
 
 use std::fs;
@@ -34,17 +33,28 @@ pub fn get_install_dir(app_handle: &AppHandle) -> PathBuf {
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
-fn get_data_dir(app_handle: &AppHandle) -> PathBuf {
-    let install_dir = get_install_dir(app_handle);
-    install_dir
-        .parent()
-        .map(|p| p.join("data"))
-        .unwrap_or_else(|| PathBuf::from("data"))
+pub fn get_data_dir_for_webview() -> PathBuf {
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(parent) = exe_path.parent() {
+            let dir = parent.join("data");
+            fs::create_dir_all(&dir).ok();
+            return dir;
+        }
+    }
+    
+    let dir = PathBuf::from("data");
+    fs::create_dir_all(&dir).ok();
+    dir
+}
+
+pub fn get_data_dir(app_handle: &AppHandle) -> PathBuf {
+    let dir = get_install_dir(app_handle).join("data");
+    fs::create_dir_all(&dir).ok();
+    dir
 }
 
 pub fn get_db_path(app_handle: &AppHandle) -> PathBuf {
     let data_dir = get_data_dir(app_handle);
-    fs::create_dir_all(&data_dir).ok();
     data_dir.join("inovel.db")
 }
 

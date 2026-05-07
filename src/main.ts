@@ -1,6 +1,5 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
-import naive from "naive-ui";
 import "./style.css";
 import App from "./App.vue";
 import router from "./router";
@@ -104,13 +103,12 @@ const pinia = createPinia();
 
 app.use(pinia);
 app.use(router);
-app.use(naive);
 
 app.config.errorHandler = (err, instance, info) => {
   console.error("[Vue Error]", err);
   console.error("[Component]", instance);
   console.error("[Info]", info);
-  
+
   // 显示友好错误信息
   const errorMessage = err instanceof Error ? err.message : String(err);
   showErrorToUser(`Vue 组件错误: ${errorMessage}`);

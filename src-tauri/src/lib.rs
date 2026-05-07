@@ -1,20 +1,20 @@
-pub mod models;
-pub mod db;
+pub mod backup;
+pub mod chapter;
 pub mod config;
+pub mod db;
+pub mod encryption;
+pub mod export;
+pub mod git_snapshot;
+pub mod inspiration;
+pub mod models;
 pub mod names;
 pub mod project;
-pub mod chapter;
-pub mod writing;
-pub mod worldbuilding;
 pub mod relationship;
-pub mod timeline;
-pub mod git_snapshot;
 pub mod sensitive;
-pub mod export;
-pub mod backup;
-pub mod encryption;
-pub mod inspiration;
 pub mod template;
+pub mod timeline;
+pub mod worldbuilding;
+pub mod writing;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -23,24 +23,31 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    use tauri::WebviewUrl;
+    use tauri::WebviewWindowBuilder;
     use tauri_plugin_prevent_default::Flags;
-    
+
+    let webview_data_dir = config::get_data_dir_for_webview();
+    std::fs::create_dir_all(&webview_data_dir).expect("failed to create webview data directory");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_prevent_default::Builder::new()
-                // 禁用所有浏览器键盘快捷键
-                // 注: 鼠标侧键(前进/后退)需要通过 JavaScript 层拦截
-                .with_flags(
-                    Flags::keyboard() | 
-                    Flags::RELOAD | 
-                    Flags::DEV_TOOLS
-                )
-                .build()
+                .with_flags(Flags::keyboard() | Flags::RELOAD | Flags::DEV_TOOLS)
+                .build(),
         )
-        .setup(|_app| {
+        .setup(move |app| {
+            let _window =
+                WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+                    .title("iNovel")
+                    .inner_size(1200.0, 800.0)
+                    .min_inner_size(900.0, 600.0)
+                    .data_directory(webview_data_dir.clone())
+                    .build()?;
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -74,7 +81,6 @@ pub fn run() {
             writing::get_writing_stats,
             writing::upsert_writing_record,
             writing::get_today_words,
-            // 番茄钟专注会话命令
             writing::record_focus_session,
             writing::get_focus_sessions,
             writing::get_focus_stats,
@@ -123,28 +129,24 @@ pub fn run() {
             backup::delete_backup_record,
             backup::get_backup_logs,
             backup::get_backup_stats,
-            // 加密相关命令
             encryption::encrypt_project,
             encryption::decrypt_project,
             encryption::verify_project_password,
             encryption::change_project_password,
             encryption::reencrypt_project,
             encryption::is_project_encrypted_command,
-            // 灵感看板命令
             inspiration::create_inspiration_item,
             inspiration::update_inspiration_item,
             inspiration::delete_inspiration_item,
             inspiration::reorder_inspiration_items,
             inspiration::get_inspiration_board,
             inspiration::get_inspiration_items,
-            // 模板系统命令
             template::get_builtin_templates,
             template::get_user_templates,
             template::save_user_template,
             template::update_user_template,
             template::delete_user_template,
             template::get_all_templates,
-            // 图片处理命令
             chapter::save_image,
         ])
         .run(tauri::generate_context!())

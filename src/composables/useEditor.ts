@@ -2,6 +2,7 @@ import { ref, watch, onMounted, onUnmounted, nextTick, toRef, type Ref } from "v
 import { useEditor, EditorContent } from "@tiptap/vue-3";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import { invoke } from "@tauri-apps/api/core";
 import { createSmartSymbolsExtension } from "../components/SmartSymbolsExtension";
 import { createMentionExtension } from "../components/MentionExtension";
 import {
@@ -102,7 +103,6 @@ export function useEditorComposable(options: UseEditorOptions) {
         scanTimer.value = setTimeout(async () => {
             if (!projectIdRef.value || !editorInstance) return;
             try {
-                const { invoke } = await import("@tauri-apps/api/core");
                 const matches: SensitiveMatch[] = await invoke("scan_sensitive_words", {
                     projectId: projectIdRef.value,
                     content: text,

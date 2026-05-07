@@ -26,7 +26,8 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useProjectStore } from "../stores/project";
-import ShortcutSettings from "../components/ShortcutSettings.vue";
+import { defineAsyncComponent } from "vue";
+const ShortcutSettings = defineAsyncComponent(() => import("../components/ShortcutSettings.vue"));
 import type { EncryptProjectParams, DecryptProjectParams, ChangePasswordParams, EncryptionProgress } from "../types/encryption";
 
 const route = useRoute();

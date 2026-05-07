@@ -1,4 +1,5 @@
 import { ref, toRef, type Ref } from "vue";
+import { invoke } from "@tauri-apps/api/core";
 
 export interface UseWordCountOptions {
   chapterId: number | null | Ref<number | null>;
@@ -36,7 +37,6 @@ export function useWordCount(options: UseWordCountOptions) {
     wordCountSaveTimer.value = setTimeout(async () => {
       if (chapterIdRef.value && wordCount.value >= 0) {
         try {
-          const { invoke } = await import("@tauri-apps/api/core");
           await invoke("update_chapter_word_count", {
             chapterId: chapterIdRef.value,
             wordCount: wordCount.value,

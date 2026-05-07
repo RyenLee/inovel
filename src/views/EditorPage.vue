@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, defineAsyncComponent } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useProjectStore } from "../stores/project";
 import { useEditorStore } from "../stores/editor";
+import { useWorldbuildingStore } from "../stores/worldbuilding";
 import { NButton, NIcon, NProgress, useMessage, NTooltip, NModal, NSelect, NInputNumber, NRadioGroup, NRadio, NTag } from "naive-ui";
 import { ArrowLeft, Save, FileText, Sun, Moon, ChevronLeft, ChevronRight, Target, Settings, BarChart3, User, Globe, X, GitBranch, AlertTriangle, Download, Package, Maximize2, Minimize2, Sparkles, Keyboard } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
@@ -10,16 +11,17 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import TreeSidebar from "../components/TreeSidebar.vue";
 import OutlinePanel from "../components/OutlinePanel.vue";
 import MarkdownEditor from "../components/MarkdownEditor.vue";
-import WorldbuildingPanel from "../components/WorldbuildingPanel.vue";
-import RelationshipGraph from "../components/RelationshipGraph.vue";
-import Timeline from "../components/Timeline.vue";
-import HistoryDialog from "../components/HistoryDialog.vue";
-import SensitiveWordsManager from "../components/SensitiveWordsManager.vue";
-import ExportDialog from "../components/ExportDialog.vue";
-import BackupDialog from "../components/BackupDialog.vue";
-import ShortcutSettings from "../components/ShortcutSettings.vue";
-import PomodoroTimer from "../components/PomodoroTimer.vue";
-import InspirationBoard from "../components/InspirationBoard.vue";
+// 延迟加载非首屏组件
+const WorldbuildingPanel = defineAsyncComponent(() => import("../components/WorldbuildingPanel.vue"));
+const RelationshipGraph = defineAsyncComponent(() => import("../components/RelationshipGraph.vue"));
+const Timeline = defineAsyncComponent(() => import("../components/Timeline.vue"));
+const HistoryDialog = defineAsyncComponent(() => import("../components/HistoryDialog.vue"));
+const SensitiveWordsManager = defineAsyncComponent(() => import("../components/SensitiveWordsManager.vue"));
+const ExportDialog = defineAsyncComponent(() => import("../components/ExportDialog.vue"));
+const BackupDialog = defineAsyncComponent(() => import("../components/BackupDialog.vue"));
+const ShortcutSettings = defineAsyncComponent(() => import("../components/ShortcutSettings.vue"));
+const PomodoroTimer = defineAsyncComponent(() => import("../components/PomodoroTimer.vue"));
+const InspirationBoard = defineAsyncComponent(() => import("../components/InspirationBoard.vue"));
 import { Timer, Lightbulb } from "lucide-vue-next";
 import { useTheme } from "../composables/useTheme";
 
@@ -229,23 +231,20 @@ const handleMentionClick = (id: string) => {
   const [, type, idStr] = m
   const numericId = parseInt(idStr, 10)
 
-  // Import worldbuilding store to find the item
-  import('../stores/worldbuilding').then(({ useWorldbuildingStore }) => {
-    const store = useWorldbuildingStore()
+  const worldbuildingStore = useWorldbuildingStore()
 
-    if (type === 'character') {
-      const char = store.getCharacterById(numericId)
-      if (char) {
-        handleSelectCharacter(char)
-      } else {
-        message.warning('未找到该人物')
-      }
-    } else if (type === 'location' || type === 'organization') {
-      // For location/organization, show the worldbuilding panel on the relevant tab
-      sidebarTab.value = 'worldbuilding'
-      message.success(`已切换到世界观面板`)
+  if (type === 'character') {
+    const char = worldbuildingStore.getCharacterById(numericId)
+    if (char) {
+      handleSelectCharacter(char)
+    } else {
+      message.warning('未找到该人物')
     }
-  })
+  } else if (type === 'location' || type === 'organization') {
+    // For location/organization, show the worldbuilding panel on the relevant tab
+    sidebarTab.value = 'worldbuilding'
+    message.success(`已切换到世界观面板`)
+  }
 }
 
 const projectId = computed(() => route.params.projectId as string);
@@ -379,13 +378,13 @@ const saveChapter = async () => {
   try {
     // 从编辑器获取实时内容（优先），回退到 currentContent
     const contentToSave = editorRef.value?.getHTML() ?? currentContent.value;
-    
+
     // 内容一致性检查
     if (contentToSave !== currentContent.value) {
       console.warn("编辑器内容与缓存不一致，使用编辑器实时内容");
       currentContent.value = contentToSave;
     }
-    
+
     // 保存内容
     await invoke("save_chapter_content", {
       projectId: String(projectId.value),
@@ -404,13 +403,13 @@ const saveChapter = async () => {
     }
     // 获取当前编辑器中的实时字数
     const finalWordCount = editorRef.value?.getWordCount() ?? 0;
-    
+
     // 更新字数到数据库
     await invoke("update_chapter_word_count", {
       chapterId: currentChapter.value.id,
       wordCount: finalWordCount,
     });
-    
+
     // 同步更新章节树中的缓存（避免重新加载导致的闪烁）
     for (const volume of chapterTree.value) {
       const chapter = volume.chapters.find(c => c.id === currentChapter.value!.id);
@@ -419,7 +418,7 @@ const saveChapter = async () => {
         break;
       }
     }
-    
+
     // 更新当前章节的缓存字数
     if (currentChapter.value) {
       currentChapter.value.word_count_cache = finalWordCount;
@@ -429,7 +428,7 @@ const saveChapter = async () => {
     await upsertWritingRecord(finalWordCount);
 
     message.success("保存成功");
-    
+
     // 延迟重新加载章节树，确保 TreeSidebar 等组件也能同步
     setTimeout(async () => {
       await loadChapterTree();
@@ -561,16 +560,16 @@ const handleSelectChapter = async (chapterId: number, chapter: Chapter) => {
   // 设置加载状态，编辑器会显示占位符
   currentChapter.value = chapter;
   currentContent.value = ''; // 清空内容
-  
+
   // 加载新章节内容
   const content = await loadChapterContentByPath(chapter.id);
-  
+
   // 内容加载完成后再更新，避免中间状态导致的闪烁
   currentContent.value = content;
-  
+
   // 重新加载章节树以获取最新字数
   await loadChapterTree();
-  
+
   // 同步 currentChapter 的字数缓存（如果章节树中有最新数据）
   const updatedChapter = chapterTree.value
     .flatMap(v => v.chapters)
@@ -662,11 +661,10 @@ const todayNewWords = computed(() => {
 </script>
 
 <template>
-  <div class="h-screen flex flex-col transition-colors duration-300"
-    :class="[
-      isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900',
-      isZenMode ? 'bg-gray-900!' : ''
-    ]">
+  <div class="h-screen flex flex-col transition-colors duration-300" :class="[
+    isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900',
+    isZenMode ? 'bg-gray-900!' : ''
+  ]">
     <!-- Zen Mode Exit Button (floating) -->
     <button v-if="isZenMode && !isPomodoroZenMode" @click="exitZenMode"
       class="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg shadow-lg hover:bg-gray-700 transition-colors">
@@ -781,7 +779,8 @@ const todayNewWords = computed(() => {
           </n-tooltip>
           <n-tooltip trigger="hover">
             <template #trigger>
-              <button @click="showInspirationBoard = !showInspirationBoard" class="p-2 rounded-lg transition-colors duration-300"
+              <button @click="showInspirationBoard = !showInspirationBoard"
+                class="p-2 rounded-lg transition-colors duration-300"
                 :class="showInspirationBoard ? 'bg-yellow-500 text-white' : isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
                 <Lightbulb class="w-5 h-5" />
               </button>
@@ -828,8 +827,7 @@ const todayNewWords = computed(() => {
       </div>
 
       <!-- Editor Area -->
-      <main class="flex-1 overflow-hidden flex justify-center"
-        :class="isZenModeActive ? 'bg-gray-900' : 'p-4'">
+      <main class="flex-1 overflow-hidden flex justify-center" :class="isZenModeActive ? 'bg-gray-900' : 'p-4'">
         <!-- Zen Mode: Centered editor container with 50% width -->
         <div v-if="isZenModeActive" class="w-1/2 mx-auto h-full flex flex-col px-8 py-6">
           <div v-if="!currentChapter" class="h-full flex flex-col items-center justify-center text-gray-500">
@@ -942,7 +940,8 @@ const todayNewWords = computed(() => {
               <n-progress type="line" :percentage="dailyProgress" :height="8" :border-radius="4" :fill-border-radius="4"
                 :color="dailyProgress >= 100 ? '#52c41a' : '#3b82f6'" :rail-color="isDark ? '#374151' : '#e5e7eb'"
                 class="daily-goal-progress" :show-indicator="false" />
-              <span class="text-sm font-medium whitespace-nowrap" :class="dailyProgress >= 100 ? 'text-green-500' : 'text-blue-500'">
+              <span class="text-sm font-medium whitespace-nowrap"
+                :class="dailyProgress >= 100 ? 'text-green-500' : 'text-blue-500'">
                 {{ dailyProgress }}%
               </span>
             </div>
@@ -973,8 +972,7 @@ const todayNewWords = computed(() => {
         <!-- Backup Button -->
         <n-tooltip trigger="hover">
           <template #trigger>
-            <n-button size="tiny" quaternary @click="showBackup = true"
-              class="text-gray-500! hover:text-green-500!">
+            <n-button size="tiny" quaternary @click="showBackup = true" class="text-gray-500! hover:text-green-500!">
               <template #icon>
                 <n-icon>
                   <Package />
@@ -1058,31 +1056,17 @@ const todayNewWords = computed(() => {
     <ShortcutSettings v-model:show="showShortcuts" />
 
     <!-- Pomodoro Timer (floating) -->
-    <PomodoroTimer
-      v-if="projectId && !isLoading"
-      :project-id="Number(projectId)"
-      :is-dark="isDark"
-      :visible="showPomodoro"
-      @zen-mode="handlePomodoroZenMode"
-    />
+    <PomodoroTimer v-if="projectId && !isLoading" :project-id="Number(projectId)" :is-dark="isDark"
+      :visible="showPomodoro" @zen-mode="handlePomodoroZenMode" />
 
     <!-- Inspiration Board Modal -->
-    <n-modal
-      v-model:show="showInspirationBoard"
-      preset="card"
-      title="灵感看板"
-      :style="{ width: '90vw', height: '80vh' }"
-      :max-height="600"
-      :mask-closable="true"
-    >
+    <n-modal v-model:show="showInspirationBoard" preset="card" title="灵感看板" :style="{ width: '90vw', height: '80vh' }"
+      :max-height="600" :mask-closable="true">
       <template #header-extra>
         <n-tag type="warning" size="small">双击卡片编辑，右键插入到编辑器</n-tag>
       </template>
-      <InspirationBoard
-        :project-id="Number(projectId)"
-        :is-dark="isDark"
-        @insert-content="handleInsertFromInspiration"
-      />
+      <InspirationBoard :project-id="Number(projectId)" :is-dark="isDark"
+        @insert-content="handleInsertFromInspiration" />
     </n-modal>
   </div>
 </template>

@@ -15,10 +15,10 @@ name = "inovel_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.6.0", features = [] }
+tauri-build = { version = "2.6.1", features = [] }
 
 [dependencies]
-tauri = { version = "2.11.0", features = ["protocol-asset"] }
+tauri = { version = "2.11.1", features = ["protocol-asset"] }
 tauri-plugin-opener = { version = "2.5.4" }
 tauri-plugin-dialog = { version = "2.7.1" }
 tauri-plugin-updater = "2.10.1"
@@ -40,4 +40,4 @@ base64 = "0.22.1"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 tracing-appender = "0.2.5"
-regex = "1.12.1"
+regex = "1.12.3"

@@ -16,10 +16,10 @@
 
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, defineAsyncComponent } from 'vue'
 import { NButton, NIcon } from 'naive-ui'
 import { ArrowLeft } from 'lucide-vue-next'
-import WorldbuildingPanel from '@/components/WorldbuildingPanel.vue'
+const WorldbuildingPanel = defineAsyncComponent(() => import('@/components/WorldbuildingPanel.vue'))
 import { useProjectStore } from '@/stores/project'
 
 const router = useRouter()
