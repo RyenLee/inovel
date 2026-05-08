@@ -1,3 +1,5 @@
+import { useEnumDictionary } from '../stores/enumDictionary'
+
 export type ChapterStatus = 'outline' | 'draft' | 'revised' | 'final' | 'abandoned';
 
 export const CHAPTER_STATUS_OPTIONS = [
@@ -8,12 +10,26 @@ export const CHAPTER_STATUS_OPTIONS = [
   { label: '废弃', value: 'abandoned', color: '#EF4444' },
 ] as const;
 
+const STATUS_COLOR_MAP: Record<string, string> = {
+  outline: '#9CA3AF',
+  draft: '#F59E0B',
+  revised: '#3B82F6',
+  final: '#10B981',
+  abandoned: '#EF4444',
+};
+
 export function getStatusColor(status: ChapterStatus): string {
-  const option = CHAPTER_STATUS_OPTIONS.find(o => o.value === status);
-  return option?.color ?? '#9CA3AF';
+  return STATUS_COLOR_MAP[status] ?? '#9CA3AF';
 }
 
 export function getStatusLabel(status: ChapterStatus): string {
+  try {
+    const { getChapterStatusName, isLoaded } = useEnumDictionary()
+    if (isLoaded.value) {
+      const name = getChapterStatusName(status)
+      if (name !== status) return name
+    }
+  } catch {}
   const option = CHAPTER_STATUS_OPTIONS.find(o => o.value === status);
   return option?.label ?? status;
 }

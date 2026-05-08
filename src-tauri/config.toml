@@ -64,12 +64,10 @@ max_batch_size = 50
 [api]
 # 基础 URL（用于外部 API 调用）
 base_url = ""
-# 请求超时时间（秒）
-timeout_seconds = 30
-# 失败重试次数
-retry_count = 3
-# 重试间隔（毫秒）
-retry_delay_ms = 1000
+# 请求超时时间（毫秒）
+timeout_ms = 30000
+# 最大重试次数
+max_retries = 3
 
 # ==================== 性能监控配置 ====================
 [performance]
@@ -79,3 +77,34 @@ monitoring_enabled = true
 slow_request_threshold_ms = 1000
 # 是否记录请求/响应大小
 log_payload_size = true
+
+# ==================== 窗口配置 ====================
+[window]
+# 默认窗口宽度（像素）
+default_width = 1200
+# 默认窗口高度（像素）
+default_height = 800
+# 窗口最小宽度（像素）
+min_width = 600
+# 窗口最小高度（像素）
+min_height = 800
+# 是否允许通过鼠标拖拽调整窗口大小
+# 设置为 false 可以防止用户意外调整窗口大小
+resizable = false
+# 窗口最大宽度（像素）
+max_width = 1920
+# 窗口最大高度（像素）
+max_height = 1200
+
+# ==================== 竖屏模式配置 ====================
+[window.portrait]
+# 是否启用竖屏模式支持
+enabled = true
+# 竖屏默认宽度（像素）- 竖屏模式下宽度较小
+default_width = 800
+# 竖屏默认高度（像素）- 竖屏模式下高度较大
+default_height = 1200
+# 竖屏最小宽度（像素）
+min_width = 600
+# 竖屏最小高度（像素）
+min_height = 800

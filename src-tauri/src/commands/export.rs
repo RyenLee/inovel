@@ -1,5 +1,6 @@
 use crate::commands::git_snapshot::get_project_folder_path;
 use crate::db::{get_db_path, init_db};
+use crate::logging::operation::record_simple_operation;
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
 use regex::Regex;
 use rusqlite::Connection;
@@ -419,6 +420,17 @@ pub async fn export_txt(app_handle: AppHandle, project_id: i64) -> Result<String
 
     let output_path = export_dir.join("export.txt");
     fs::write(&output_path, &text).map_err(|e| format!("写入文件失败: {}", e))?;
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "export",
+        "txt",
+        "project",
+        Some(project_id),
+        Some("导出TXT格式"),
+        Some(project_id),
+    );
+
     Ok(output_path.to_string_lossy().to_string())
 }
 

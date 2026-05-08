@@ -1,5 +1,5 @@
 import { ref, computed } from "vue";
-import { open } from "@tauri-apps/plugin-dialog";
+import { useFolderDialog } from "./useFolderDialog";
 import { invoke } from "@tauri-apps/api/core";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -22,6 +22,7 @@ export interface ImportState {
 }
 
 export function useTextImport() {
+  const { selectFile } = useFolderDialog();
   const state = ref<ImportState>({
     file: null,
     content: "",
@@ -61,28 +62,31 @@ export function useTextImport() {
   const selectAndReadFile = async (): Promise<boolean> => {
     state.value = { file: null, content: "", preview: "", isReading: false, error: null };
 
-    try {
-      const selected = await open({
-        filters: [{ name: "文本文件", extensions: ["txt"] }],
-        multiple: false,
-      });
+    const { path, error } = await selectFile({
+      title: "选择文本文件",
+      filters: [{ name: "文本文件", extensions: ["txt"] }],
+    });
 
-      if (!selected || Array.isArray(selected)) {
-        return false;
-      }
+    if (error) {
+      state.value.error = error;
+      return false;
+    }
 
-      const fileName = selected.split("\\").pop() || selected.split("/").pop() || "unknown.txt";
-      const ext = fileName.split(".").pop()?.toLowerCase();
+    if (!path) {
+      return false;
+    }
 
-      if (ext !== "txt") {
-        state.value.error = "仅支持 .txt 格式的文本文件";
-        return false;
-      }
+    const fileName = path.replace(/\\/g, '/').split('/').pop() || "unknown.txt";
+    const ext = fileName.split(".").pop()?.toLowerCase();
 
-      state.value.isReading = true;
+    if (ext !== "txt") {
+      state.value.error = "仅支持 .txt 格式的文本文件";
+      return false;
+    }
 
-      // 使用自定义命令读取文件
-      const content = await invoke<string>("read_text_file", { filePath: selected });
+    state.value.isReading = true;
+
+    const content = await invoke<string>("read_text_file", { filePath: path });
 
       if (!content || content.trim().length === 0) {
         state.value.error = "文件内容为空（仅包含空白字符）";
@@ -91,14 +95,14 @@ export function useTextImport() {
       }
 
       // 获取文件大小
-      const fileSize = await invoke<number>("get_file_size", { filePath: selected });
+      const fileSize = await invoke<number>("get_file_size", { filePath: path });
 
       const encoding = detectEncoding(content);
 
       state.value = {
         file: {
           name: fileName,
-          path: selected,
+          path,
           size: fileSize,
           encoding,
         },
@@ -109,18 +113,6 @@ export function useTextImport() {
       };
 
       return true;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 
-        (typeof err === 'string' ? err : "未知错误");
-      state.value = {
-        file: null,
-        content: "",
-        preview: "",
-        isReading: false,
-        error: `读取文件失败：${message}`,
-      };
-      return false;
-    }
   };
 
   const getChunks = (): string[] => {

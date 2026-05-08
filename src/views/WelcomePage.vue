@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { open } from "@tauri-apps/plugin-dialog";
+import { useFolderDialog } from "../composables/useFolderDialog";
 import { useDialog, useMessage } from "naive-ui";
 import {
     NCard,
@@ -20,6 +20,7 @@ import {
     NAlert,
     NTimeline,
     NTimelineItem,
+    NSpace,
 } from "naive-ui";
 import { Book, Plus, FolderOpen, FileText, AlertTriangle, Trash2, Edit3, Sun, Moon, Settings, BarChart3, TrendingUp, Calendar, Keyboard, Database, Play, RotateCcw, Eye, CheckCircle, XCircle } from "lucide-vue-next";
 import { useRouter } from "vue-router";
@@ -32,6 +33,7 @@ const router = useRouter();
 const { isDark, toggleDark } = useTheme();
 const message = useMessage();
 const dialog = useDialog();
+const { selectFolder } = useFolderDialog();
 const projectStore = useProjectStore();
 
 const showModal = ref(false);
@@ -175,18 +177,15 @@ const goToStats = () => {
 };
 
 const openFolderDialog = async () => {
-    try {
-        const selected = await open({
-            directory: true,
-            multiple: false,
-            title: "选择项目存储位置",
-        });
-        if (selected) {
-            formData.value.path = selected as string;
-        }
-    } catch (error) {
-        console.error("Failed to open folder dialog:", error);
-        message.error("选择文件夹失败");
+    const { path, error } = await selectFolder({
+        title: "选择项目存储位置",
+    });
+    if (error) {
+        message.error(error);
+        return;
+    }
+    if (path) {
+        formData.value.path = path;
     }
 };
 
@@ -364,11 +363,7 @@ const closeModal = () => {
                             <NIcon><Keyboard /></NIcon>
                         </template>
                     </n-button>
-                    <n-button quaternary circle @click="goToSettings" title="项目设置">
-                        <template #icon>
-                            <NIcon><Settings /></NIcon>
-                        </template>
-                    </n-button>
+
                     <n-button quaternary circle @click="goToStats" title="写作统计">
                         <template #icon>
                             <NIcon><BarChart3 /></NIcon>
@@ -380,6 +375,12 @@ const closeModal = () => {
                         <Sun v-if="isDark" class="w-5 h-5" />
                         <Moon v-else class="w-5 h-5" />
                     </button>
+                    <n-button quaternary circle @click="goToSettings" title="项目设置">
+                        <template #icon>
+                            <NIcon><Settings /></NIcon>
+                        </template>
+                    </n-button>
+
                     <n-button type="primary" @click="showModal = true">
                         <template #icon>
                             <NIcon>

@@ -18,19 +18,39 @@ import {
     NResult,
     NSelect,
 } from "naive-ui";
-import { ArrowLeft, Target, Save, Users, MapPin, Building } from "lucide-vue-next";
+import { ArrowLeft, Target, Save } from "lucide-vue-next";
+import { invoke } from "@tauri-apps/api/core";
+import { useProjectStore } from "../stores/project";
 
 const router = useRouter();
 const message = useMessage();
+const projectStore = useProjectStore();
 
 const isLoading = ref(false);
 const isSaving = ref(false);
 
-// Settings state
 const dailyGoal = ref(3000);
-const autoSaveInterval = ref(1); // 单位：分钟，默认1分钟
+const autoSaveInterval = ref(1);
 
-// 自动保存间隔选项（分钟）
+const windowSize = ref<string>("default");
+const hasProject = ref(false);
+const currentProjectId = ref<number | null>(null);
+
+const windowSizeOptions = [
+    // 横屏模式
+    { label: "默认横屏 (1200×800)", value: "1200x800" },
+    { label: "紧凑横屏 (1024×768)", value: "1024x768" },
+    { label: "标准横屏 (1280×800)", value: "1280x800" },
+    { label: "宽屏 (1440×900)", value: "1440x900" },
+    { label: "全高清横屏 (1920×1080)", value: "1920x1080" },
+    // 竖屏模式
+    { label: "默认竖屏 (800×1200)", value: "800x1200" },
+    { label: "紧凑竖屏 (600×900)", value: "600x900" },
+    { label: "标准竖屏 (720×1280)", value: "720x1280" },
+    { label: "大屏竖屏 (800×1400)", value: "800x1400" },
+    { label: "全高清竖屏 (1080×1920)", value: "1080x1920" },
+];
+
 const autoSaveIntervalOptions = [
     { label: "30 秒", value: 0.5 },
     { label: "1 分钟", value: 1 },
@@ -43,7 +63,31 @@ const LOCAL_STORAGE_KEY = "inovel_settings";
 
 onMounted(async () => {
     await loadSettings();
+    await loadProjectInfo();
 });
+
+const loadProjectInfo = async () => {
+    try {
+        await projectStore.fetchRecentProjects();
+        if (projectStore.recentProjects.length > 0) {
+            hasProject.value = true;
+            const lastProject = projectStore.recentProjects[0];
+            currentProjectId.value = lastProject.id;
+
+            const windowSizeResult = await invoke<[number, number] | null>("get_window_size", {
+                projectId: lastProject.id,
+            });
+            if (windowSizeResult) {
+                const [width, height] = windowSizeResult;
+                windowSize.value = `${width}x${height}`;
+            } else {
+                windowSize.value = "default";
+            }
+        }
+    } catch (error) {
+        console.error("Failed to load project info:", error);
+    }
+};
 
 const loadSettings = async () => {
     isLoading.value = true;
@@ -73,6 +117,16 @@ const saveAllSettings = async () => {
             autoSaveInterval: autoSaveInterval.value,
         };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settings));
+
+        if (hasProject.value && currentProjectId.value && windowSize.value !== "default") {
+            const [width, height] = windowSize.value.split("x").map(Number);
+            await invoke("set_window_size", {
+                projectId: currentProjectId.value,
+                width,
+                height,
+            });
+        }
+
         message.success("设置已保存");
     } catch (error) {
         console.error("Failed to save settings:", error);
@@ -161,6 +215,38 @@ const goBack = () => {
                     </n-card>
                 </n-gi>
 
+                <!-- Window Size Settings -->
+                <n-gi v-if="hasProject">
+                    <n-card title="窗口大小" hoverable class="settings-card">
+                        <n-form label-placement="top" class="settings-form">
+                            <n-form-item label="窗口尺寸" class="settings-form-item">
+                                <div class="flex flex-nowrap items-center gap-3">
+                                    <n-select v-model:value="windowSize" :options="windowSizeOptions"
+                                        class="min-w-[180px] w-56" :teleport="'body'" />
+                                </div>
+                                <template #feedback>
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">
+                                        设置应用窗口大小，下次启动时生效
+                                    </span>
+                                </template>
+                            </n-form-item>
+                        </n-form>
+
+                        <template #footer>
+                            <n-space justify="end" class="w-full">
+                                <n-button type="primary" @click="saveAllSettings" :loading="isSaving">
+                                    <template #icon>
+                                        <NIcon>
+                                            <Save />
+                                        </NIcon>
+                                    </template>
+                                    保存设置
+                                </n-button>
+                            </n-space>
+                        </template>
+                    </n-card>
+                </n-gi>
+
                 <!-- Stats Link -->
                 <n-gi>
                     <n-card title="写作统计" hoverable @click="router.push('/stats')" class="settings-card cursor-pointer">
@@ -172,37 +258,7 @@ const goBack = () => {
                     </n-card>
                 </n-gi>
 
-                <!-- Worldbuilding Link -->
-                <n-gi>
-                    <n-card title="世界观设定" hoverable @click="router.push('/worldbuilding')"
-                        class="settings-card cursor-pointer">
-                        <div class="flex flex-wrap items-center justify-center gap-6 sm:gap-8 py-4">
-                            <div class="flex flex-col items-center text-center min-w-[70px]">
-                                <n-icon :size="32" class="text-blue-500 mb-2">
-                                    <Users />
-                                </n-icon>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">人物</p>
-                            </div>
-                            <div class="flex flex-col items-center text-center min-w-[70px]">
-                                <n-icon :size="32" class="text-green-500 mb-2">
-                                    <MapPin />
-                                </n-icon>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">地点</p>
-                            </div>
-                            <div class="flex flex-col items-center text-center min-w-[70px]">
-                                <n-icon :size="32" class="text-orange-500 mb-2">
-                                    <Building />
-                                </n-icon>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">组织</p>
-                            </div>
-                        </div>
-                        <template #footer>
-                            <p class="text-center text-sm text-gray-500 dark:text-gray-400 whitespace-normal">
-                                管理小说中的人物、地点和组织
-                            </p>
-                        </template>
-                    </n-card>
-                </n-gi>
+
             </n-grid>
         </main>
     </div>

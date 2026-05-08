@@ -3,6 +3,7 @@ import { ref, computed, watch, onUnmounted, nextTick, onMounted } from "vue";
 import { NButton, NTooltip, NModal, NSlider, NSwitch, useMessage, NIcon, useDialog } from "naive-ui";
 import { Play, Pause, RotateCcw, Settings, X, Volume2, VolumeX, Maximize2, Minimize2, Timer, Coffee, CoffeeIcon } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   type SessionType,
   type PomodoroSettings,
@@ -32,13 +33,46 @@ const isDragging = ref(false);
 const dragOffset = ref({ x: 0, y: 0 });
 const position = ref({ x: 0, y: 0 });
 
+// Timer dimensions for better bounds calculation
+const TIMER_WIDTH = 220;
+const TIMER_HEIGHT = 300;
+
+// Default position: right-middle, stays within window bounds
+const defaultPosition = computed(() => {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  // Ensure we don't go out of bounds!
+  const x = Math.max(0, Math.min(width - TIMER_WIDTH, width - TIMER_WIDTH - 20)); // 20px padding from right
+  const y = Math.max(0, Math.min(height - TIMER_HEIGHT, (height - TIMER_HEIGHT) / 2)); // centered vertically
+  return { x, y };
+});
+
+// Initialize position to right-middle on mount, and keep in bounds
+const initPosition = () => {
+  position.value = defaultPosition.value;
+};
+
+// Handle window resize to maintain relative position
+const handleResize = () => {
+  if (!isDragging.value) {
+    position.value = defaultPosition.value;
+  }
+};
+
 // Handle drag start
 const onDragStart = (e: MouseEvent | TouchEvent) => {
+  // Prevent drag from starting if clicking on interactive elements
+  const target = e.target as HTMLElement;
+  const isInteractive = target.closest('input, button, select, textarea, [role="button"], .no-drag');
+  if (isInteractive) {
+    return;
+  }
+  
   isDragging.value = true;
   const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
   const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
   
-  // Get current position from style or default to right-bottom
+  // Get current position from style or default to right-middle
   const rect = (e.target as HTMLElement).closest('.pomodoro-timer-container')?.getBoundingClientRect();
   if (rect) {
     dragOffset.value = {
@@ -46,9 +80,10 @@ const onDragStart = (e: MouseEvent | TouchEvent) => {
       y: clientY - rect.top,
     };
   } else {
+    const defaultPos = defaultPosition.value;
     dragOffset.value = {
-      x: clientX - window.innerWidth + 220,
-      y: clientY - window.innerHeight + 200,
+      x: clientX - defaultPos.x,
+      y: clientY - defaultPos.y,
     };
   }
   
@@ -65,11 +100,12 @@ const onDragMove = (e: MouseEvent | TouchEvent) => {
   const newX = clientX - dragOffset.value.x;
   const newY = clientY - dragOffset.value.y;
   
-  // Keep within viewport bounds
-  const minX = 0;
-  const minY = 0;
-  const maxX = window.innerWidth - 250;
-  const maxY = window.innerHeight - 300;
+  // Keep within viewport bounds (with 10px padding)
+  const PADDING = 10;
+  const minX = PADDING;
+  const minY = PADDING;
+  const maxX = window.innerWidth - TIMER_WIDTH - PADDING;
+  const maxY = window.innerHeight - TIMER_HEIGHT - PADDING;
   
   position.value = {
     x: Math.max(minX, Math.min(maxX, newX)),
@@ -84,12 +120,35 @@ const onDragEnd = () => {
   isDragging.value = false;
 };
 
+// Track unlisten functions for Tauri events
+let unlistenWindowMove: (() => void) | null = null;
+let unlistenWindowResize: (() => void) | null = null;
+
 // Add global mouse/touch listeners when dragging
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('mousemove', onDragMove);
   document.addEventListener('mouseup', onDragEnd);
   document.addEventListener('touchmove', onDragMove, { passive: false });
   document.addEventListener('touchend', onDragEnd);
+  window.addEventListener('resize', handleResize);
+  
+  // Initialize position to right-middle
+  initPosition();
+  
+  // Listen to Tauri window events
+  try {
+    const appWindow = getCurrentWindow();
+    unlistenWindowMove = await appWindow.listen('tauri://move', () => {
+      // Reposition on window move to keep it in view
+      initPosition();
+    });
+    unlistenWindowResize = await appWindow.listen('tauri://resize', () => {
+      // Also reposition on window resize
+      initPosition();
+    });
+  } catch (error) {
+    console.warn('Failed to listen to Tauri window events:', error);
+  }
 });
 
 onUnmounted(() => {
@@ -97,6 +156,16 @@ onUnmounted(() => {
   document.removeEventListener('mouseup', onDragEnd);
   document.removeEventListener('touchmove', onDragMove);
   document.removeEventListener('touchend', onDragEnd);
+  window.removeEventListener('resize', handleResize);
+  
+  // Unlisten Tauri events
+  unlistenWindowMove?.();
+  unlistenWindowResize?.();
+});
+
+// Expose methods to parent for external control
+defineExpose({
+  reposition: initPosition
 });
 
 const message = useMessage();
@@ -107,6 +176,9 @@ const showSettings = ref(false);
 const showCompletionModal = ref(false);
 const completionMessage = ref("");
 const completionSessionType = ref<SessionType>("work");
+
+// Task name
+const taskName = ref("");
 
 const settings = ref<PomodoroSettings>({ ...DEFAULT_POMODORO_SETTINGS });
 
@@ -143,6 +215,13 @@ const currentColor = computed(() => {
 const circumference = 2 * Math.PI * 90; // radius = 90
 const strokeDashoffset = computed(() => {
   return circumference * (1 - progress.value / 100);
+});
+
+// Computed: whether buttons should be disabled (in focus mode while running)
+const isFocusModeActive = computed(() => {
+  return state.value.status === "running" && 
+         state.value.currentSessionType === "work" && 
+         settings.value.zenModeEnabled;
 });
 
 // Load settings from localStorage
@@ -188,10 +267,23 @@ const updateTimeRemaining = () => {
   state.value.timeRemaining = duration * 60;
 };
 
-// Initialize audio
-const initAudio = () => {
-  if (typeof window !== "undefined" && !audioContext) {
-    audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+// Initialize audio context
+const initAudio = async () => {
+  if (typeof window !== "undefined") {
+    if (!audioContext) {
+      // Create audio context
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      audioContext = new AudioContextClass();
+    }
+    
+    // If context is suspended (due to browser autoplay policy), resume it
+    if (audioContext.state === "suspended") {
+      try {
+        await audioContext.resume();
+      } catch (error) {
+        console.warn("Failed to resume audio context:", error);
+      }
+    }
   }
 };
 
@@ -274,10 +366,12 @@ const playCompleteSound = () => {
 };
 
 // Start timer
-const startTimer = () => {
+const startTimer = async () => {
   if (state.value.status === "running") return;
   
-  initAudio();
+  // Initialize audio before starting
+  await initAudio();
+  
   state.value.status = "running";
   
   // Enable zen mode if configured
@@ -326,6 +420,7 @@ const resetTimer = () => {
 // Handle session completion
 const handleSessionComplete = async () => {
   pauseTimer();
+  await initAudio(); // Ensure audio is initialized before playing sound
   playCompleteSound();
   
   const completedType = state.value.currentSessionType;
@@ -426,6 +521,17 @@ const skipSession = () => {
   updateTimeRemaining();
 };
 
+// Toggle zen mode (focus mode)
+const toggleZenMode = () => {
+  if (isFocusModeActive.value) {
+    // If already in active focus mode, don't allow toggling off
+    message.info("请先暂停或完成当前专注会话");
+    return;
+  }
+  // Toggle the setting
+  settings.value.zenModeEnabled = !settings.value.zenModeEnabled;
+};
+
 // Switch to specific session type
 const switchToSession = (type: SessionType) => {
   if (state.value.status === "running") {
@@ -451,6 +557,16 @@ onUnmounted(() => {
     audioContext.close();
   }
   saveStateToStorage();
+});
+
+// Watch for visibility changes to re-initialize position
+watch(() => props.visible, (newVisible) => {
+  if (newVisible) {
+    // Use nextTick to wait for DOM to be ready before calculating position
+    nextTick(() => {
+      initPosition();
+    });
+  }
 });
 
 // Initialize
@@ -488,15 +604,45 @@ loadSettings();
           v-for="type in ['work', 'short_break', 'long_break'] as SessionType[]"
           :key="type"
           class="px-3 py-1 text-xs font-medium rounded-full transition-all"
-          :class="state.currentSessionType === type
+          :class="isFocusModeActive 
+            ? 'opacity-50 cursor-not-allowed' 
+            : state.currentSessionType === type
             ? 'text-white'
             : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
-          :style="state.currentSessionType === type ? { backgroundColor: getSessionTypeColor(type, props.isDark) } : {}"
-          @click="switchToSession(type)"
+          :style="!isFocusModeActive && state.currentSessionType === type ? { backgroundColor: getSessionTypeColor(type, props.isDark) } : {}"
+          @click="!isFocusModeActive && switchToSession(type)"
+          :disabled="isFocusModeActive"
         >
           {{ type === 'work' ? '专注' : type === 'short_break' ? '短休' : '长休' }}
         </button>
       </div>
+
+      <!-- Status Indicator -->
+      <div class="flex items-center justify-center gap-2 mb-2">
+        <div
+          class="w-2 h-2 rounded-full animate-pulse"
+          :class="{
+            'bg-green-500': state.status === 'running',
+            'bg-yellow-500': state.status === 'paused',
+            'bg-gray-400': state.status === 'idle'
+          }"
+        ></div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">
+          {{ state.status === 'running' ? '运行中' : state.status === 'paused' ? '已暂停' : '空闲' }}
+        </span>
+      </div>
+
+      <!-- Task Name Input -->
+      <input
+        v-if="state.currentSessionType === 'work'"
+        v-model="taskName"
+        type="text"
+        placeholder="输入任务名称..."
+        class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
+        :disabled="state.status === 'running'"
+        @mousedown.stop
+        @touchstart.stop
+      />
 
       <!-- Circular Progress Timer -->
       <div class="relative w-48 h-48 mx-auto">
@@ -542,17 +688,22 @@ loadSettings();
         <n-tooltip trigger="hover">
           <template #trigger>
             <button
-              class="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              @click="resetTimer"
+              class="p-2 rounded-full transition-colors"
+              :class="isFocusModeActive 
+                ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 cursor-not-allowed' 
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+              @click="!isFocusModeActive && resetTimer()"
+              :disabled="isFocusModeActive"
             >
               <RotateCcw class="w-5 h-5" />
             </button>
           </template>
-          重置
+          {{ isFocusModeActive ? '专注模式下禁用' : '重置' }}
         </n-tooltip>
 
         <button
-          class="p-4 rounded-full text-white transition-all hover:scale-105"
+          class="p-4 rounded-full text-white transition-all"
+          :class="isFocusModeActive ? 'cursor-not-allowed opacity-70' : 'hover:scale-105'"
           :style="{ backgroundColor: currentColor }"
           @click="state.status === 'running' ? pauseTimer() : startTimer()"
         >
@@ -563,8 +714,12 @@ loadSettings();
         <n-tooltip trigger="hover">
           <template #trigger>
             <button
-              class="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              @click="skipSession"
+              class="p-2 rounded-full transition-colors"
+              :class="isFocusModeActive 
+                ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 cursor-not-allowed' 
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+              @click="!isFocusModeActive && skipSession()"
+              :disabled="isFocusModeActive"
             >
               <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polygon points="5,4 15,12 5,20" />
@@ -572,7 +727,7 @@ loadSettings();
               </svg>
             </button>
           </template>
-          跳过
+          {{ isFocusModeActive ? '专注模式下禁用' : '跳过' }}
         </n-tooltip>
       </div>
 
@@ -595,40 +750,53 @@ loadSettings();
             <template #trigger>
               <button
                 class="p-1.5 rounded transition-colors"
-                :class="settings.soundEnabled ? 'text-blue-500' : 'text-gray-400'"
-                @click="settings.soundEnabled = !settings.soundEnabled"
+                :class="[
+                  settings.soundEnabled ? 'text-blue-500' : 'text-gray-400',
+                  isFocusModeActive ? 'cursor-not-allowed opacity-50' : 'hover:text-blue-600'
+                ]"
+                @click="!isFocusModeActive && (settings.soundEnabled = !settings.soundEnabled)"
+                :disabled="isFocusModeActive"
               >
                 <Volume2 v-if="settings.soundEnabled" class="w-4 h-4" />
                 <VolumeX v-else class="w-4 h-4" />
               </button>
             </template>
-            {{ settings.soundEnabled ? '关闭' : '开启' }}声音
+            {{ isFocusModeActive ? '专注模式下禁用' : (settings.soundEnabled ? '关闭' : '开启') + '声音' }}
           </n-tooltip>
           
           <n-tooltip trigger="hover">
             <template #trigger>
               <button
                 class="p-1.5 rounded transition-colors"
-                :class="settings.zenModeEnabled ? 'text-purple-500' : 'text-gray-400'"
-                @click="settings.zenModeEnabled = !settings.zenModeEnabled"
+                :class="[
+                  settings.zenModeEnabled ? 'text-purple-500' : 'text-gray-400',
+                  isFocusModeActive ? 'cursor-not-allowed opacity-50' : 'hover:text-purple-600'
+                ]"
+                @click="toggleZenMode()"
               >
                 <Maximize2 v-if="settings.zenModeEnabled" class="w-4 h-4" />
                 <Minimize2 v-else class="w-4 h-4" />
               </button>
             </template>
-            {{ settings.zenModeEnabled ? '关闭' : '开启' }}专注模式
+            {{ isFocusModeActive ? '专注模式下禁用' : (settings.zenModeEnabled ? '关闭' : '开启') + '专注模式' }}
           </n-tooltip>
           
           <n-tooltip trigger="hover">
             <template #trigger>
               <button
-                class="p-1.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                @click="showSettings = true"
+                class="p-1.5 rounded transition-colors"
+                :class="[
+                  isFocusModeActive 
+                    ? 'text-gray-400 cursor-not-allowed opacity-50' 
+                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                ]"
+                @click="!isFocusModeActive && (showSettings = true)"
+                :disabled="isFocusModeActive"
               >
                 <Settings class="w-4 h-4" />
               </button>
             </template>
-            设置
+            {{ isFocusModeActive ? '专注模式下禁用' : '设置' }}
           </n-tooltip>
         </div>
       </div>
@@ -647,7 +815,7 @@ loadSettings();
         </div>
         <n-slider
           v-model:value="settings.workDuration"
-          :min="5"
+          :min="1"
           :max="60"
           :step="5"
           :marks="{ 15: '15', 25: '25', 45: '45' }"

@@ -3,6 +3,8 @@ import { useEditor, EditorContent } from "@tiptap/vue-3";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { invoke } from "@tauri-apps/api/core";
+import { PluginKey } from "prosemirror-state";
+import { DecorationSet } from "prosemirror-view";
 import { createSmartSymbolsExtension } from "../components/SmartSymbolsExtension";
 import { createMentionExtension } from "../components/MentionExtension";
 import {
@@ -98,6 +100,23 @@ export function useEditorComposable(options: UseEditorOptions) {
         },
     });
 
+    // 立即扫描（无防抖，用于章节切换后）
+    const rescanSensitive = async (editorInstance: any, text: string) => {
+        if (!projectIdRef.value || !editorInstance) return;
+        try {
+            const matches: SensitiveMatch[] = await invoke("scan_sensitive_words", {
+                projectId: projectIdRef.value,
+                content: text,
+            });
+            const decorations = buildDecorations(editorInstance.state.doc, matches);
+            editorInstance.view.dispatch(
+                editorInstance.state.tr.setMeta(sensitiveKey, decorations)
+            );
+        } catch (error) {
+            console.error("扫描敏感词失败:", error);
+        }
+    };
+
     // 防抖扫描敏感词
     const debouncedScanSensitive = async (editorInstance: any, text: string) => {
         if (scanTimer.value) {
@@ -124,7 +143,7 @@ export function useEditorComposable(options: UseEditorOptions) {
     const clearSensitiveDecorations = (editorInstance: any) => {
         if (editorInstance) {
             editorInstance.view.dispatch(
-                editorInstance.state.tr.setMeta(sensitiveKey, (window as any).DecorationSet.empty)
+                editorInstance.state.tr.setMeta(sensitiveKey, DecorationSet.empty)
             );
         }
     };
@@ -222,6 +241,15 @@ export function useEditorComposable(options: UseEditorOptions) {
                             const digits = (text.match(/[0-9]/g) || []).length;
                             wordCount.value = chineseChars + englishLetters + digits;
                             onWordCountUpdate?.(wordCount.value);
+
+                            if (projectIdRef.value) {
+                                const plainText = getDocPlainText(editor.value.state.doc);
+                                if (plainText.length > 0) {
+                                    rescanSensitive(editor.value, plainText);
+                                } else {
+                                    clearSensitiveDecorations(editor.value);
+                                }
+                            }
                         }
                     });
                 }

@@ -1,4 +1,5 @@
 use crate::db::{get_db_path, init_db};
+use crate::logging::operation::record_simple_operation;
 use crate::models::{
     Character, CreateCharacterParams, UpdateCharacterParams,
     Location, CreateLocationParams, UpdateLocationParams,
@@ -31,6 +32,17 @@ pub async fn create_character(app_handle: AppHandle, params: CreateCharacterPara
         params![params.project_id, params.name, params.gender, params.age, params.appearance, params.personality, params.background, cf, now, now],
     ).map_err(|e| format!("创建角色失败: {}", e))?;
     let id = conn.last_insert_rowid();
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "character",
+        "create",
+        "character",
+        Some(id),
+        Some(&format!("创建角色: {}", params.name)),
+        Some(params.project_id),
+    );
+
     Ok(Character { id, project_id: params.project_id, name: params.name, gender: params.gender, age: params.age, appearance: params.appearance, personality: params.personality, background: params.background, custom_fields: cf, created_at: now.clone(), updated_at: now })
 }
 
@@ -63,6 +75,17 @@ pub async fn update_character(app_handle: AppHandle, character_id: i64, params: 
             created_at: row.get(9)?, updated_at: row.get(10)?,
         }),
     ).map_err(|e| format!("查询角色失败: {}", e))?;
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "character",
+        "update",
+        "character",
+        Some(character_id),
+        Some(&format!("更新角色: {}", c.name)),
+        Some(c.project_id),
+    );
+
     Ok(c)
 }
 
@@ -81,6 +104,17 @@ pub async fn delete_character(app_handle: AppHandle, character_id: i64) -> Resul
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
     conn.execute("DELETE FROM characters WHERE id = ?1", [character_id]).map_err(|e| format!("删除角色失败: {}", e))?;
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "character",
+        "delete",
+        "character",
+        Some(character_id),
+        Some("删除角色"),
+        None,
+    );
+
     Ok(())
 }
 

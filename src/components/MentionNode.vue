@@ -4,11 +4,13 @@ import { NPopover, NTag } from 'naive-ui'
 import { NodeViewWrapper } from '@tiptap/vue-3'
 import type { NodeViewProps } from '@tiptap/vue-3'
 import { useWorldbuildingStore } from '../stores/worldbuilding'
+import { useEnumDictionary } from '../stores/enumDictionary'
 import { parseMentionId } from './MentionExtension'
 
 const props = defineProps<NodeViewProps>()
 
 const worldbuildingStore = useWorldbuildingStore()
+const enumDictionary = useEnumDictionary()
 
 const parsed = computed(() => parseMentionId(props.node.attrs.id))
 
@@ -88,7 +90,7 @@ function handleClick() {
           <div class="mention-card-body">
             <div v-if="(mentionData as any).gender" class="mention-row">
               <span class="mention-label">性别</span>
-              <span class="mention-value">{{ (mentionData as any).gender }}</span>
+              <span class="mention-value">{{ enumDictionary.getGenderName((mentionData as any).gender) }}</span>
             </div>
             <div v-if="(mentionData as any).age" class="mention-row">
               <span class="mention-label">年龄</span>
@@ -108,7 +110,7 @@ function handleClick() {
           <div class="mention-card-body">
             <div v-if="(mentionData as any).location_type" class="mention-row">
               <span class="mention-label">类型</span>
-              <span class="mention-value">{{ (mentionData as any).location_type }}</span>
+              <span class="mention-value">{{ enumDictionary.getLocationTypeName((mentionData as any).location_type) }}</span>
             </div>
             <div v-if="(mentionData as any).description" class="mention-desc">
               {{ (mentionData as any).description }}
@@ -120,7 +122,7 @@ function handleClick() {
           <div class="mention-card-body">
             <div v-if="(mentionData as any).org_type" class="mention-row">
               <span class="mention-label">类型</span>
-              <span class="mention-value">{{ (mentionData as any).org_type }}</span>
+              <span class="mention-value">{{ enumDictionary.getOrganizationTypeName((mentionData as any).org_type) }}</span>
             </div>
             <div v-if="(mentionData as any).leader" class="mention-row">
               <span class="mention-label">首领</span>

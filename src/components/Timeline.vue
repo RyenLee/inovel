@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { NButton, NIcon, NModal, NInput, NDatePicker, NSelect, NPopconfirm, useMessage, NEmpty, NCard } from 'naive-ui'
+import { NButton, NIcon, NModal, NInput, NDatePicker, NSelect, NPopconfirm, useMessage, NEmpty, NCard, NSpin } from 'naive-ui'
 import { Plus, Trash2, Edit3, Calendar, BookOpen, GripVertical } from 'lucide-vue-next'
 import { invoke } from '@tauri-apps/api/core'
 import Sortable from 'sortablejs'
@@ -97,7 +97,7 @@ const chapterOptions = computed(() => [
 // Sorted events by story_time
 const sortedEvents = computed(() => {
   return [...events.value].sort((a, b) => {
-    return b.story_time - a.story_time
+    return a.story_time - b.story_time
   })
 })
 

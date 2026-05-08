@@ -32,3 +32,102 @@ body {
   --color-border: #4b5563;
   --color-hover: #374151;
 }
+
+/* ==================== 自定义滚动条样式 ==================== */
+
+/* 通用滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--color-text-primary);
+}
+
+/* Firefox 滚动条样式 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) var(--color-bg-secondary);
+}
+
+/* 平滑滚动 */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 自定义滚动容器样式 */
+.scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) var(--color-bg-secondary);
+}
+
+.scroll-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scroll-container::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+  border-radius: 4px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+  border: 2px solid var(--color-bg-secondary);
+  transition: background-color 0.2s ease;
+}
+
+.scroll-container::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* 深色模式滚动条 */
+.dark ::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+.dark ::-webkit-scrollbar-thumb:active {
+  background: var(--color-text-primary);
+}
+
+.dark * {
+  scrollbar-color: var(--color-border) var(--color-bg-secondary);
+}
+
+.dark .scroll-container::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+.dark .scroll-container::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-color: var(--color-bg-secondary);
+}
+
+.dark .scroll-container::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}

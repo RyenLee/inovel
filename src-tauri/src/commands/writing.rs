@@ -1,6 +1,7 @@
 use crate::db::{get_db_path, init_db};
+use crate::logging::operation::record_simple_operation;
 use crate::models::{FocusSession, FocusStats, WritingGoal, WritingRecord};
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use tauri::AppHandle;
 
 /// 获取写作目标
@@ -14,7 +15,10 @@ use tauri::AppHandle;
 /// # 返回值
 /// 成功返回写作目标（可能为 None），失败返回错误信息
 #[tauri::command]
-pub async fn get_writing_goal(app_handle: AppHandle, project_id: i64) -> Result<Option<WritingGoal>, String> {
+pub async fn get_writing_goal(
+    app_handle: AppHandle,
+    project_id: i64,
+) -> Result<Option<WritingGoal>, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
     let result: Option<WritingGoal> = conn
@@ -38,7 +42,11 @@ pub async fn get_writing_goal(app_handle: AppHandle, project_id: i64) -> Result<
 /// # 返回值
 /// 成功返回保存的写作目标，失败返回错误信息
 #[tauri::command]
-pub async fn save_writing_goal(app_handle: AppHandle, project_id: i64, daily_goal: i32) -> Result<WritingGoal, String> {
+pub async fn save_writing_goal(
+    app_handle: AppHandle,
+    project_id: i64,
+    daily_goal: i32,
+) -> Result<WritingGoal, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
     init_db(&conn).map_err(|e| format!("数据库初始化失败: {}", e))?;
@@ -47,7 +55,8 @@ pub async fn save_writing_goal(app_handle: AppHandle, project_id: i64, daily_goa
         "INSERT INTO writing_goals (project_id, daily_goal, updated_at) VALUES (?1, ?2, ?3)
          ON CONFLICT(project_id) DO UPDATE SET daily_goal = ?2, updated_at = ?3",
         (project_id, daily_goal, &now),
-    ).map_err(|e| format!("保存写作目标失败: {}", e))?;
+    )
+    .map_err(|e| format!("保存写作目标失败: {}", e))?;
     let result = conn.query_row(
         "SELECT id, project_id, daily_goal, updated_at FROM writing_goals WHERE project_id = ?1",
         [project_id],
@@ -68,25 +77,45 @@ pub async fn save_writing_goal(app_handle: AppHandle, project_id: i64, daily_goa
 /// # 返回值
 /// 成功返回写作记录列表，失败返回错误信息
 #[tauri::command]
-pub async fn get_writing_stats(app_handle: AppHandle, project_id: i64, days: i32) -> Result<Vec<WritingRecord>, String> {
+pub async fn get_writing_stats(
+    app_handle: AppHandle,
+    project_id: i64,
+    days: i32,
+) -> Result<Vec<WritingRecord>, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
 
     let records: Vec<WritingRecord> = if project_id == 0 {
-        let mut stmt = conn.prepare(
-            "SELECT record_date, SUM(total_words) as total_words, SUM(duration) as duration
-             FROM writing_records GROUP BY record_date ORDER BY record_date DESC LIMIT ?1"
-        ).map_err(|e| format!("查询失败: {}", e))?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT record_date, SUM(total_words) as total_words, SUM(duration) as duration
+             FROM writing_records GROUP BY record_date ORDER BY record_date DESC LIMIT ?1",
+            )
+            .map_err(|e| format!("查询失败: {}", e))?;
         stmt.query_map(params![days as i64], |row| {
-            Ok(WritingRecord { date: row.get(0)?, total_words: row.get::<_, i64>(1)? as i32, duration: row.get::<_, i64>(2)? as i32 })
-        }).map_err(|e| format!("查询执行失败: {}", e))?.filter_map(|r| r.ok()).collect()
+            Ok(WritingRecord {
+                date: row.get(0)?,
+                total_words: row.get::<_, i64>(1)? as i32,
+                duration: row.get::<_, i64>(2)? as i32,
+            })
+        })
+        .map_err(|e| format!("查询执行失败: {}", e))?
+        .filter_map(|r| r.ok())
+        .collect()
     } else {
         let mut stmt = conn.prepare(
             "SELECT record_date, total_words, duration FROM writing_records WHERE project_id = ?1 ORDER BY record_date DESC LIMIT ?2"
         ).map_err(|e| format!("查询失败: {}", e))?;
         stmt.query_map(params![project_id, days as i64], |row| {
-            Ok(WritingRecord { date: row.get(0)?, total_words: row.get(1)?, duration: row.get(2)? })
-        }).map_err(|e| format!("查询执行失败: {}", e))?.filter_map(|r| r.ok()).collect()
+            Ok(WritingRecord {
+                date: row.get(0)?,
+                total_words: row.get(1)?,
+                duration: row.get(2)?,
+            })
+        })
+        .map_err(|e| format!("查询执行失败: {}", e))?
+        .filter_map(|r| r.ok())
+        .collect()
     };
     Ok(records)
 }
@@ -104,7 +133,12 @@ pub async fn get_writing_stats(app_handle: AppHandle, project_id: i64, days: i32
 /// # 返回值
 /// 成功返回写作记录，失败返回错误信息
 #[tauri::command]
-pub async fn upsert_writing_record(app_handle: AppHandle, project_id: i64, total_words: i32, duration: i32) -> Result<WritingRecord, String> {
+pub async fn upsert_writing_record(
+    app_handle: AppHandle,
+    project_id: i64,
+    total_words: i32,
+    duration: i32,
+) -> Result<WritingRecord, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
     init_db(&conn).map_err(|e| format!("数据库初始化失败: {}", e))?;
@@ -133,7 +167,10 @@ pub async fn upsert_writing_record(app_handle: AppHandle, project_id: i64, total
 /// # 返回值
 /// 成功返回今日写作记录（可能为 None），失败返回错误信息
 #[tauri::command]
-pub async fn get_today_words(app_handle: AppHandle, project_id: i64) -> Result<Option<WritingRecord>, String> {
+pub async fn get_today_words(
+    app_handle: AppHandle,
+    project_id: i64,
+) -> Result<Option<WritingRecord>, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
     let date_str = chrono::Local::now().format("%Y-%m-%d").to_string();
@@ -176,14 +213,28 @@ pub async fn record_focus_session(
     init_db(&conn).map_err(|e| format!("数据库初始化失败: {}", e))?;
     let now = chrono::Utc::now().to_rfc3339();
     let completed_int = if completed { 1 } else { 0 };
-    
+
     conn.execute(
         "INSERT INTO focus_sessions (project_id, session_type, duration_minutes, started_at, completed, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![project_id, session_type, duration_minutes, started_at, completed_int, now],
     ).map_err(|e| format!("记录专注会话失败: {}", e))?;
-    
+
     let id = conn.last_insert_rowid();
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "focus",
+        "record_session",
+        "focus_session",
+        Some(id),
+        Some(&format!(
+            "记录专注会话: {}分钟 ({})",
+            duration_minutes, session_type
+        )),
+        Some(project_id),
+    );
+
     Ok(FocusSession {
         id,
         project_id,
@@ -197,11 +248,11 @@ pub async fn record_focus_session(
 
 /// 获取专注会话列表
 ///
-/// 获取指定天数内的所有专注会话记录。
+/// 获取指定天数内的所有专注会话记录。当 project_id 为 0 时返回所有项目的会话记录。
 ///
 /// # 参数
 /// - `app_handle`: Tauri 应用句柄
-/// - `project_id`: 项目 ID
+/// - `project_id`: 项目 ID（0 表示所有项目）
 /// - `days`: 查询天数
 ///
 /// # 返回值
@@ -214,39 +265,60 @@ pub async fn get_focus_sessions(
 ) -> Result<Vec<FocusSession>, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
-    
+
     let cutoff_date = chrono::Local::now() - chrono::Duration::days(days as i64);
     let cutoff_str = cutoff_date.format("%Y-%m-%d").to_string();
-    
-    let mut stmt = conn.prepare(
-        "SELECT id, project_id, session_type, duration_minutes, started_at, completed, created_at
-         FROM focus_sessions WHERE project_id = ?1 AND started_at >= ?2 ORDER BY started_at DESC"
-    ).map_err(|e| format!("查询失败: {}", e))?;
-    
-    let sessions = stmt.query_map(params![project_id, cutoff_str], |row| {
-        Ok(FocusSession {
-            id: row.get(0)?,
-            project_id: row.get(1)?,
-            session_type: row.get(2)?,
-            duration_minutes: row.get(3)?,
-            started_at: row.get(4)?,
-            completed: row.get::<_, i32>(5)? == 1,
-            created_at: row.get(6)?,
+
+    let sessions: Vec<FocusSession> = if project_id == 0 {
+        let mut stmt = conn.prepare(
+            "SELECT id, project_id, session_type, duration_minutes, started_at, completed, created_at
+             FROM focus_sessions WHERE started_at >= ?1 ORDER BY started_at DESC"
+        ).map_err(|e| format!("查询失败: {}", e))?;
+        stmt.query_map(params![cutoff_str], |row| {
+            Ok(FocusSession {
+                id: row.get(0)?,
+                project_id: row.get(1)?,
+                session_type: row.get(2)?,
+                duration_minutes: row.get(3)?,
+                started_at: row.get(4)?,
+                completed: row.get::<_, i32>(5)? == 1,
+                created_at: row.get(6)?,
+            })
         })
-    }).map_err(|e| format!("查询执行失败: {}", e))?
-    .filter_map(|r| r.ok())
-    .collect();
-    
+        .map_err(|e| format!("查询执行失败: {}", e))?
+        .filter_map(|r| r.ok())
+        .collect()
+    } else {
+        let mut stmt = conn.prepare(
+            "SELECT id, project_id, session_type, duration_minutes, started_at, completed, created_at
+             FROM focus_sessions WHERE project_id = ?1 AND started_at >= ?2 ORDER BY started_at DESC"
+        ).map_err(|e| format!("查询失败: {}", e))?;
+        stmt.query_map(params![project_id, cutoff_str], |row| {
+            Ok(FocusSession {
+                id: row.get(0)?,
+                project_id: row.get(1)?,
+                session_type: row.get(2)?,
+                duration_minutes: row.get(3)?,
+                started_at: row.get(4)?,
+                completed: row.get::<_, i32>(5)? == 1,
+                created_at: row.get(6)?,
+            })
+        })
+        .map_err(|e| format!("查询执行失败: {}", e))?
+        .filter_map(|r| r.ok())
+        .collect()
+    };
+
     Ok(sessions)
 }
 
 /// 获取专注统计数据
 ///
-/// 获取指定天数内的专注会话统计汇总。
+/// 获取指定天数内的专注会话统计汇总。当 project_id 为 0 时返回所有项目的统计数据。
 ///
 /// # 参数
 /// - `app_handle`: Tauri 应用句柄
-/// - `project_id`: 项目 ID
+/// - `project_id`: 项目 ID（0 表示所有项目）
 /// - `days`: 查询天数
 ///
 /// # 返回值
@@ -259,29 +331,59 @@ pub async fn get_focus_stats(
 ) -> Result<FocusStats, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
-    
+
     let cutoff_date = chrono::Local::now() - chrono::Duration::days(days as i64);
     let cutoff_str = cutoff_date.format("%Y-%m-%d").to_string();
-    
-    let stats = conn.query_row(
-        "SELECT 
-            COUNT(*) as total_sessions,
-            COALESCE(SUM(duration_minutes), 0) as total_minutes,
-            COALESCE(SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END), 0) as completed_sessions,
-            COALESCE(SUM(CASE WHEN session_type = 'work' THEN 1 ELSE 0 END), 0) as work_sessions,
-            COALESCE(SUM(CASE WHEN session_type = 'short_break' THEN 1 ELSE 0 END), 0) as short_break_sessions,
-            COALESCE(SUM(CASE WHEN session_type = 'long_break' THEN 1 ELSE 0 END), 0) as long_break_sessions
-         FROM focus_sessions WHERE project_id = ?1 AND started_at >= ?2",
-        params![project_id, cutoff_str],
-        |row| Ok(FocusStats {
-            total_sessions: row.get(0)?,
-            total_minutes: row.get(1)?,
-            completed_sessions: row.get(2)?,
-            work_sessions: row.get(3)?,
-            short_break_sessions: row.get(4)?,
-            long_break_sessions: row.get(5)?,
-        }),
-    ).map_err(|e| format!("查询统计数据失败: {}", e))?;
-    
+
+    let stats = if project_id == 0 {
+        conn.query_row(
+            "SELECT 
+                COUNT(*) as total_sessions,
+                COALESCE(SUM(duration_minutes), 0) as total_minutes,
+                COALESCE(SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END), 0) as completed_sessions,
+                COALESCE(SUM(CASE WHEN session_type = 'work' THEN 1 ELSE 0 END), 0) as work_sessions,
+                COALESCE(SUM(CASE WHEN session_type = 'short_break' THEN 1 ELSE 0 END), 0) as short_break_sessions,
+                COALESCE(SUM(CASE WHEN session_type = 'long_break' THEN 1 ELSE 0 END), 0) as long_break_sessions,
+                COALESCE(SUM(CASE WHEN session_type = 'work' AND completed = 1 THEN 1 ELSE 0 END), 0) as completed_work_sessions,
+                COALESCE(SUM(CASE WHEN session_type = 'work' THEN duration_minutes ELSE 0 END), 0) as work_duration_minutes
+             FROM focus_sessions WHERE started_at >= ?1",
+            params![cutoff_str],
+            |row| Ok(FocusStats {
+                total_sessions: row.get(0)?,
+                total_minutes: row.get(1)?,
+                completed_sessions: row.get(2)?,
+                work_sessions: row.get(3)?,
+                short_break_sessions: row.get(4)?,
+                long_break_sessions: row.get(5)?,
+                completed_work_sessions: row.get(6)?,
+                work_duration_minutes: row.get(7)?,
+            }),
+        ).map_err(|e| format!("查询统计数据失败: {}", e))?
+    } else {
+        conn.query_row(
+            "SELECT 
+                COUNT(*) as total_sessions,
+                COALESCE(SUM(duration_minutes), 0) as total_minutes,
+                COALESCE(SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END), 0) as completed_sessions,
+                COALESCE(SUM(CASE WHEN session_type = 'work' THEN 1 ELSE 0 END), 0) as work_sessions,
+                COALESCE(SUM(CASE WHEN session_type = 'short_break' THEN 1 ELSE 0 END), 0) as short_break_sessions,
+                COALESCE(SUM(CASE WHEN session_type = 'long_break' THEN 1 ELSE 0 END), 0) as long_break_sessions,
+                COALESCE(SUM(CASE WHEN session_type = 'work' AND completed = 1 THEN 1 ELSE 0 END), 0) as completed_work_sessions,
+                COALESCE(SUM(CASE WHEN session_type = 'work' THEN duration_minutes ELSE 0 END), 0) as work_duration_minutes
+             FROM focus_sessions WHERE project_id = ?1 AND started_at >= ?2",
+            params![project_id, cutoff_str],
+            |row| Ok(FocusStats {
+                total_sessions: row.get(0)?,
+                total_minutes: row.get(1)?,
+                completed_sessions: row.get(2)?,
+                work_sessions: row.get(3)?,
+                short_break_sessions: row.get(4)?,
+                long_break_sessions: row.get(5)?,
+                completed_work_sessions: row.get(6)?,
+                work_duration_minutes: row.get(7)?,
+            }),
+        ).map_err(|e| format!("查询统计数据失败: {}", e))?
+    };
+
     Ok(stats)
 }

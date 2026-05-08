@@ -37,6 +37,8 @@ interface FocusStats {
     work_sessions: number;
     short_break_sessions: number;
     long_break_sessions: number;
+    completed_work_sessions: number;
+    work_duration_minutes: number;
 }
 
 const router = useRouter();
@@ -50,6 +52,8 @@ const focusStats = ref<FocusStats>({
     work_sessions: 0,
     short_break_sessions: 0,
     long_break_sessions: 0,
+    completed_work_sessions: 0,
+    work_duration_minutes: 0,
 });
 
 onMounted(async () => {
@@ -63,21 +67,26 @@ const loadStats = async () => {
             projectId: 0,
             days: 30,
         });
-        writingRecords.value = records;
+        writingRecords.value = validateWritingRecords(records);
 
-        // Load focus session stats
         try {
             const stats = await invoke<FocusStats>("get_focus_stats", {
                 projectId: 0,
                 days: 30,
             });
-            focusStats.value = stats;
+            
+            if (!validateFocusStats(stats)) {
+                console.warn("Focus stats validation failed, using sanitized values");
+                focusStats.value = sanitizeFocusStats(stats);
+            } else {
+                focusStats.value = stats;
+            }
 
             const sessions = await invoke<FocusSession[]>("get_focus_sessions", {
                 projectId: 0,
                 days: 30,
             });
-            focusSessions.value = sessions;
+            focusSessions.value = validateFocusSessions(sessions);
         } catch (e) {
             console.error("Failed to load focus stats:", e);
         }
@@ -86,6 +95,107 @@ const loadStats = async () => {
     } finally {
         isLoading.value = false;
     }
+};
+
+// 写作记录数据校验
+const validateWritingRecords = (records: WritingRecord[]): WritingRecord[] => {
+    return records.filter(record => {
+        if (!record.date) return false;
+        if (!isValidDate(record.date)) {
+            console.warn("Invalid writing record date:", record);
+            return false;
+        }
+        if (record.total_words < 0) {
+            console.warn("Negative word count:", record);
+            record.total_words = 0;
+        }
+        if (record.duration < 0) {
+            console.warn("Negative duration:", record);
+            record.duration = 0;
+        }
+        return true;
+    });
+};
+
+// 日期格式校验
+const isValidDate = (dateStr: string): boolean => {
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime());
+};
+
+// 专注会话数据校验
+const validateFocusSessions = (sessions: FocusSession[]): FocusSession[] => {
+    return sessions.filter(session => {
+        // 校验ID
+        if (!session.id || session.id <= 0) {
+            console.warn("Invalid session ID:", session);
+            return false;
+        }
+        // 校验开始时间
+        if (!session.started_at || !isValidDate(session.started_at)) {
+            console.warn("Invalid session started_at:", session);
+            return false;
+        }
+        // 校验收录时长（非负）
+        if (session.duration_minutes < 0) {
+            console.warn("Negative session duration:", session);
+            session.duration_minutes = 0;
+        }
+        // 校验会话类型
+        const validTypes = ['work', 'short_break', 'long_break'];
+        if (!validTypes.includes(session.session_type)) {
+            console.warn("Invalid session type:", session);
+            return false;
+        }
+        return true;
+    });
+};
+
+// 专注统计数据校验
+const validateFocusStats = (stats: FocusStats): boolean => {
+    // 检查负数
+    if (stats.total_sessions < 0 || stats.total_minutes < 0 || stats.completed_sessions < 0) {
+        console.warn("Focus stats contains negative values", stats);
+        return false;
+    }
+    if (stats.work_sessions < 0 || stats.short_break_sessions < 0 || stats.long_break_sessions < 0) {
+        console.warn("Focus stats contains negative session counts", stats);
+        return false;
+    }
+    if (stats.completed_work_sessions < 0 || stats.work_duration_minutes < 0) {
+        console.warn("Focus stats contains negative work values", stats);
+        return false;
+    }
+    // 检查完成数不能超过总数
+    if (stats.completed_sessions > stats.total_sessions) {
+        console.warn("Completed sessions exceeds total sessions", stats);
+        return false;
+    }
+    if (stats.completed_work_sessions > stats.work_sessions) {
+        console.warn("Completed work sessions exceeds work sessions", stats);
+        return false;
+    }
+    // 检查会话类型计数总和
+    const totalTypeCount = stats.work_sessions + stats.short_break_sessions + stats.long_break_sessions;
+    if (totalTypeCount !== stats.total_sessions) {
+        console.warn("Session type count mismatch", stats);
+        return false;
+    }
+    return true;
+};
+
+// 统计数据清理（将无效数据转为安全值）
+const sanitizeFocusStats = (stats: FocusStats): FocusStats => {
+    return {
+        total_sessions: Math.max(stats.total_sessions, 0),
+        total_minutes: Math.max(stats.total_minutes, 0),
+        completed_sessions: Math.min(Math.max(stats.completed_sessions, 0), stats.total_sessions),
+        work_sessions: Math.max(stats.work_sessions, 0),
+        short_break_sessions: Math.max(stats.short_break_sessions, 0),
+        long_break_sessions: Math.max(stats.long_break_sessions, 0),
+        completed_work_sessions: Math.min(Math.max(stats.completed_work_sessions, 0), stats.work_sessions),
+        work_duration_minutes: Math.max(stats.work_duration_minutes, 0),
+    };
 };
 
 const totalWordsThisMonth = computed(() => {
@@ -110,6 +220,14 @@ const maxWordsInDay = computed(() => {
     return Math.max(...writingRecords.value.map(r => r.total_words));
 });
 
+// Format date to YYYY-MM-DD using local time (not UTC)
+const formatDateToYMD = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const heatmapData = computed(() => {
     const data: { date: string; value: number; level: number }[] = [];
     const today = new Date();
@@ -117,7 +235,7 @@ const heatmapData = computed(() => {
     for (let i = 83; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = formatDateToYMD(date);
 
         const record = writingRecords.value.find(r => r.date === dateStr);
         const value = record?.total_words || 0;
@@ -173,48 +291,84 @@ const goBack = () => {
 
 const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
+    // 处理无效日期
+    if (isNaN(date.getTime())) {
+        return dateStr;
+    }
     return `${date.getMonth() + 1}/${date.getDate()}`;
 };
 
 // Focus session computed properties
+// 专注时长：仅统计工作会话的时长（精确到分钟）
 const totalFocusMinutes = computed(() => {
-    return focusStats.value.total_minutes;
+    // 确保非负
+    return Math.max(focusStats.value.work_duration_minutes || 0, 0);
 });
 
-const formatFocusTime = (minutes: number) => {
-    if (minutes < 60) {
-        return `${minutes}分钟`;
+// 完成番茄数：仅统计完成的工作会话
+const completedPomodoros = computed(() => {
+    // 确保非负且不超过工作会话总数
+    const completed = focusStats.value.completed_work_sessions || 0;
+    const totalWork = focusStats.value.work_sessions || 0;
+    return Math.max(0, Math.min(completed, totalWork));
+});
+
+// 格式化专注时长显示
+const formatFocusTime = (minutes: number): string => {
+    // 确保输入非负
+    const mins = Math.max(Math.round(minutes), 0);
+    
+    if (mins < 60) {
+        return `${mins}分钟`;
     }
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`;
+    const hours = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    return remainingMins > 0 ? `${hours}小时${remainingMins}分钟` : `${hours}小时`;
 };
 
+// 最近专注记录，已排序并添加数据校验
+const recentFocusSessions = computed(() => {
+    // 使用已校验过的数据
+    const validSessions = focusSessions.value;
+    
+    // 按开始时间降序排序（最新的在前）
+    // 使用时间戳确保跨天时间比较正确
+    return validSessions
+        .sort((a, b) => {
+            const timeA = new Date(a.started_at).getTime();
+            const timeB = new Date(b.started_at).getTime();
+            return timeB - timeA;
+        })
+        .slice(0, 5);
+});
+
+// 专注热力图数据
 const focusHeatmapData = computed(() => {
     const data: { date: string; value: number; level: number }[] = [];
     const today = new Date();
 
+    // 预先计算所有日期的总分钟数
+    const dateToMinutes: Record<string, number> = {};
+    for (let j = 83; j >= 0; j--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - j);
+        const dStr = formatDateToYMD(d);
+        const daySessions = focusSessions.value.filter(s => {
+            // 使用字符串前缀匹配确保日期正确分组
+            return s.started_at.startsWith(dStr);
+        });
+        dateToMinutes[dStr] = daySessions.reduce((sum, s) => sum + s.duration_minutes, 0);
+    }
+
+    const maxMinutes = Math.max(...Object.values(dateToMinutes), 60);
+
     for (let i = 83; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-
-        // Count focus sessions for this date
-        const daySessions = focusSessions.value.filter(s => s.started_at.startsWith(dateStr));
-        const totalMinutes = daySessions.reduce((sum, s) => sum + s.duration_minutes, 0);
-        const value = totalMinutes;
+        const dateStr = formatDateToYMD(date);
+        const value = dateToMinutes[dateStr] || 0;
 
         let level = 0;
-        const maxMinutes = Math.max(...focusSessions.value.reduce((acc: number[], s) => {
-            const day = s.started_at.split('T')[0];
-            const existing = acc.find((_, i) => {
-                const existingDate = new Date(today);
-                existingDate.setDate(existingDate.getDate() - (83 - i));
-                return existingDate.toISOString().split('T')[0] === day;
-            }, 0);
-            return acc;
-        }, []), 60);
-
         if (value > 0) {
             if (value <= 25) level = 1;
             else if (value <= 50) level = 2;
@@ -228,26 +382,22 @@ const focusHeatmapData = computed(() => {
     return data;
 });
 
-const recentFocusSessions = computed(() => {
-    return focusSessions.value.slice(0, 10);
-});
-
 const getSessionTypeLabel = (type: string) => {
-    switch (type) {
-        case 'work': return '专注';
-        case 'short_break': return '短休息';
-        case 'long_break': return '长休息';
-        default: return type;
-    }
+    const nameMap: Record<string, string> = {
+        work: '专注',
+        short_break: '短休息',
+        long_break: '长休息',
+    };
+    return nameMap[type] ?? type;
 };
 
 const getSessionTypeColor = (type: string) => {
-    switch (type) {
-        case 'work': return '#ef4444';
-        case 'short_break': return '#22c55e';
-        case 'long_break': return '#3b82f6';
-        default: return '#6b7280';
-    }
+    const colorMap: Record<string, string> = {
+        work: '#ef4444',
+        short_break: '#22c55e',
+        long_break: '#3b82f6',
+    };
+    return colorMap[type] ?? '#6b7280';
 };
 </script>
 
@@ -312,7 +462,7 @@ const getSessionTypeColor = (type: string) => {
                             </div>
                             <div class="overflow-hidden">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">写作时长</p>
-                                <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ totalDuration }} 分钟</p>
+                                <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ formatFocusTime(totalDuration) }}</p>
                             </div>
                         </div>
                     </n-card>
@@ -357,7 +507,7 @@ const getSessionTypeColor = (type: string) => {
                             </div>
                             <div class="overflow-hidden">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">完成番茄</p>
-                                <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ focusStats.completed_sessions }}</p>
+                                <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ completedPomodoros }}</p>
                             </div>
                         </div>
                     </n-card>

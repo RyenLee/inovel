@@ -5,6 +5,7 @@ use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{EnvFilter, Layer, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 static LOG_GUARDS: OnceLock<Vec<WorkerGuard>> = OnceLock::new();
+static LOG_INIT: OnceLock<()> = OnceLock::new();
 
 pub struct LogConfig {
     pub log_dir: PathBuf,
@@ -23,6 +24,10 @@ impl Default for LogConfig {
 }
 
 pub fn init_logging(config: LogConfig) -> Result<(), String> {
+    if LOG_INIT.get().is_some() {
+        return Ok(());
+    }
+
     let _ = std::fs::create_dir_all(&config.log_dir);
 
     let (file_non_blocking, file_guard) = tracing_appender::non_blocking(
@@ -81,6 +86,8 @@ pub fn init_logging(config: LogConfig) -> Result<(), String> {
         .with(error_layer)
         .init();
 
+    let _ = LOG_INIT.set(());
+
     Ok(())
 }
 
@@ -97,6 +104,7 @@ pub fn init_logging_with_app(app_handle: &AppHandle) -> Result<(), String> {
     init_logging(config)?;
 
     super::operation::init_operation_log_db(app_handle)?;
+    super::enum_dict::init_enum_dictionary(app_handle)?;
 
     Ok(())
 }

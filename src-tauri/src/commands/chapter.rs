@@ -1,4 +1,5 @@
 use crate::db::{get_db_path, init_db};
+use crate::logging::operation::record_simple_operation;
 use crate::models::{Chapter, ChapterStatusCount, Volume, VolumeWithChapters};
 use base64::{Engine as _, engine::general_purpose};
 use rusqlite::Connection;
@@ -34,7 +35,7 @@ pub async fn save_image(
     // 获取项目路径
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
-    let (storage_path, project_name): (String, String) = conn
+    let (storage_path, _project_name): (String, String) = conn
         .query_row(
             "SELECT path, name FROM projects WHERE id = ?1",
             [project_id],
@@ -43,7 +44,7 @@ pub async fn save_image(
         .map_err(|e| format!("项目不存在: {}", e))?;
 
     // 创建 media 目录
-    let media_dir = Path::new(&storage_path).join(&project_name).join("media");
+    let media_dir = Path::new(&storage_path).join("media");
     fs::create_dir_all(&media_dir).map_err(|e| format!("创建 media 目录失败: {}", e))?;
 
     // 生成唯一的文件名
@@ -142,7 +143,7 @@ pub async fn create_chapter(
     let sort_order = max_order.unwrap_or(-1) + 1;
     let now = chrono::Utc::now().to_rfc3339();
 
-    let (storage_path, project_name): (String, String) = conn
+    let (storage_path, _project_name): (String, String) = conn
         .query_row(
             "SELECT path, name FROM projects WHERE id = ?1",
             [project_id],
@@ -157,7 +158,6 @@ pub async fn create_chapter(
     let id = conn.last_insert_rowid();
 
     let actual_file_path = Path::new(&storage_path)
-        .join(&project_name)
         .join("chapters")
         .join(format!("v{}_c{}.md", volume_id, id));
     fs::create_dir_all(actual_file_path.parent().unwrap())
@@ -173,10 +173,10 @@ pub async fn create_chapter(
     )
     .map_err(|e| format!("更新文件路径失败: {}", e))?;
 
-    Ok(Chapter {
+    let chapter = Chapter {
         id,
         volume_id,
-        title,
+        title: title.clone(),
         file_path: actual_file_path.to_string_lossy().to_string(),
         sort_order,
         summary: String::new(),
@@ -184,7 +184,19 @@ pub async fn create_chapter(
         status: "draft".to_string(),
         created_at: now.clone(),
         updated_at: now,
-    })
+    };
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "chapter",
+        "create",
+        "chapter",
+        Some(id),
+        Some(&format!("创建章节: {}", title)),
+        Some(project_id),
+    );
+
+    Ok(chapter)
 }
 
 /// 更新卷名称
@@ -209,6 +221,17 @@ pub async fn update_volume_name(
         (&new_name, volume_id),
     )
     .map_err(|e| format!("更新卷名失败: {}", e))?;
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "volume",
+        "update_name",
+        "volume",
+        Some(volume_id),
+        Some(&format!("更新卷名: {}", new_name)),
+        None,
+    );
+
     Ok(())
 }
 
@@ -235,6 +258,17 @@ pub async fn update_chapter_title(
         (&new_title, &now, chapter_id),
     )
     .map_err(|e| format!("更新章节标题失败: {}", e))?;
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "chapter",
+        "update_title",
+        "chapter",
+        Some(chapter_id),
+        Some(&format!("更新章节标题: {}", new_title)),
+        None,
+    );
+
     Ok(())
 }
 
@@ -308,6 +342,17 @@ pub async fn delete_volume(app_handle: AppHandle, volume_id: i64) -> Result<(), 
         .ok();
     conn.execute("DELETE FROM volumes WHERE id = ?1", [volume_id])
         .map_err(|e| format!("删除卷失败: {}", e))?;
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "volume",
+        "delete",
+        "volume",
+        Some(volume_id),
+        Some("删除卷及其章节"),
+        None,
+    );
+
     Ok(())
 }
 
@@ -345,6 +390,20 @@ pub async fn delete_chapter(
 
     conn.execute("DELETE FROM chapters WHERE id = ?1", [chapter_id])
         .map_err(|e| format!("删除章节记录失败: {}", e))?;
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "chapter",
+        "delete",
+        "chapter",
+        Some(chapter_id),
+        Some(&format!(
+            "删除章节{}",
+            if keep_file { "(保留文件)" } else { "" }
+        )),
+        None,
+    );
+
     Ok(())
 }
 
@@ -432,6 +491,17 @@ pub async fn move_chapter_to_volume(
         (target_volume_id, sort_order, chapter_id),
     )
     .map_err(|e| format!("移动章节失败: {}", e))?;
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "chapter",
+        "move",
+        "chapter",
+        Some(chapter_id),
+        Some(&format!("移动章节到卷 {}", target_volume_id)),
+        None,
+    );
+
     Ok(())
 }
 
@@ -647,6 +717,17 @@ pub async fn update_chapter_status(
         (&status, &now, chapter_id),
     )
     .map_err(|e| format!("更新章节状态失败: {}", e))?;
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "chapter",
+        "update_status",
+        "chapter",
+        Some(chapter_id),
+        Some(&format!("更新章节状态: {}", status)),
+        None,
+    );
+
     Ok(())
 }
 

@@ -3,15 +3,18 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick, defineAsyncComp
 import { useRoute, useRouter } from "vue-router";
 import { useProjectStore } from "../stores/project";
 import { useEditorStore } from "../stores/editor";
-import { useWorldbuildingStore } from "../stores/worldbuilding";
-import { NButton, NIcon, NProgress, useMessage, NTooltip, NModal, NSelect, NInputNumber, NRadioGroup, NRadio, NTag } from "naive-ui";
-import { ArrowLeft, Save, FileText, Sun, Moon, ChevronLeft, ChevronRight, Target, Settings, BarChart3, User, Globe, X, GitBranch, AlertTriangle, Download, Package, Maximize2, Minimize2, Sparkles, Keyboard } from "lucide-vue-next";
+import { useWorldbuildingStore, type Character, type Location, type Organization } from "../stores/worldbuilding";
+import { useEnumDictionary } from "../stores/enumDictionary";
+import { NButton, NIcon, NProgress, useMessage, NTooltip, NModal, NSelect, NInputNumber, NRadioGroup, NRadio, NTag, NSpace } from "naive-ui";
+import { ArrowLeft, Save, FileText, Sun, Moon, ChevronLeft, ChevronRight, Target, Settings, BarChart3, User, Globe, X, GitBranch, AlertTriangle, Download, Package, Maximize2, Minimize2, Sparkles, Keyboard, Timer, Lightbulb } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useTheme } from "../composables/useTheme";
+
 import TreeSidebar from "../components/TreeSidebar.vue";
 import OutlinePanel from "../components/OutlinePanel.vue";
 import MarkdownEditor from "../components/MarkdownEditor.vue";
-// 延迟加载非首屏组件
+
 const WorldbuildingPanel = defineAsyncComponent(() => import("../components/WorldbuildingPanel.vue"));
 const RelationshipGraph = defineAsyncComponent(() => import("../components/RelationshipGraph.vue"));
 const Timeline = defineAsyncComponent(() => import("../components/Timeline.vue"));
@@ -22,12 +25,24 @@ const BackupDialog = defineAsyncComponent(() => import("../components/BackupDial
 const ShortcutSettings = defineAsyncComponent(() => import("../components/ShortcutSettings.vue"));
 const PomodoroTimer = defineAsyncComponent(() => import("../components/PomodoroTimer.vue"));
 const InspirationBoard = defineAsyncComponent(() => import("../components/InspirationBoard.vue"));
-import { Timer, Lightbulb } from "lucide-vue-next";
-import { useTheme } from "../composables/useTheme";
 
 const { isDark, toggleDark } = useTheme();
 
+// Initialize enum dictionary
+const enumDictionary = useEnumDictionary()
+enumDictionary.loadDictionary()
+
 // Types
+interface SimpleCharacter {
+  id: number
+  name: string
+  gender?: string
+  age?: number | null
+  appearance?: string
+  personality?: string
+  background?: string
+}
+
 interface Chapter {
   id: number;
   volume_id: number;
@@ -65,7 +80,8 @@ const sidebarMode = ref<"tree" | "outline">("tree"); // 侧边栏模式切换
 const sidebarTab = ref<"chapters" | "worldbuilding" | "relationship" | "timeline" | "inspiration">("chapters"); // 侧边栏内容切换
 const chapterTree = ref<VolumeWithChapters[]>([]);
 const editorRef = ref<InstanceType<typeof MarkdownEditor> | null>(null);
-const worldbuildingPanelRef = ref<{ viewCharacterDetail: (character: Character) => void } | null>(null);
+const worldbuildingPanelRef = ref<{ viewCharacterDetail: (character: Character) => void; viewLocationDetail: (location: Location) => void; viewOrganizationDetail: (organization: Organization) => void } | null>(null);
+const pomodoroTimerRef = ref<InstanceType<typeof PomodoroTimer> | null>(null);
 
 // Reload trigger for TreeSidebar
 const reloadTrigger = ref(0);
@@ -108,22 +124,13 @@ const nameCategoryOptions = [
   { label: "英文地名", value: "western_place" },
 ];
 
-const genderOptions = [
+const genderOptions = computed(() => [
   { label: "不限", value: "any" },
-  { label: "男", value: "male" },
-  { label: "女", value: "female" },
-];
-
-// Character detail sidebar state
-interface Character {
-  id: number
-  name: string
-  gender: string
-  age: number | null
-  appearance: string
-  personality: string
-  background: string
-}
+  ...enumDictionary.genderOptions.value.map(opt => ({
+    label: opt.label,
+    value: opt.value,
+  })),
+]);
 
 const showHistory = ref(false)
 const showSensitiveWords = ref(false)
@@ -187,10 +194,22 @@ const toggleFullscreen = async () => {
 
 // Listen to fullscreen state changes
 const unlistenFullscreen = ref<(() => void) | null>(null);
+const unlistenWindowMove = ref<(() => void) | null>(null);
+const unlistenWindowResize = ref<(() => void) | null>(null);
 const setupFullscreenListener = async () => {
   // Use listen to capture resize events which include fullscreen changes
   unlistenFullscreen.value = await appWindow.onResized(async () => {
     isFullscreen.value = await appWindow.isFullscreen();
+    // Also reposition Pomodoro timer on resize!
+    nextTick(() => {
+      pomodoroTimerRef.value?.reposition?.();
+    });
+  });
+  // Listen to window move to reposition timer!
+  unlistenWindowMove.value = await appWindow.listen('tauri://move', () => {
+    nextTick(() => {
+      pomodoroTimerRef.value?.reposition?.();
+    });
   });
 };
 
@@ -203,13 +222,15 @@ const exitZenMode = () => {
   // Note: pomodoro zen mode is controlled by the timer itself
 };
 
-const handleSelectCharacter = async (character: Character) => {
-  // 切换到世界观面板并显示人物详情
+const handleSelectCharacter = async (character: SimpleCharacter) => {
   sidebarTab.value = 'worldbuilding'
   showWorldbuilding.value = true
-  // 等待组件挂载完成后再调用方法
   await nextTick()
-  worldbuildingPanelRef.value?.viewCharacterDetail(character)
+  worldbuildingPanelRef.value?.viewCharacterDetail(character as any)
+}
+
+const onSelectCharacterFromGraph = (character: SimpleCharacter) => {
+  handleSelectCharacter(character)
 }
 
 // Handle timeline chapter navigation
@@ -227,7 +248,7 @@ const handleNavigateChapter = async (chapterId: number) => {
 }
 
 // Handle mention click from editor
-const handleMentionClick = (id: string) => {
+const handleMentionClick = async (id: string) => {
   const m = id.match(/^(character|location|organization)-(\d+)$/)
   if (!m) return
   const [, type, idStr] = m
@@ -242,10 +263,26 @@ const handleMentionClick = (id: string) => {
     } else {
       message.warning('未找到该人物')
     }
-  } else if (type === 'location' || type === 'organization') {
-    // For location/organization, show the worldbuilding panel on the relevant tab
-    sidebarTab.value = 'worldbuilding'
-    message.success(`已切换到世界观面板`)
+  } else if (type === 'location') {
+    const location = worldbuildingStore.getLocationById(numericId)
+    if (location) {
+      sidebarTab.value = 'worldbuilding'
+      showWorldbuilding.value = true
+      await nextTick()
+      worldbuildingPanelRef.value?.viewLocationDetail(location)
+    } else {
+      message.warning('未找到该地点')
+    }
+  } else if (type === 'organization') {
+    const org = worldbuildingStore.getOrganizationById(numericId)
+    if (org) {
+      sidebarTab.value = 'worldbuilding'
+      showWorldbuilding.value = true
+      await nextTick()
+      worldbuildingPanelRef.value?.viewOrganizationDetail(org)
+    } else {
+      message.warning('未找到该组织')
+    }
   }
 }
 
@@ -620,6 +657,15 @@ watch(
   }
 );
 
+// Watch for pomodoro visibility to reposition timer
+watch(showPomodoro, (visible) => {
+  if (visible) {
+    nextTick(() => {
+      pomodoroTimerRef.value?.reposition?.();
+    });
+  }
+});
+
 onMounted(async () => {
   if (projectStore.recentProjects.length === 0) {
     await projectStore.getRecentProjects();
@@ -628,6 +674,13 @@ onMounted(async () => {
   await loadChapterTree();
   await loadWritingGoal();
   await loadTodayRecord();
+  
+  // 预加载世界观数据，确保@引用功能在编辑器打开后即可正常使用
+  if (projectId.value) {
+    const worldbuildingStore = useWorldbuildingStore();
+    await worldbuildingStore.loadAll(Number(projectId.value));
+  }
+  
   startAutoSave();
   window.addEventListener("keydown", handleKeyDown);
   await setupFullscreenListener();
@@ -641,6 +694,12 @@ onUnmounted(async () => {
   window.removeEventListener("keydown", handleKeyDown);
   if (unlistenFullscreen.value) {
     unlistenFullscreen.value();
+  }
+  if (unlistenWindowMove.value) {
+    unlistenWindowMove.value();
+  }
+  if (unlistenWindowResize.value) {
+    unlistenWindowResize.value();
   }
   // Auto-commit on close
   try {
@@ -731,7 +790,7 @@ const todayNewWords = computed(() => {
             </template>
             保存
           </n-button>
-          <n-tooltip trigger="hover">
+<!--           <n-tooltip trigger="hover">
             <template #trigger>
               <button @click="openNameGenerator" class="p-2 rounded-lg transition-colors duration-300"
                 :class="isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
@@ -739,7 +798,7 @@ const todayNewWords = computed(() => {
               </button>
             </template>
             名称生成
-          </n-tooltip>
+          </n-tooltip> -->
           <n-tooltip trigger="hover">
             <template #trigger>
               <button @click="toggleZenMode" class="p-2 rounded-lg transition-colors duration-300"
@@ -761,15 +820,6 @@ const todayNewWords = computed(() => {
           </n-tooltip>
           <n-tooltip trigger="hover">
             <template #trigger>
-              <button @click="goToProjectSettings" class="p-2 rounded-lg transition-colors duration-300"
-                :class="isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
-                <Settings class="w-5 h-5" />
-              </button>
-            </template>
-            项目设置
-          </n-tooltip>
-          <n-tooltip trigger="hover">
-            <template #trigger>
               <button @click="goToProjectStats" class="p-2 rounded-lg transition-colors duration-300"
                 :class="isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
                 <BarChart3 class="w-5 h-5" />
@@ -777,13 +827,6 @@ const todayNewWords = computed(() => {
             </template>
             项目统计
           </n-tooltip>
-          <button @click="() => toggleDark()" class="p-2 rounded-lg transition-colors duration-300" :class="isDark
-            ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400'
-            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-            ">
-            <Sun v-if="isDark" class="w-5 h-5" />
-            <Moon v-else class="w-5 h-5" />
-          </button>
           <n-tooltip trigger="hover">
             <template #trigger>
               <button @click="showShortcuts = true" class="p-2 rounded-lg transition-colors duration-300"
@@ -811,6 +854,22 @@ const todayNewWords = computed(() => {
               </button>
             </template>
             {{ showInspirationBoard ? '隐藏' : '显示' }}灵感看板
+          </n-tooltip>
+          <button @click="() => toggleDark()" class="p-2 rounded-lg transition-colors duration-300" :class="isDark
+            ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400'
+            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+            ">
+            <Sun v-if="isDark" class="w-5 h-5" />
+            <Moon v-else class="w-5 h-5" />
+          </button>
+          <n-tooltip trigger="hover">
+            <template #trigger>
+              <button @click="goToProjectSettings" class="p-2 rounded-lg transition-colors duration-300"
+                :class="isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+                <Settings class="w-5 h-5" />
+              </button>
+            </template>
+            项目设置
           </n-tooltip>
         </div>
       </div>
@@ -864,14 +923,14 @@ const todayNewWords = computed(() => {
             <div class="flex items-center gap-2 mb-3 pb-3 border-b border-gray-700">
               <FileText class="w-4 h-4 text-blue-500" />
               <h2 class="text-base font-medium text-gray-300">{{ currentChapter.title }}</h2>
-              <span class="text-xs text-gray-500 ml-auto">{{ totalWordCount }} 字</span>
+              <span class="text-xs text-gray-500 ml-auto">{{ currentChapter.word_count_cache || 0 }} 字</span>
             </div>
             <!-- Markdown Editor -->
             <MarkdownEditor ref="editorRef" v-model="currentContent" :chapter-id="currentChapter.id"
               :project-id="Number(projectId)" :volume-word-count="volumeWordCount" :total-word-count="totalWordCount"
               :is-dark="isDark" :editor-mode="editorStore.mode" @update:model-value="handleContentUpdate"
               @mention-click="handleMentionClick" @show-history="showHistory = true" @create-snapshot="manualSnapshot"
-              @word-count-updated="handleWordCountUpdated" />
+              @word-count-updated="handleWordCountUpdated" @open-name-generator="openNameGenerator" />
           </div>
         </div>
         <!-- Normal mode editor -->
@@ -892,7 +951,7 @@ const todayNewWords = computed(() => {
               :project-id="Number(projectId)" :volume-word-count="volumeWordCount" :total-word-count="totalWordCount"
               :is-dark="isDark" :editor-mode="editorStore.mode" @update:model-value="handleContentUpdate"
               @mention-click="handleMentionClick" @show-history="showHistory = true" @create-snapshot="manualSnapshot"
-              @word-count-updated="handleWordCountUpdated" />
+              @word-count-updated="handleWordCountUpdated" @open-name-generator="openNameGenerator" />
           </div>
         </div>
       </main>
@@ -936,7 +995,7 @@ const todayNewWords = computed(() => {
         <div class="flex-1 overflow-hidden">
           <WorldbuildingPanel ref="worldbuildingPanelRef" v-if="sidebarTab === 'worldbuilding'" />
           <RelationshipGraph v-else-if="sidebarTab === 'relationship'" :project-id="Number(projectId)"
-            @select-character="handleSelectCharacter" />
+            @select-character="onSelectCharacterFromGraph" />
           <Timeline v-else-if="sidebarTab === 'timeline'" :project-id="Number(projectId)"
             @navigate-chapter="handleNavigateChapter" />
         </div>
@@ -1082,7 +1141,7 @@ const todayNewWords = computed(() => {
     <ShortcutSettings v-model:show="showShortcuts" />
 
     <!-- Pomodoro Timer (floating) -->
-    <PomodoroTimer v-if="projectId && !isLoading" :project-id="Number(projectId)" :is-dark="isDark"
+    <PomodoroTimer ref="pomodoroTimerRef" v-if="projectId && !isLoading" :project-id="Number(projectId)" :is-dark="isDark"
       :visible="showPomodoro" @zen-mode="handlePomodoroZenMode" />
 
     <!-- Inspiration Board Modal -->

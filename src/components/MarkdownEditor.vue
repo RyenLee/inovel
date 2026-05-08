@@ -25,9 +25,10 @@ import {
   Eye,
   Upload,
   X,
+  Sparkles,
 } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { useFolderDialog } from "../composables/useFolderDialog";
 import { readFile } from "@tauri-apps/plugin-fs";
 import type { EditorMode } from "../stores/editor";
 import TemplateSelector from "./TemplateSelector.vue";
@@ -49,6 +50,7 @@ const emit = defineEmits<{
   (e: "show-history"): void;
   (e: "create-snapshot"): void;
   (e: "word-count-updated", count: number): void;
+  (e: "open-name-generator"): void;
 }>();
 const editorRootRef = ref<HTMLElement | null>(null);
 const editorContainerRef = ref<HTMLElement | null>(null);
@@ -95,8 +97,9 @@ const {
   beautifyDropdownOptions,
 } = toRefs(beautify);
 
+// 行高比例
 const lineHeightRatio = computed(() => {
-    const fontSize = 16;
+    const fontSize = 14;
     return lineHeight.value / fontSize;
 });
 const lineHeightPx = computed(() => `${lineHeight.value}px`);
@@ -105,6 +108,7 @@ useEditorLayout({
   editorRootRef: () => editorRootRef.value,
   editor,
 });
+const { selectFile } = useFolderDialog();
 const showTemplateSelector = ref(false);
 const showTextImportDialog = ref(false);
 const templateInsertMode = ref<'replace' | 'insert'>('replace');
@@ -322,36 +326,36 @@ const toggleTemplateMode = () => {
   templateInsertMode.value = templateInsertMode.value === 'replace' ? 'insert' : 'replace';
 };
 const selectImageForImg = async (img: HTMLImageElement) => {
-  try {
-    const selected = await open({
-      filters: [{
-        name: 'Image',
-        extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']
-      }]
-    });
-    if (selected && !Array.isArray(selected)) {
-      const fileData = await readFile(selected);
-      let binary = '';
-      for (let i = 0; i < fileData.length; i++) {
-        binary += String.fromCharCode(fileData[i]);
-      }
-      const base64Data = btoa(binary);
-      const fileName = selected.split('/').pop() || 'image.png';
-      const newPath = await invoke<string>('save_image', {
-        projectId: props.projectId,
-        fileName,
-        fileData: base64Data
-      });
-      img.src = newPath;
-      if (editor.value) {
-        const html = editor.value.getHTML();
-        emit('update:modelValue', html);
-        emit('requestSave');
-      }
-    }
+  const { path, error } = await selectFile({
+    title: "选择图片",
+    filters: [{
+      name: 'Image',
+      extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']
+    }]
+  });
+  if (error) {
+    console.error(error);
+    return;
   }
-  catch (error) {
-    console.error('选择图片失败:', error);
+  if (path) {
+    const fileData = await readFile(path);
+    let binary = '';
+    for (let i = 0; i < fileData.length; i++) {
+      binary += String.fromCharCode(fileData[i]);
+    }
+    const base64Data = btoa(binary);
+    const fileName = path.replace(/\\/g, '/').split('/').pop() || 'image.png';
+    const newPath = await invoke<string>('save_image', {
+      projectId: props.projectId,
+      fileName,
+      fileData: base64Data
+    });
+    img.src = newPath;
+    if (editor.value) {
+      const html = editor.value.getHTML();
+      emit('update:modelValue', html);
+      emit('requestSave');
+    }
   }
 };
 defineExpose({
@@ -539,21 +543,19 @@ defineExpose({
           打开模板库
         </NTooltip>
 
-        <!-- <NTooltip trigger="hover">
+        <NTooltip trigger="hover">
           <template #trigger>
-            <div class="flex items-center">
-              <NButton size="tiny" quaternary class="px-1!" @click="toggleTemplateMode">
-                <template #icon>
-                  <NIcon size="12">
-                    <component :is="templateInsertMode === 'replace' ? Replace : Plus" />
-                  </NIcon>
-                </template>
-              </NButton>
-            </div>
+            <NButton size="small" tertiary @click="emit('open-name-generator')">
+              <template #icon>
+                <NIcon>
+                  <Type />
+                </NIcon>
+              </template>
+            </NButton>
           </template>
-          {{ templateInsertMode === 'replace' ? '替换模式' : '插入模式' }}（点击切换）
-        </NTooltip> -->
-
+          名称生成
+        </NTooltip>
+        
         <NDropdown trigger="hover" :options="beautifyDropdownOptions" @select="beautify.handleBeautifyDropdown">
           <NButton size="small" tertiary>
             <template #icon>
@@ -598,7 +600,7 @@ defineExpose({
           </div>
 
           <div class="space-y-2">
-            <NSlider v-model:value="lineHeight" :min="10" :max="50" :step="1" :tooltip="false" />
+            <NSlider v-model:value="lineHeight" :min="16" :max="50" :step="1" :tooltip="false" />
             <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>紧凑</span>
               <span class="font-medium text-blue-500">{{ lineHeight }}px</span>
@@ -888,6 +890,7 @@ defineExpose({
 
 .editor-content-wrapper .tiptap p {
   margin-bottom: 0.75em !important;
+  line-height: v-bind(lineHeightRatio) !important;
 }
 
 .editor-content-wrapper .tiptap li {
@@ -967,7 +970,7 @@ defineExpose({
 .paper-grid .tiptap p,
 .paper-dots .tiptap p {
   line-height: v-bind(lineHeightRatio) !important;
-  margin-bottom: 0.75em !important;
+  margin-bottom: 1.25em !important;
 }
 
 .paper-lined .tiptap li,

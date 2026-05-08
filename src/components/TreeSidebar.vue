@@ -68,14 +68,17 @@ const showStatusFilter = ref(false);
 const showTemplateSelector = ref(false);
 const currentVolumeIdForTemplate = ref<number | null>(null);
 
-const statusFilterOptions = [
-  { label: '全部章节', value: 'all' },
-  { label: '大纲', value: 'outline', color: '#9CA3AF' },
-  { label: '草稿', value: 'draft', color: '#F59E0B' },
-  { label: '修订', value: 'revised', color: '#3B82F6' },
-  { label: '定稿', value: 'final', color: '#10B981' },
-  { label: '废弃', value: 'abandoned', color: '#EF4444' },
-];
+const statusFilterOptions = computed(() => {
+  const base: Array<{ label: string; value: string; color?: string }> = [{ label: '全部章节', value: 'all' }];
+  const hardcoded: Array<{ label: string; value: string; color: string }> = [
+    { label: '大纲', value: 'outline', color: '#9CA3AF' },
+    { label: '草稿', value: 'draft', color: '#F59E0B' },
+    { label: '修订', value: 'revised', color: '#3B82F6' },
+    { label: '定稿', value: 'final', color: '#10B981' },
+    { label: '废弃', value: 'abandoned', color: '#EF4444' },
+  ];
+  return [...base, ...hardcoded];
+});
 
 // Filtered volumes based on status filter
 const filteredVolumes = computed(() => {

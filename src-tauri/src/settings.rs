@@ -19,6 +19,8 @@ pub struct AppConfig {
     pub api: ApiConfig,
     #[serde(default)]
     pub performance: PerformanceConfig,
+    #[serde(default)]
+    pub window: WindowConfig,
 }
 
 impl Default for AppConfig {
@@ -30,6 +32,7 @@ impl Default for AppConfig {
             request_merging: RequestMergingConfig::default(),
             api: ApiConfig::default(),
             performance: PerformanceConfig::default(),
+            window: WindowConfig::default(),
         }
     }
 }
@@ -143,6 +146,55 @@ impl Default for PerformanceConfig {
             monitoring_enabled: true,
             slow_request_threshold_ms: 500,
             log_payload_size: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PortraitConfig {
+    pub enabled: bool,
+    pub default_width: f64,
+    pub default_height: f64,
+    pub min_width: f64,
+    pub min_height: f64,
+}
+
+impl Default for PortraitConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            default_width: 800.0,
+            default_height: 1200.0,
+            min_width: 600.0,
+            min_height: 800.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct WindowConfig {
+    pub default_width: f64,
+    pub default_height: f64,
+    pub min_width: f64,
+    pub min_height: f64,
+    pub max_width: f64,
+    pub max_height: f64,
+    pub resizable: bool,
+    #[serde(default)]
+    pub portrait: PortraitConfig,
+}
+
+impl Default for WindowConfig {
+    fn default() -> Self {
+        Self {
+            default_width: 1200.0,
+            default_height: 800.0,
+            min_width: 600.0,
+            min_height: 800.0,
+            max_width: 1920.0,
+            max_height: 1200.0,
+            resizable: true,
+            portrait: PortraitConfig::default(),
         }
     }
 }

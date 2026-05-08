@@ -22,7 +22,7 @@ import {
 } from "naive-ui";
 import { ArrowLeft, Target, Save, FolderOpen, Keyboard, ImageIcon } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { useFolderDialog } from "../composables/useFolderDialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useProjectStore } from "../stores/project";
@@ -34,6 +34,7 @@ const route = useRoute();
 const router = useRouter();
 const message = useMessage();
 const projectStore = useProjectStore();
+const { selectFile } = useFolderDialog();
 
 const projectId = computed(() => Number(route.params.projectId));
 const isLoading = ref(false);
@@ -124,35 +125,38 @@ const loadSettings = async () => {
 
 // Change cover image
 const changeCover = async () => {
+    const { path, error } = await selectFile({
+        title: "选择封面图片",
+        filters: [{
+            name: "Images",
+            extensions: ["jpg", "jpeg", "png"],
+        }],
+    });
+
+    if (error) {
+        message.error(error);
+        return;
+    }
+    if (!path) return;
+
+    isChangingCover.value = true;
     try {
-        const selected = await open({
-            multiple: false,
-            filters: [{
-                name: "Images",
-                extensions: ["jpg", "jpeg", "png"],
-            }],
-        });
+      const newCoverPath = await invoke<string>("set_cover", {
+        projectId: projectId.value,
+        imagePath: path,
+      });
 
-        if (!selected) return;
+      coverUrl.value = convertFileSrc(newCoverPath);
+      message.success("封面已更新");
 
-        isChangingCover.value = true;
-        const newCoverPath = await invoke<string>("set_cover", {
-            projectId: projectId.value,
-            imagePath: selected,
-        });
-
-        coverUrl.value = convertFileSrc(newCoverPath);
-        message.success("封面已更新");
-
-        // Update current project
-        if (projectStore.currentProject) {
-            projectStore.currentProject.cover_path = newCoverPath;
-        }
+      if (projectStore.currentProject) {
+        projectStore.currentProject.cover_path = newCoverPath;
+      }
     } catch (error) {
-        console.error("Failed to change cover:", error);
-        message.error(`更换封面失败: ${error}`);
+      console.error("Failed to change cover:", error);
+      message.error(`更换封面失败: ${error}`);
     } finally {
-        isChangingCover.value = false;
+      isChangingCover.value = false;
     }
 };
 
@@ -409,18 +413,6 @@ const handleDecrypt = async () => {
                             </n-card>
                         </n-gi>
                     </n-grid>
-                </n-tab-pane>
-
-                <n-tab-pane name="shortcuts" tab="快捷键">
-                    <ShortcutSettings :project-id="projectId" />
-                </n-tab-pane>
-
-                <n-tab-pane name="worldbuilding" tab="世界观">
-                    <n-card title="世界观设定" hoverable>
-                        <div class="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 py-4">
-                            <span>点击编辑器左侧的世界图标进入世界观设定面板</span>
-                        </div>
-                    </n-card>
                 </n-tab-pane>
 
                 <n-tab-pane name="security" tab="安全性">

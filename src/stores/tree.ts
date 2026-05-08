@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import { useEnumDictionary } from './enumDictionary'
 
 export type ChapterStatus = 'outline' | 'draft' | 'revised' | 'final' | 'abandoned';
 export type ChapterStatusFilter = ChapterStatus | 'all';
@@ -12,40 +13,61 @@ export const CHAPTER_STATUS_OPTIONS = [
   { label: '废弃', value: 'abandoned', color: '#EF4444' },
 ] as const;
 
+const STATUS_COLOR_MAP: Record<string, string> = {
+  outline: '#9CA3AF',
+  draft: '#F59E0B',
+  revised: '#3B82F6',
+  final: '#10B981',
+  abandoned: '#EF4444',
+};
+
 export const getStatusColor = (status: ChapterStatus): string => {
-  const option = CHAPTER_STATUS_OPTIONS.find(o => o.value === status);
-  return option?.color || '#9CA3AF';
+  return STATUS_COLOR_MAP[status] ?? '#9CA3AF';
 };
 
 export const getStatusLabel = (status: ChapterStatus): string => {
+  try {
+    const { getChapterStatusName, isLoaded } = useEnumDictionary()
+    if (isLoaded.value) {
+      const name = getChapterStatusName(status)
+      if (name !== status) return name
+    }
+  } catch {}
   const option = CHAPTER_STATUS_OPTIONS.find(o => o.value === status);
   return option?.label || status;
 };
 
 export const useTreeStore = defineStore("tree", () => {
-  // Status filter state
   const statusFilter = ref<ChapterStatusFilter>('all');
 
-  // Status filter options for UI
-  const statusFilterOptions = [
-    { label: '全部章节', value: 'all' },
-    ...CHAPTER_STATUS_OPTIONS,
-  ];
+  const statusFilterOptions = computed(() => {
+    const base = [{ label: '全部章节', value: 'all' }];
+    try {
+      const { chapterStatuses, isLoaded } = useEnumDictionary()
+      if (isLoaded.value && chapterStatuses.value.length > 0) {
+        return [
+          ...base,
+          ...chapterStatuses.value.map(e => ({
+            label: e.name,
+            value: e.code,
+            color: STATUS_COLOR_MAP[e.code] ?? '#9CA3AF',
+          })),
+        ];
+      }
+    } catch {}
+    return [...base, ...CHAPTER_STATUS_OPTIONS];
+  });
 
-  // Check if filter is active
   const isFilterActive = computed(() => statusFilter.value !== 'all');
 
-  // Set status filter
   function setStatusFilter(filter: ChapterStatusFilter) {
     statusFilter.value = filter;
   }
 
-  // Clear filter
   function clearFilter() {
     statusFilter.value = 'all';
   }
 
-  // Toggle filter
   function toggleStatusFilter(status: ChapterStatus) {
     if (statusFilter.value === status) {
       statusFilter.value = 'all';

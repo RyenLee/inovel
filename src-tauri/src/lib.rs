@@ -18,6 +18,68 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+fn get_startup_window_size(default_config: &settings::WindowConfig) -> (f64, f64) {
+    let db_path = config::get_data_dir_for_webview()
+        .parent()
+        .map(|p| p.join("inovel.db"))
+        .unwrap_or_else(|| std::path::PathBuf::from("inovel.db"));
+
+    if !db_path.exists() {
+        return (default_config.default_width, default_config.default_height);
+    }
+
+    let conn = match rusqlite::Connection::open(&db_path) {
+        Ok(c) => c,
+        Err(_) => return (default_config.default_width, default_config.default_height),
+    };
+
+    let result: Result<(String, i64), _> = conn.query_row(
+        "SELECT path, id FROM projects ORDER BY last_opened_at DESC LIMIT 1",
+        [],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    );
+
+    let (project_path, _project_id) = match result {
+        Ok(r) => r,
+        Err(_) => {
+            let fallback: Result<(String, i64), _> = conn.query_row(
+                "SELECT path, id FROM projects ORDER BY created_at DESC LIMIT 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            );
+            match fallback {
+                Ok(r) => r,
+                Err(_) => return (default_config.default_width, default_config.default_height),
+            }
+        }
+    };
+
+    let project_json_path = std::path::Path::new(&project_path).join("project.json");
+    if !project_json_path.exists() {
+        return (default_config.default_width, default_config.default_height);
+    }
+
+    let content = match std::fs::read_to_string(&project_json_path) {
+        Ok(c) => c,
+        Err(_) => return (default_config.default_width, default_config.default_height),
+    };
+
+    let json: serde_json::Value = match serde_json::from_str(&content) {
+        Ok(j) => j,
+        Err(_) => return (default_config.default_width, default_config.default_height),
+    };
+
+    if let (Some(width), Some(height)) = (
+        json.get("window_width").and_then(|v| v.as_f64()),
+        json.get("window_height").and_then(|v| v.as_f64()),
+    ) {
+        info!("从 project.json 读取窗口大小: {}x{}", width, height);
+        return (width, height);
+    }
+
+    (default_config.default_width, default_config.default_height)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     use tauri::WebviewUrl;
@@ -41,7 +103,7 @@ pub fn run() {
                 .build(),
         )
         .manage(app_state)
-        .manage(shared_config)
+        .manage(shared_config.clone())
         .setup(move |app| {
             app.state::<state::AppState>()
                 .set_app_handle(app.handle().clone());
@@ -50,13 +112,35 @@ pub fn run() {
 
             info!("应用启动中...");
 
-            let _window =
-                WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-                    .title("iNovel")
-                    .inner_size(1200.0, 800.0)
-                    .min_inner_size(900.0, 600.0)
-                    .data_directory(webview_data_dir.clone())
-                    .build()?;
+            let window_config = {
+                let config_guard = shared_config.read().unwrap();
+                let window_cfg = &config_guard.window;
+                settings::WindowConfig {
+                    default_width: window_cfg.default_width,
+                    default_height: window_cfg.default_height,
+                    min_width: window_cfg.min_width,
+                    min_height: window_cfg.min_height,
+                    max_width: window_cfg.max_width,
+                    max_height: window_cfg.max_height,
+                    resizable: window_cfg.resizable,
+                    portrait: window_cfg.portrait.clone(),
+                }
+            };
+
+            let (final_width, final_height) = get_startup_window_size(&window_config);
+
+            let mut builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+                .title("iNovel")
+                .inner_size(final_width, final_height)
+                .min_inner_size(window_config.min_width, window_config.min_height)
+                .max_inner_size(window_config.max_width, window_config.max_height)
+                .data_directory(webview_data_dir.clone());
+
+            if !window_config.resizable {
+                builder = builder.resizable(false);
+            }
+
+            let _window = builder.build()?;
 
             info!("应用启动完成");
             Ok(())
@@ -72,6 +156,9 @@ pub fn run() {
             commands::project::migrate_existing_projects,
             commands::project::check_migration_needed,
             commands::project::rollback_migration,
+            commands::project::save_window_size,
+            commands::project::set_window_size,
+            commands::project::get_window_size,
             commands::chapter::get_chapter_content,
             commands::chapter::save_chapter_content,
             commands::chapter::create_volume,
@@ -176,6 +263,7 @@ pub fn run() {
             logging::commands::get_operation_stats,
             logging::commands::get_error_logs,
             logging::commands::clear_error_logs,
+            logging::commands::get_enum_dictionary,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

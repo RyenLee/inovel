@@ -1,5 +1,7 @@
 use crate::config;
+use crate::logging::enum_dict;
 use crate::logging::operation::{self, OperationLogFilter, RecordOperationParams};
+use std::collections::HashMap;
 use tauri::AppHandle;
 
 #[tauri::command]
@@ -64,4 +66,28 @@ pub async fn clear_error_logs(
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn get_enum_dictionary(
+    app_handle: AppHandle,
+    category: Option<String>,
+) -> Result<HashMap<String, Vec<enum_dict::EnumDefinition>>, String> {
+    use crate::logging::enum_dict::get_all_enums;
+    use crate::config::get_db_path;
+
+    let db_path = get_db_path(&app_handle);
+    let conn = rusqlite::Connection::open(&db_path)
+        .map_err(|e| format!("数据库连接失败: {}", e))?;
+
+    enum_dict::ensure_enum_dictionary_table(&conn)?;
+
+    if let Some(cat) = category {
+        let mut result: HashMap<String, Vec<enum_dict::EnumDefinition>> = HashMap::new();
+        let enums = enum_dict::get_enums_by_category(&conn, &cat)?;
+        result.insert(cat, enums);
+        Ok(result)
+    } else {
+        get_all_enums(&conn)
+    }
 }

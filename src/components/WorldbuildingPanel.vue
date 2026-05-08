@@ -64,7 +64,7 @@
                 <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
                   <n-tag v-if="character.gender" size="small" :type="character.gender === 'male' ? 'info' : 'warning'"
                     :bordered="false" class="rounded-full!">
-                    {{ character.gender === 'male' ? '♂ 男' : '♀ 女' }}
+                    {{ enumDictionary.getGenderName(character.gender) }}
                   </n-tag>
                   <n-tag v-if="character.age" size="small" type="default" :bordered="false" class="rounded-full!">
                     {{ character.age }}岁
@@ -228,13 +228,7 @@
           </n-form-item>
 
           <n-form-item label="性别">
-            <n-radio-group v-model:value="characterForm.gender" name="gender">
-              <n-space>
-                <n-radio value="male">男</n-radio>
-                <n-radio value="female">女</n-radio>
-                <n-radio value="">未知</n-radio>
-              </n-space>
-            </n-radio-group>
+            <n-select v-model:value="characterForm.gender" :options="enumDictionary.genderOptions.value" placeholder="选择性别" style="width: 100%" />
           </n-form-item>
 
           <n-form-item label="年龄">
@@ -281,7 +275,7 @@
           </n-form-item>
 
           <n-form-item label="类型">
-            <n-select v-model:value="locationForm.location_type" :options="locationTypeOptions" placeholder="选择地点类型" />
+            <n-select v-model:value="locationForm.location_type" :options="enumDictionary.locationTypeOptions.value" placeholder="选择地点类型" />
           </n-form-item>
 
           <n-form-item label="描述">
@@ -328,7 +322,7 @@
           </n-form-item>
 
           <n-form-item label="类型">
-            <n-select v-model:value="organizationForm.org_type" :options="orgTypeOptions" placeholder="选择组织类型" />
+            <n-select v-model:value="organizationForm.org_type" :options="enumDictionary.organizationTypeOptions.value" placeholder="选择组织类型" />
           </n-form-item>
 
           <n-form-item label="描述">
@@ -379,7 +373,7 @@
             <div class="flex items-center gap-2">
               <n-tag v-if="viewingCharacter.gender" :type="viewingCharacter.gender === 'male' ? 'info' : 'warning'"
                 size="small">
-                {{ viewingCharacter.gender === 'male' ? '♂ 男' : '♀ 女' }}
+                {{ enumDictionary.getGenderName(viewingCharacter.gender) }}
               </n-tag>
               <n-tag v-if="viewingCharacter.age" type="default" size="small">
                 {{ viewingCharacter.age }}岁
@@ -438,6 +432,151 @@
         </template>
       </n-drawer-content>
     </n-drawer>
+
+    <!-- Location Detail Drawer (Read-only) -->
+    <n-drawer v-model:show="locationDetailVisible" :width="480" placement="right" :trap-focus="true"
+      :block-scroll="true">
+      <n-drawer-content :title="viewingLocation?.name || '地点详情'" closable>
+        <div v-if="viewingLocation" class="space-y-6">
+          <!-- Location Icon & Basic Info -->
+          <div class="flex flex-col items-center text-center pb-4 border-b border-gray-100 dark:border-gray-700">
+            <div class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white mb-3 bg-linear-to-br from-green-500 to-green-600">
+              📍
+            </div>
+            <div class="flex items-center gap-2">
+              <n-tag v-if="viewingLocation.location_type" type="success" size="small">
+                {{ getLocationTypeLabel(viewingLocation.location_type) }}
+              </n-tag>
+              <n-tag v-if="viewingLocation.population" type="default" size="small">
+                {{ viewingLocation.population }}人
+              </n-tag>
+            </div>
+          </div>
+
+          <!-- Climate -->
+          <div v-if="viewingLocation.climate">
+            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+              气候环境
+            </h4>
+            <p class="text-gray-700 dark:text-gray-200 leading-relaxed pl-3.5">{{ viewingLocation.climate }}</p>
+          </div>
+
+          <!-- Description -->
+          <div v-if="viewingLocation.description">
+            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              地点描述
+            </h4>
+            <p class="text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap pl-3.5">{{
+              viewingLocation.description }}</p>
+          </div>
+
+          <!-- Notable Features -->
+          <div v-if="viewingLocation.notable_features">
+            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              显著特征
+            </h4>
+            <p class="text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap pl-3.5">{{
+              viewingLocation.notable_features }}</p>
+          </div>
+
+          <!-- Custom Fields -->
+          <div v-if="viewingLocationCustomFields.length > 0">
+            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+              自定义属性
+            </h4>
+            <div class="space-y-2 pl-3.5">
+              <div v-for="(field, index) in viewingLocationCustomFields" :key="index" class="flex items-start gap-2">
+                <span class="text-gray-500 dark:text-gray-400 min-w-[60px]">{{ field.key }}:</span>
+                <span class="text-gray-700 dark:text-gray-200">{{ field.value }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="locationDetailVisible = false">关闭</n-button>
+            <n-button type="primary" @click="editLocationFromDetail">编辑地点</n-button>
+          </n-space>
+        </template>
+      </n-drawer-content>
+    </n-drawer>
+
+    <!-- Organization Detail Drawer (Read-only) -->
+    <n-drawer v-model:show="organizationDetailVisible" :width="480" placement="right" :trap-focus="true"
+      :block-scroll="true">
+      <n-drawer-content :title="viewingOrganization?.name || '组织详情'" closable>
+        <div v-if="viewingOrganization" class="space-y-6">
+          <!-- Organization Icon & Basic Info -->
+          <div class="flex flex-col items-center text-center pb-4 border-b border-gray-100 dark:border-gray-700">
+            <div class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white mb-3 bg-linear-to-br from-orange-500 to-orange-600">
+              🏛️
+            </div>
+            <div class="flex items-center gap-2">
+              <n-tag v-if="viewingOrganization.org_type" type="warning" size="small">
+                {{ getOrgTypeLabel(viewingOrganization.org_type) }}
+              </n-tag>
+              <n-tag v-if="viewingOrganization.member_count" type="default" size="small">
+                {{ viewingOrganization.member_count }}人
+              </n-tag>
+            </div>
+          </div>
+
+          <!-- Leader -->
+          <div v-if="viewingOrganization.leader">
+            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+              领导者
+            </h4>
+            <p class="text-gray-700 dark:text-gray-200 leading-relaxed pl-3.5">{{ viewingOrganization.leader }}</p>
+          </div>
+
+          <!-- Headquarters -->
+          <div v-if="viewingOrganization.headquarters">
+            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              总部/据点
+            </h4>
+            <p class="text-gray-700 dark:text-gray-200 leading-relaxed pl-3.5">{{ viewingOrganization.headquarters }}</p>
+          </div>
+
+          <!-- Description -->
+          <div v-if="viewingOrganization.description">
+            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+              组织描述
+            </h4>
+            <p class="text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap pl-3.5">{{
+              viewingOrganization.description }}</p>
+          </div>
+
+          <!-- Custom Fields -->
+          <div v-if="viewingOrganizationCustomFields.length > 0">
+            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              自定义属性
+            </h4>
+            <div class="space-y-2 pl-3.5">
+              <div v-for="(field, index) in viewingOrganizationCustomFields" :key="index" class="flex items-start gap-2">
+                <span class="text-gray-500 dark:text-gray-400 min-w-[60px]">{{ field.key }}:</span>
+                <span class="text-gray-700 dark:text-gray-200">{{ field.value }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="organizationDetailVisible = false">关闭</n-button>
+            <n-button type="primary" @click="editOrganizationFromDetail">编辑组织</n-button>
+          </n-space>
+        </template>
+      </n-drawer-content>
+    </n-drawer>
   </div>
 </template>
 
@@ -464,17 +603,21 @@ import {
   NDrawerContent,
 } from 'naive-ui'
 import { Plus, Trash, BookOpen } from 'lucide-vue-next'
-import {
-  useWorldbuildingStore,
+import { useWorldbuildingStore,
   type Character,
   type Location,
   type Organization,
   type CustomField
 } from '@/stores/worldbuilding'
 import { useProjectStore } from '@/stores/project'
+import { useEnumDictionary } from '@/stores/enumDictionary'
 
 const store = useWorldbuildingStore()
 const projectStore = useProjectStore()
+const enumDictionary = useEnumDictionary()
+
+// 初始化时加载字典数据
+enumDictionary.loadDictionary()
 
 // Get current project ID
 const getProjectId = () => projectStore.currentProject?.id ?? null
@@ -496,6 +639,16 @@ const characterDetailVisible = ref(false)
 const viewingCharacter = ref<Character | null>(null)
 const viewingCharacterCustomFields = ref<CustomField[]>([])
 
+// Location detail view states (read-only)
+const locationDetailVisible = ref(false)
+const viewingLocation = ref<Location | null>(null)
+const viewingLocationCustomFields = ref<CustomField[]>([])
+
+// Organization detail view states (read-only)
+const organizationDetailVisible = ref(false)
+const viewingOrganization = ref<Organization | null>(null)
+const viewingOrganizationCustomFields = ref<CustomField[]>([])
+
 // Form states
 const characterForm = reactive({
   name: '',
@@ -505,6 +658,8 @@ const characterForm = reactive({
   personality: '',
   background: '',
 })
+
+const showGenderError = ref(false)
 
 const characterCustomFields = ref<CustomField[]>([])
 
@@ -530,38 +685,13 @@ const organizationForm = reactive({
 
 const organizationCustomFields = ref<CustomField[]>([])
 
-// Options
-const locationTypeOptions = [
-  { label: '城市', value: 'city' },
-  { label: '城镇', value: 'town' },
-  { label: '村庄', value: 'village' },
-  { label: '建筑', value: 'building' },
-  { label: '区域', value: 'region' },
-  { label: '国家', value: 'country' },
-  { label: '其他', value: 'other' },
-]
-
-const orgTypeOptions = [
-  { label: '王国', value: 'kingdom' },
-  { label: '公会', value: 'guild' },
-  { label: '帮派', value: 'gang' },
-  { label: '教派', value: 'cult' },
-  { label: '商会', value: 'company' },
-  { label: '军队', value: 'military' },
-  { label: '秘密组织', value: 'secret_society' },
-  { label: '家族', value: 'family' },
-  { label: '其他', value: 'other' },
-]
-
 // Helper functions
 function getLocationTypeLabel(type: string): string {
-  const found = locationTypeOptions.find(opt => opt.value === type)
-  return found ? found.label : type
+  return enumDictionary.getLocationTypeName(type)
 }
 
 function getOrgTypeLabel(type: string): string {
-  const found = orgTypeOptions.find(opt => opt.value === type)
-  return found ? found.label : type
+  return enumDictionary.getOrganizationTypeName(type)
 }
 
 function parseCustomFields(jsonStr: string): CustomField[] {
@@ -592,6 +722,7 @@ function resetCharacterForm() {
   characterForm.personality = ''
   characterForm.background = ''
   characterCustomFields.value = []
+  showGenderError.value = false
 }
 
 function resetLocationForm() {
@@ -635,9 +766,26 @@ function openCharacterDrawer(character?: Character) {
 
 // View character detail (read-only)
 function viewCharacterDetail(character: Character) {
+  activeTab.value = 'characters'
   viewingCharacter.value = character
   viewingCharacterCustomFields.value = parseCustomFields(character.custom_fields)
   characterDetailVisible.value = true
+}
+
+// View location detail (read-only)
+function viewLocationDetail(location: Location) {
+  activeTab.value = 'locations'
+  viewingLocation.value = location
+  viewingLocationCustomFields.value = parseCustomFields(location.custom_fields)
+  locationDetailVisible.value = true
+}
+
+// View organization detail (read-only)
+function viewOrganizationDetail(organization: Organization) {
+  activeTab.value = 'organizations'
+  viewingOrganization.value = organization
+  viewingOrganizationCustomFields.value = parseCustomFields(organization.custom_fields)
+  organizationDetailVisible.value = true
 }
 
 // Edit character from detail view
@@ -645,6 +793,22 @@ function editCharacterFromDetail() {
   if (viewingCharacter.value) {
     characterDetailVisible.value = false
     openCharacterDrawer(viewingCharacter.value)
+  }
+}
+
+// Edit location from detail view
+function editLocationFromDetail() {
+  if (viewingLocation.value) {
+    locationDetailVisible.value = false
+    openLocationDrawer(viewingLocation.value)
+  }
+}
+
+// Edit organization from detail view
+function editOrganizationFromDetail() {
+  if (viewingOrganization.value) {
+    organizationDetailVisible.value = false
+    openOrganizationDrawer(viewingOrganization.value)
   }
 }
 
@@ -682,7 +846,17 @@ function openOrganizationDrawer(org?: Organization) {
 
 // Save functions
 async function handleSaveCharacter() {
+  // 重置错误状态
+  showGenderError.value = false
+
+  // 验证姓名
   if (!characterForm.name.trim()) {
+    return
+  }
+
+  // 验证性别
+  if (!characterForm.gender) {
+    showGenderError.value = true
     return
   }
 
@@ -822,7 +996,11 @@ onMounted(async () => {
 // Expose methods to parent component
 defineExpose({
   viewCharacterDetail,
+  viewLocationDetail,
+  viewOrganizationDetail,
   openCharacterDrawer,
+  openLocationDrawer,
+  openOrganizationDrawer,
 })
 </script>
 
@@ -876,5 +1054,69 @@ defineExpose({
   :deep(.n-tab-pane > div[class*="space-y-"])>*+* {
     margin-top: 10px;
   }
+}
+
+/* 性别单选按钮组样式修复 */
+:deep(.gender-radio-group) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+:deep(.gender-radio-group .n-radio-button) {
+  height: 34px;
+  padding: 0 16px;
+  background-color: #fff !important;
+  border: 2px solid #ddd !important;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 30px;
+  transition: all 0.2s ease;
+  box-shadow: none !important;
+}
+
+:deep(.gender-radio-group .n-radio-button .n-radio-button__content) {
+  color: #333 !important;
+}
+
+:deep(.gender-radio-group .n-radio-button .n-radio-button__content .n-radio-button__label) {
+  color: #333 !important;
+}
+
+:deep(.gender-radio-group .n-radio-button:hover) {
+  border-color: #63e6be !important;
+}
+
+:deep(.gender-radio-group .n-radio-button:hover .n-radio-button__content .n-radio-button__label) {
+  color: #18a058 !important;
+}
+
+:deep(.gender-radio-group .n-radio-button--checked) {
+  background-color: #63e6be !important;
+  border-color: #63e6be !important;
+}
+
+:deep(.gender-radio-group .n-radio-button--checked .n-radio-button__content .n-radio-button__label) {
+  color: #fff !important;
+  font-weight: 500;
+}
+
+/* 暗色模式支持 */
+:deep(.n-theme-dark) .gender-radio-group .n-radio-button {
+  background-color: #333 !important;
+  border: 2px solid #555 !important;
+}
+
+:deep(.n-theme-dark) .gender-radio-group .n-radio-button .n-radio-button__content .n-radio-button__label {
+  color: #fff !important;
+}
+
+:deep(.n-theme-dark) .gender-radio-group .n-radio-button--checked {
+  background-color: #63e6be !important;
+  border-color: #63e6be !important;
+}
+
+:deep(.n-theme-dark) .gender-radio-group .n-radio-button--checked .n-radio-button__content .n-radio-button__label {
+  color: #000 !important;
 }
 </style>

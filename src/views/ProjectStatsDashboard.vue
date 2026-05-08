@@ -66,13 +66,13 @@ const loadStats = async () => {
 };
 
 // Chapter status configuration
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
     outline: { label: '大纲', color: '#9CA3AF' },
     draft: { label: '草稿', color: '#F59E0B' },
     revised: { label: '修订', color: '#3B82F6' },
     final: { label: '定稿', color: '#10B981' },
     abandoned: { label: '废弃', color: '#EF4444' },
-} as const;
+};
 
 const totalChapters = computed(() => {
     return chapterStatusCounts.value.reduce((sum, item) => sum + item.count, 0);
@@ -81,12 +81,12 @@ const totalChapters = computed(() => {
 // Generate pie chart data
 const pieChartData = computed(() => {
     const allStatuses = ['outline', 'draft', 'revised', 'final', 'abandoned'];
-    const total = totalChapters.value || 1; // Avoid division by zero
+    const total = totalChapters.value;
 
     return allStatuses.map(status => {
         const countItem = chapterStatusCounts.value.find(c => c.status === status);
         const count = countItem?.count || 0;
-        const percentage = Math.round((count / total) * 100);
+        const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
 
         return {
             status,
@@ -103,48 +103,57 @@ const pieChartSize = 120;
 const pieChartRadius = 40;
 const pieChartCenter = pieChartSize / 2;
 
+// Active segment for hover effect
+const activeSegment = ref<string | null>(null);
+
 const pieChartPaths = computed(() => {
-    const total = totalChapters.value || 1;
-    let currentAngle = -90; // Start from top
+    const total = totalChapters.value;
+    
+    if (total === 0) {
+        return [];
+    }
+    
+    let currentAngle = -90;
 
-    return pieChartData.value.map(item => {
-        const angle = (item.count / total) * 360;
-        const startAngle = currentAngle;
-        const endAngle = currentAngle + angle;
-        currentAngle = endAngle;
+    return pieChartData.value
+        .filter(item => item.count > 0)
+        .map(item => {
+            const angle = (item.count / total) * 360;
+            const startAngle = currentAngle;
+            const endAngle = currentAngle + angle;
+            currentAngle = endAngle;
 
-        if (item.count === 0) {
-            return null;
-        }
+            const startRad = (startAngle * Math.PI) / 180;
+            const endRad = (endAngle * Math.PI) / 180;
 
-        const startRad = (startAngle * Math.PI) / 180;
-        const endRad = (endAngle * Math.PI) / 180;
+            const x1 = pieChartCenter + pieChartRadius * Math.cos(startRad);
+            const y1 = pieChartCenter + pieChartRadius * Math.sin(startRad);
+            const x2 = pieChartCenter + pieChartRadius * Math.cos(endRad);
+            const y2 = pieChartCenter + pieChartRadius * Math.sin(endRad);
 
-        const x1 = pieChartCenter + pieChartRadius * Math.cos(startRad);
-        const y1 = pieChartCenter + pieChartRadius * Math.sin(startRad);
-        const x2 = pieChartCenter + pieChartRadius * Math.cos(endRad);
-        const y2 = pieChartCenter + pieChartRadius * Math.sin(endRad);
+            const largeArc = angle > 180 ? 1 : 0;
 
-        const largeArc = angle > 180 ? 1 : 0;
+            if (Math.abs(angle - 360) < 0.01) {
+                // Full circle - use a simple circle path
+                return {
+                    status: item.status,
+                    d: `M ${pieChartCenter} ${pieChartCenter}
+                        m 0 -${pieChartRadius}
+                        a ${pieChartRadius} ${pieChartRadius} 0 1 1 0 ${pieChartRadius * 2}
+                        a ${pieChartRadius} ${pieChartRadius} 0 1 1 0 -${pieChartRadius * 2}`,
+                    fill: item.color,
+                };
+            }
 
-        if (angle >= 360) {
-            // Full circle
             return {
-                d: `M ${pieChartCenter} ${pieChartCenter - pieChartRadius}
-                    A ${pieChartRadius} ${pieChartRadius} 0 1 1 ${pieChartCenter - 0.01} ${pieChartCenter - pieChartRadius}
-                    A ${pieChartRadius} ${pieChartRadius} 0 1 1 ${pieChartCenter} ${pieChartCenter - pieChartRadius}`,
+                status: item.status,
+                d: `M ${pieChartCenter} ${pieChartCenter}
+                    L ${x1} ${y1}
+                    A ${pieChartRadius} ${pieChartRadius} 0 ${largeArc} 1 ${x2} ${y2}
+                    Z`,
                 fill: item.color,
             };
-        }
-
-        return {
-            d: `M ${pieChartCenter} ${pieChartCenter}
-                L ${x1} ${y1}
-                A ${pieChartRadius} ${pieChartRadius} 0 ${largeArc} 1 ${x2} ${y2}
-                Z`,
-            fill: item.color,
-        };
-    }).filter(Boolean);
+        });
 });
 
 const totalWordsThisMonth = computed(() => {
@@ -167,6 +176,14 @@ const maxWordsInDay = computed(() => {
     return Math.max(...writingRecords.value.map(r => r.total_words));
 });
 
+// Format date to YYYY-MM-DD using local time (not UTC)
+const formatDateToYMD = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const heatmapData = computed(() => {
     const data: { date: string; value: number; level: number }[] = [];
     const today = new Date();
@@ -174,7 +191,7 @@ const heatmapData = computed(() => {
     for (let i = 83; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = formatDateToYMD(date);
 
         const record = writingRecords.value.find(r => r.date === dateStr);
         const value = record?.total_words || 0;
@@ -453,26 +470,48 @@ const formatDate = (dateStr: string) => {
                             </div>
                             <template v-else>
                                 <!-- Pie Chart -->
-                                <svg :width="pieChartSize" :height="pieChartSize" class="mb-4">
+                                <svg 
+                                    :width="pieChartSize" 
+                                    :height="pieChartSize" 
+                                    class="mb-4 cursor-pointer"
+                                >
                                     <g v-for="(path, index) in pieChartPaths" :key="index">
-                                        <path :d="path?.d || ''" :fill="path?.fill" stroke="white" stroke-width="2"/>
+                                        <path 
+                                            :d="path?.d || ''" 
+                                            :fill="path?.fill" 
+                                            stroke="white" 
+                                            stroke-width="2"
+                                            :class="{ 'opacity-50': activeSegment && activeSegment !== path?.status }"
+                                            @mouseenter="activeSegment = path?.status || null"
+                                            @mouseleave="activeSegment = null"
+                                            style="transition: opacity 0.2s ease;"
+                                        />
                                     </g>
-                                    <circle :cx="pieChartCenter" :cy="pieChartCenter" r="20" fill="white" />
-                                    <text :x="pieChartCenter" :y="pieChartCenter + 4" text-anchor="middle" class="text-xs font-medium fill-gray-600 dark:fill-gray-300">
+                                    <circle :cx="pieChartCenter" :cy="pieChartCenter" r="22" fill="white" />
+                                    <text :x="pieChartCenter" :y="pieChartCenter + 5" text-anchor="middle" class="text-xs font-medium fill-gray-600 dark:fill-gray-300">
                                         {{ totalChapters }}
+                                    </text>
+                                    <text :x="pieChartCenter" :y="pieChartCenter - 8" text-anchor="middle" class="text-[10px] fill-gray-400">
+                                        章节
                                     </text>
                                 </svg>
 
                                 <!-- Legend -->
-                                <div class="w-full space-y-2">
+                                <div class="w-full space-y-1">
                                     <div
                                         v-for="item in pieChartData"
                                         :key="item.status"
-                                        class="flex items-center justify-between py-1"
+                                        class="flex items-center justify-between py-1.5 px-2 rounded-lg transition-colors cursor-pointer"
+                                        :class="{ 
+                                            'bg-gray-100 dark:bg-gray-700': activeSegment === item.status,
+                                            'hover:bg-gray-50 dark:hover:bg-gray-800': activeSegment !== item.status
+                                        }"
+                                        @mouseenter="activeSegment = item.status"
+                                        @mouseleave="activeSegment = null"
                                     >
                                         <div class="flex items-center gap-2">
                                             <span
-                                                class="w-3 h-3 rounded-full"
+                                                class="w-3 h-3 rounded-full flex-shrink-0"
                                                 :style="{ backgroundColor: item.color }"
                                             ></span>
                                             <span class="text-sm text-gray-600 dark:text-gray-400">
@@ -480,7 +519,7 @@ const formatDate = (dateStr: string) => {
                                             </span>
                                         </div>
                                         <div class="flex items-center gap-3">
-                                            <span class="text-sm font-medium text-gray-900 dark:text-white">
+                                            <span class="text-sm font-medium text-gray-900 dark:text-white min-w-[48px] text-right">
                                                 {{ item.count }} 章
                                             </span>
                                             <span class="text-xs text-gray-400 w-10 text-right">

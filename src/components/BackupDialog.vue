@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import {
   NModal,
   NButton,
@@ -13,10 +13,10 @@ import {
   useMessage,
   NEmpty,
   NSpin,
+  NInput,
 } from "naive-ui";
 import { Package, FolderOpen, Trash2, Upload, Clock, BarChart3 } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
-import { save } from "@tauri-apps/plugin-dialog";
 
 const props = defineProps<{
   show: boolean;
@@ -88,16 +88,21 @@ function formatDate(iso: string): string {
   });
 }
 
+// 日志默认显示数量
+const LOG_DISPLAY_LIMIT = 5;
+const showAllLogs = ref(false);
+
 async function loadData() {
   isLoading.value = true;
   try {
     const [b, l, s] = await Promise.all([
       invoke<BackupRecord[]>("list_backups", { projectId: props.projectId }),
-      invoke<BackupLogEntry[]>("get_backup_logs", { projectId: props.projectId, limit: 30 }),
+      invoke<BackupLogEntry[]>("get_backup_logs", { projectId: props.projectId, limit: 50 }),
       invoke<BackupStats>("get_backup_stats", { projectId: props.projectId }),
     ]);
     backups.value = b;
-    logs.value = l;
+    // Sort logs by created_at descending (newest first)
+    logs.value = l.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     stats.value = s;
   } catch (e) {
     console.error("加载备份数据失败:", e);
@@ -106,14 +111,15 @@ async function loadData() {
   }
 }
 
-async function doBackup() {
-  const selected = await save({
-    title: "保存备份文件",
-    filters: [{ name: "ZIP 压缩包", extensions: ["zip"] }],
-  });
-  if (!selected) return;
+// Get logs to display (limited by LOG_DISPLAY_LIMIT unless showAllLogs is true)
+const displayedLogs = computed(() => {
+  if (showAllLogs.value) {
+    return logs.value;
+  }
+  return logs.value.slice(0, LOG_DISPLAY_LIMIT);
+});
 
-  const destPath = selected.endsWith(".zip") ? selected : selected + ".zip";
+async function doBackup() {
   isBackingUp.value = true;
 
   try {
@@ -121,19 +127,17 @@ async function doBackup() {
     if (isFullBackup.value) {
       path = await invoke<string>("backup_project", {
         projectId: props.projectId,
-        destinationPath: destPath,
         excludeExports: excludeExports.value,
         description: backupDescription.value || null,
       });
     } else {
       path = await invoke<string>("create_incremental_backup", {
         projectId: props.projectId,
-        destinationPath: destPath,
         excludeExports: excludeExports.value,
         description: backupDescription.value || null,
       });
     }
-    message.success("备份创建成功");
+    message.success(`备份创建成功：${path}`);
     await loadData();
     activeTab.value = "history";
   } catch (error) {
@@ -353,33 +357,45 @@ onMounted(loadData);
           <div v-if="logs.length === 0" class="py-8">
             <n-empty description="暂无操作日志" />
           </div>
-          <div v-else class="space-y-1 max-h-96 overflow-y-auto">
-            <div
-              v-for="log in logs"
-              :key="log.id"
-              class="flex items-start gap-2 py-1.5 text-sm"
-            >
-              <span
-                class="shrink-0 px-1.5 py-0.5 rounded text-xs font-medium"
-                :class="{
-                  'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300': log.level === 'info',
-                  'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300': log.level === 'warn',
-                  'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300': log.level === 'error',
-                }"
+          <div v-else>
+            <div class="space-y-1 max-h-64 overflow-y-auto">
+              <div
+                v-for="log in displayedLogs"
+                :key="log.id"
+                class="flex flex-wrap items-start gap-2 py-1.5 text-sm"
               >
-                {{ log.level === 'warn' ? 'WARN' : log.level.toUpperCase() }}
-              </span>
-              <span class="text-gray-500 shrink-0 text-xs">
-                {{ formatDate(log.created_at) }}
-              </span>
-              <span
-                class="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                <span
+                  class="shrink-0 px-1.5 py-0.5 rounded text-xs font-medium"
+                  :class="{
+                    'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300': log.level === 'info',
+                    'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300': log.level === 'warn',
+                    'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300': log.level === 'error',
+                  }"
+                >
+                  {{ log.level === 'warn' ? 'WARN' : log.level.toUpperCase() }}
+                </span>
+                <span class="text-gray-500 shrink-0 text-xs">
+                  {{ formatDate(log.created_at) }}
+                </span>
+                <span
+                  class="shrink-0 text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                >
+                  {{ log.operation }}
+                </span>
+                <span class="text-gray-700 dark:text-gray-300 text-xs break-all word-wrap max-w-[400px]">
+                  {{ log.message }}
+                </span>
+              </div>
+            </div>
+            <!-- Show more button -->
+            <div v-if="logs.length > LOG_DISPLAY_LIMIT" class="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700 text-center">
+              <n-button
+                size="small"
+                text
+                @click="showAllLogs = !showAllLogs"
               >
-                {{ log.operation }}
-              </span>
-              <span class="text-gray-700 dark:text-gray-300 text-xs">
-                {{ log.message }}
-              </span>
+                {{ showAllLogs ? `收起（仅显示最新${LOG_DISPLAY_LIMIT}条）` : `查看全部（共${logs.length}条）` }}
+              </n-button>
             </div>
           </div>
         </n-spin>

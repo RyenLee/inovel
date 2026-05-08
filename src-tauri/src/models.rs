@@ -635,6 +635,8 @@ pub struct FocusStats {
     pub work_sessions: i32,
     pub short_break_sessions: i32,
     pub long_break_sessions: i32,
+    pub completed_work_sessions: i32,
+    pub work_duration_minutes: i32,
 }
 
 // ==================== 灵感看板相关数据结构 ====================

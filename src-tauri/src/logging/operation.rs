@@ -387,3 +387,53 @@ pub struct OperationStat {
     pub success_count: i64,
     pub failed_count: i64,
 }
+
+pub fn record_simple_operation(
+    app_handle: &AppHandle,
+    operation_type: &str,
+    operation_action: &str,
+    target_type: &str,
+    target_id: Option<i64>,
+    details: Option<&str>,
+    project_id: Option<i64>,
+) -> Result<(), String> {
+    let params = RecordOperationParams {
+        user_id: "system".to_string(),
+        operation_type: operation_type.to_string(),
+        operation_action: operation_action.to_string(),
+        target_type: target_type.to_string(),
+        target_id: target_id.map(|id| id.to_string()),
+        details: details.map(|s| s.to_string()),
+        result: OperationResult::Success,
+        duration_ms: None,
+        ip_address: None,
+        project_id,
+    };
+
+    record_operation(app_handle, params).map(|_| ())
+}
+
+pub fn record_operation_error(
+    app_handle: &AppHandle,
+    operation_type: &str,
+    operation_action: &str,
+    target_type: &str,
+    target_id: Option<i64>,
+    error_message: &str,
+    project_id: Option<i64>,
+) -> Result<(), String> {
+    let params = RecordOperationParams {
+        user_id: "system".to_string(),
+        operation_type: operation_type.to_string(),
+        operation_action: operation_action.to_string(),
+        target_type: target_type.to_string(),
+        target_id: target_id.map(|id| id.to_string()),
+        details: Some(error_message.to_string()),
+        result: OperationResult::Failed,
+        duration_ms: None,
+        ip_address: None,
+        project_id,
+    };
+
+    record_operation(app_handle, params).map(|_| ())
+}

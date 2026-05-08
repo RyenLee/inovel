@@ -1,7 +1,7 @@
 use crate::commands::git_snapshot::{get_project_folder_path, open_or_init_repo};
 use crate::config::get_log_dir;
 use crate::db::{get_db_path, init_db};
-use git2::{DiffFormat, Repository};
+use git2::{DiffFormat, Signature};
 use rusqlite::Connection;
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -39,11 +39,11 @@ fn init_backup_logging(app_handle: &AppHandle, _project_id: i64) {
         let env_filter =
             EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
-        tracing_subscriber::registry()
+        let _ = tracing_subscriber::registry()
             .with(env_filter)
             .with(fmt::layer().with_writer(non_blocking).with_ansi(false))
             .with(fmt::layer().with_writer(std::io::stderr))
-            .init();
+            .try_init();
     });
 }
 
@@ -198,7 +198,7 @@ fn save_backup_record(
 pub fn backup_project(
     app_handle: AppHandle,
     project_id: i64,
-    destination_path: String,
+    destination_path: Option<String>,
     exclude_exports: bool,
     description: Option<String>,
 ) -> Result<String, String> {
@@ -244,7 +244,13 @@ pub fn backup_project(
         format!("{}_full_backup_{}.zip", safe_name, date)
     };
 
-    let dest_path = Path::new(&destination_path).join(&zip_name);
+    // 确定备份目录：默认为项目路径下的 backups 目录
+    let backup_dir = match destination_path {
+        Some(path) => PathBuf::from(path),
+        None => project_path.join("backups"),
+    };
+    fs::create_dir_all(&backup_dir).map_err(|e| format!("创建备份目录失败: {}", e))?;
+    let dest_path = backup_dir.join(&zip_name);
     let desc = description.unwrap_or_else(|| "全量备份".to_string());
 
     info!(project_id, path = ?dest_path, exclude_exports, "开始打包目录");
@@ -296,7 +302,7 @@ pub fn backup_project(
 pub fn create_incremental_backup(
     app_handle: AppHandle,
     project_id: i64,
-    destination_path: String,
+    destination_path: Option<String>,
     exclude_exports: bool,
     description: Option<String>,
 ) -> Result<String, String> {
@@ -326,71 +332,72 @@ pub fn create_incremental_backup(
         )
         .ok();
 
-    let current_commit = match open_or_init_repo(&project_path) {
-        Ok(repo) => repo
-            .head()
-            .ok()
-            .and_then(|h| h.target())
-            .map(|o| o.to_string()),
+    // 自动提交工作目录的变更（确保增量备份能检测到变更）
+    let repo = open_or_init_repo(&project_path)?;
+    let mut index = repo.index().map_err(|e| format!("获取 index 失败: {}", e))?;
+    index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None)
+        .map_err(|e| format!("添加文件到暂存区失败: {}", e))?;
+    let tree_oid = index.write_tree().map_err(|e| format!("写入 tree 失败: {}", e))?;
+    let tree = repo.find_tree(tree_oid).map_err(|e| format!("查找 tree 失败: {}", e))?;
+    let sig = Signature::now("inovel", "inovel@local").map_err(|e| format!("创建签名失败: {}", e))?;
+
+    let parent = match repo.head() {
+        Ok(h) => h.target().and_then(|o| repo.find_commit(o).ok()),
         Err(_) => None,
     };
+    let parents: Vec<&git2::Commit> = parent.iter().collect();
+
+    let current_oid = repo.commit(Some("HEAD"), &sig, &sig, "自动提交：增量备份前保存变更", &tree, &parents)
+        .map_err(|e| format!("自动提交失败: {}", e))?;
+    let current_commit = Some(current_oid.to_string());
 
     // 如果没有历史备份或无法获取 commit，退化为全量备份
     let changed_files: Vec<PathBuf> = if let (Some(base), Some(head)) =
         (&last_commit, &current_commit)
     {
         if base != head {
-            match Repository::open(&project_path) {
-                Ok(repo) => {
-                    let base_oid = base
-                        .parse()
-                        .map_err(|e: git2::Error| format!("解析 base commit: {}", e))
-                        .ok();
-                    let head_oid = head
-                        .parse()
-                        .map_err(|e: git2::Error| format!("解析 head commit: {}", e))
-                        .ok();
+            let base_oid = base
+                .parse()
+                .map_err(|e: git2::Error| format!("解析 base commit: {}", e))
+                .ok();
+            let head_oid = head
+                .parse()
+                .map_err(|e: git2::Error| format!("解析 head commit: {}", e))
+                .ok();
 
-                    let mut changed = Vec::new();
-                    if let (Some(b_oid), Some(h_oid)) = (base_oid, head_oid) {
-                        if let (Ok(base_tree), Ok(head_tree)) = (
-                            repo.find_commit(b_oid).and_then(|c| c.tree()),
-                            repo.find_commit(h_oid).and_then(|c| c.tree()),
-                        ) {
-                            if let Ok(diff) =
-                                repo.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), None)
-                            {
-                                let _ = diff.print(DiffFormat::Patch, |delta, _, _| {
-                                    let path =
-                                        delta.new_file().path().or_else(|| delta.old_file().path());
-                                    if let Some(p) = path {
-                                        let full = project_path.join(p);
-                                        if full.exists() && full.is_file() {
-                                            // 应用过滤
-                                            let path_str = full.to_string_lossy();
-                                            let passes = if exclude_exports {
-                                                !path_str.contains("exports")
-                                                    && !path_str.contains(".git")
-                                            } else {
-                                                !path_str.contains(".git")
-                                            };
-                                            if passes {
-                                                changed.push(full);
-                                            }
-                                        }
+            let mut changed = Vec::new();
+            if let (Some(b_oid), Some(h_oid)) = (base_oid, head_oid) {
+                if let (Ok(base_tree), Ok(head_tree)) = (
+                    repo.find_commit(b_oid).and_then(|c| c.tree()),
+                    repo.find_commit(h_oid).and_then(|c| c.tree()),
+                ) {
+                    if let Ok(diff) =
+                        repo.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), None)
+                    {
+                        let _ = diff.print(DiffFormat::Patch, |delta, _, _| {
+                            let path =
+                                delta.new_file().path().or_else(|| delta.old_file().path());
+                            if let Some(p) = path {
+                                let full = project_path.join(p);
+                                if full.exists() && full.is_file() {
+                                    let path_str = full.to_string_lossy();
+                                    let passes = if exclude_exports {
+                                        !path_str.contains("exports")
+                                            && !path_str.contains(".git")
+                                    } else {
+                                        !path_str.contains(".git")
+                                    };
+                                    if passes {
+                                        changed.push(full);
                                     }
-                                    true
-                                });
+                                }
                             }
-                        }
+                            true
+                        });
                     }
-                    changed
-                }
-                Err(e) => {
-                    warn!(project_id, "无法打开 Git 仓库: {}", e);
-                    Vec::new()
                 }
             }
+            changed
         } else {
             info!(project_id, "无变更，跳过增量备份");
             log_operation(
@@ -472,7 +479,13 @@ pub fn create_incremental_backup(
     let date = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
     let safe_name = escape_filename(&project_name);
     let zip_name = format!("{}_incr_backup_{}.zip", safe_name, date);
-    let dest_path = Path::new(&destination_path).join(&zip_name);
+    // 确定备份目录：默认为项目路径下的 backups 目录
+    let backup_dir = match destination_path {
+        Some(path) => PathBuf::from(path),
+        None => project_path.join("backups"),
+    };
+    fs::create_dir_all(&backup_dir).map_err(|e| format!("创建备份目录失败: {}", e))?;
+    let dest_path = backup_dir.join(&zip_name);
     let desc = description.unwrap_or_else(|| "增量备份".to_string());
 
     let backup_id = save_backup_record(

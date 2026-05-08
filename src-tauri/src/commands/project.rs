@@ -1,6 +1,7 @@
 use crate::commands::encryption::is_project_encrypted;
 use crate::commands::git_snapshot::init_git_repo;
 use crate::db::{check_project_exists, get_db_path, init_db};
+use crate::logging::operation::record_simple_operation;
 use crate::models::{
     CreateProjectParams, MigrateResult, MigrationDetail, ProjectMeta, RollbackParams,
     UpdateProjectParams,
@@ -9,7 +10,7 @@ use rand::RngExt;
 use rusqlite::Connection;
 use std::fs;
 use std::path::PathBuf;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 /// 生成字母数字组合的项目ID
 ///
@@ -141,6 +142,16 @@ pub async fn create_project(
     ).map_err(|e| format!("数据库插入失败: {}", e))?;
 
     let id = conn.last_insert_rowid();
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "project",
+        "create",
+        "project",
+        Some(id),
+        Some(&format!("创建项目: {}", params.name)),
+        Some(id),
+    );
 
     Ok(ProjectMeta {
         id,
@@ -322,6 +333,16 @@ pub async fn remove_project_from_list(
             }
         }
     }
+
+    let _ = record_simple_operation(
+        &app_handle,
+        "project",
+        "remove",
+        "project",
+        Some(id),
+        Some(&format!("移除项目{}", if keep_files { "(保留文件)" } else { "(删除文件)" })),
+        Some(id),
+    );
 
     Ok(())
 }
@@ -956,6 +977,132 @@ pub async fn migrate_existing_projects(
         backup_path,
         details,
     })
+}
+
+#[tauri::command]
+pub async fn save_window_size(
+    app_handle: AppHandle,
+    project_id: i64,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    let db_path = get_db_path(&app_handle);
+    let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
+
+    let project_path: String = conn
+        .query_row(
+            "SELECT path FROM projects WHERE id = ?1",
+            [project_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("查询项目路径失败: {}", e))?;
+
+    let project_json_path = PathBuf::from(&project_path).join("project.json");
+
+    if project_json_path.exists() {
+        let content =
+            fs::read_to_string(&project_json_path).map_err(|e| format!("读取项目配置失败: {}", e))?;
+        let mut json: serde_json::Value =
+            serde_json::from_str(&content).map_err(|e| format!("解析项目配置失败: {}", e))?;
+
+        json["window_width"] = serde_json::Value::Number(serde_json::Number::from_f64(width).unwrap_or(serde_json::Number::from(1200)));
+        json["window_height"] = serde_json::Value::Number(serde_json::Number::from_f64(height).unwrap_or(serde_json::Number::from(800)));
+
+        fs::write(
+            &project_json_path,
+            serde_json::to_string_pretty(&json)
+                .map_err(|e| format!("序列化项目配置失败: {}", e))?,
+        )
+        .map_err(|e| format!("写入项目配置失败: {}", e))?;
+    } else {
+        return Err("项目配置文件不存在".to_string());
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn set_window_size(
+    app: tauri::AppHandle,
+    project_id: i64,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    let db_path = get_db_path(&app);
+    let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
+
+    let project_path: String = conn
+        .query_row(
+            "SELECT path FROM projects WHERE id = ?1",
+            [project_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("查询项目路径失败: {}", e))?;
+
+    let project_json_path = PathBuf::from(&project_path).join("project.json");
+
+    if project_json_path.exists() {
+        let content =
+            fs::read_to_string(&project_json_path).map_err(|e| format!("读取项目配置失败: {}", e))?;
+        let mut json: serde_json::Value =
+            serde_json::from_str(&content).map_err(|e| format!("解析项目配置失败: {}", e))?;
+
+        json["window_width"] = serde_json::Value::Number(serde_json::Number::from_f64(width).unwrap_or(serde_json::Number::from(1200)));
+        json["window_height"] = serde_json::Value::Number(serde_json::Number::from_f64(height).unwrap_or(serde_json::Number::from(800)));
+
+        fs::write(
+            &project_json_path,
+            serde_json::to_string_pretty(&json)
+                .map_err(|e| format!("序列化项目配置失败: {}", e))?,
+        )
+        .map_err(|e| format!("写入项目配置失败: {}", e))?;
+    } else {
+        return Err("项目配置文件不存在".to_string());
+    }
+
+    if let Some(window) = app.get_webview_window("main") {
+        window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width: width as u32,
+            height: height as u32,
+        })).map_err(|e| format!("设置窗口大小失败: {}", e))?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_window_size(
+    app_handle: AppHandle,
+    project_id: i64,
+) -> Result<Option<(f64, f64)>, String> {
+    let db_path = get_db_path(&app_handle);
+    let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
+
+    let project_path: String = conn
+        .query_row(
+            "SELECT path FROM projects WHERE id = ?1",
+            [project_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("查询项目路径失败: {}", e))?;
+
+    let project_json_path = PathBuf::from(&project_path).join("project.json");
+
+    if project_json_path.exists() {
+        let content =
+            fs::read_to_string(&project_json_path).map_err(|e| format!("读取项目配置失败: {}", e))?;
+        let json: serde_json::Value =
+            serde_json::from_str(&content).map_err(|e| format!("解析项目配置失败: {}", e))?;
+
+        if let (Some(width), Some(height)) = (
+            json.get("window_width").and_then(|v| v.as_f64()),
+            json.get("window_height").and_then(|v| v.as_f64()),
+        ) {
+            return Ok(Some((width, height)));
+        }
+    }
+
+    Ok(None)
 }
 
 /// 回滚迁移：将已迁移的项目恢复为旧路径
