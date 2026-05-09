@@ -6,6 +6,8 @@ import ProjectSettingsPage from "../views/ProjectSettingsPage.vue";
 import StatsDashboard from "../views/StatsDashboard.vue";
 import ProjectStatsDashboard from "../views/ProjectStatsDashboard.vue";
 import WorldbuildingPage from "../views/WorldbuildingPage.vue";
+import TaskChecklistPage from "../views/TaskChecklistPage.vue";
+import ConfigManagerPage from "../views/ConfigManagerPage.vue";
 
 const router = createRouter({
     history: createWebHashHistory(),
@@ -47,6 +49,18 @@ const router = createRouter({
             path: "/editor/:projectId/worldbuilding",
             name: "Worldbuilding",
             component: WorldbuildingPage,
+        },
+        // 任务清单
+        {
+            path: "/tasks",
+            name: "TaskChecklist",
+            component: TaskChecklistPage,
+        },
+        // 配置管理
+        {
+            path: "/config",
+            name: "ConfigManager",
+            component: ConfigManagerPage,
         },
     ],
 });

@@ -1,0 +1,48 @@
+{
+  "action": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "refresh": "Refresh",
+    "back": "Back",
+    "add": "Add",
+    "search": "Search",
+    "reset": "Reset",
+    "apply": "Apply",
+    "copy": "Copy",
+    "select": "Select",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All"
+  },
+  "status": {
+    "loading": "Loading...",
+    "success": "Operation successful",
+    "error": "Operation failed",
+    "empty": "No data",
+    "completed": "Completed",
+    "inProgress": "In Progress",
+    "pending": "Pending",
+    "notStarted": "Not Started",
+    "blocked": "Blocked",
+    "overdue": "Overdue"
+  },
+  "time": {
+    "day": "day(s)",
+    "hour": "hour(s)",
+    "minute": "minute(s)",
+    "second": "second(s)",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow"
+  },
+  "dialog": {
+    "confirmDelete": "Confirm Deletion",
+    "confirmDeleteMessage": "Are you sure you want to delete? This action cannot be undone.",
+    "unsavedChanges": "Unsaved Changes",
+    "unsavedChangesMessage": "You have unsaved changes. Are you sure you want to leave?"
+  }
+}

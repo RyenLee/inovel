@@ -3,6 +3,15 @@ import { createPinia } from "pinia";
 import "./style.css";
 import App from "./App.vue";
 import router from "./router";
+import i18n from "./i18n";
+import { useConfig } from "./composables/useConfig";
+
+// =====================
+// 配置初始化
+// 在应用挂载前先加载配置
+// =====================
+const { loadConfig } = useConfig();
+await loadConfig().catch(console.error);
 
 // =====================
 // 禁用浏览器前进/后退功能
@@ -102,6 +111,7 @@ const app = createApp(App);
 const pinia = createPinia();
 
 app.use(pinia);
+app.use(i18n);
 app.use(router);
 
 app.config.errorHandler = (err, instance, info) => {

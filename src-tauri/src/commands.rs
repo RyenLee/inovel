@@ -1,5 +1,6 @@
 pub mod backup;
 pub mod chapter;
+pub mod config;
 pub mod encryption;
 pub mod export;
 pub mod file;

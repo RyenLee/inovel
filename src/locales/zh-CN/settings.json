@@ -1,0 +1,40 @@
+{
+  "pageTitle": "应用设置",
+  "language": "语言 / Language",
+  "interfaceLanguage": "界面语言 / Interface Language",
+  "writingGoals": "写作目标",
+  "dailyWordGoal": "每日字数目标",
+  "wordsPerDay": "字/天",
+  "dailyWordGoalFeedback": "设置每日写作目标，系统会在编辑器状态栏显示进度",
+  "editorSettings": "编辑器设置",
+  "autoSaveInterval": "自动保存间隔",
+  "minutes": "分钟",
+  "autoSaveFeedback": "编辑器每隔设定时间自动保存章节内容到后端并创建快照",
+  "windowSize": "窗口大小",
+  "windowDimension": "窗口尺寸",
+  "windowSizeFeedback": "设置应用窗口大小，下次启动时生效",
+  "saveSettings": "保存设置",
+  "settingsSaved": "设置已保存",
+  "settingsSaveFailed": "保存设置失败",
+  "writingStats": "写作统计",
+  "viewStatsDetail": "查看详细统计数据，请点击此处",
+  "windowSizeOptions": {
+    "defaultLandscape": "默认横屏 (1200×800)",
+    "compactLandscape": "紧凑横屏 (1024×768)",
+    "standardLandscape": "标准横屏 (1280×800)",
+    "wideLandscape": "宽屏 (1440×900)",
+    "fullHDLandscape": "全高清横屏 (1920×1080)",
+    "defaultPortrait": "默认竖屏 (800×1200)",
+    "compactPortrait": "紧凑竖屏 (600×900)",
+    "standardPortrait": "标准竖屏 (720×1280)",
+    "largePortrait": "大屏竖屏 (800×1400)",
+    "fullHDPortrait": "全高清竖屏 (1080×1920)"
+  },
+  "autoSaveOptions": {
+    "30seconds": "30 秒",
+    "1minute": "1 分钟",
+    "2minutes": "2 分钟",
+    "5minutes": "5 分钟",
+    "10minutes": "10 分钟"
+  }
+}

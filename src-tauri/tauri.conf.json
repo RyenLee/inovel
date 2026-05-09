@@ -1,26 +1,25 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "iNovel",
-  "version": "1.0.0",
-  "identifier": "com.ryenl.inovel",
-  "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
-  },
   "app": {
     "security": {
-      "csp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": ["**"]
-      }
+        "scope": [
+          "**"
+        ]
+      },
+      "csp": null
     }
+  },
+  "build": {
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "nsis", "dmg", "app", "deb", "appimage"],
+    "category": "Productivity",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -28,30 +27,44 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["resources/names.json", "resources/builtin_templates.json"],
-    "category": "Productivity",
-    "shortDescription": "Novel writing and management tool",
-    "longDescription": "iNovel is a desktop application designed for novel authors, providing project management, chapter editing, worldbuilding features, and more.",
-    "windows": {
-      "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "timestampUrl": ""
-    },
     "linux": {
       "appimage": {
         "bundleMediaFramework": false
       }
+    },
+    "longDescription": "iNovel is a desktop application designed for novel authors, providing project management, chapter editing, worldbuilding features, and more.",
+    "resources": [
+      "resources/names.json",
+      "resources/builtin_templates.json",
+      "resources/default_config.toml"
+    ],
+    "shortDescription": "Novel writing and management tool",
+    "targets": [
+      "msi",
+      "nsis",
+      "dmg",
+      "app",
+      "deb",
+      "appimage"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
     }
   },
+  "identifier": "com.ryenl.inovel",
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZBMjNGQjdGRUI2MjdCNjEKUldUSjhDQUFBQT09Cg==",
       "endpoints": [
         "https://github.com/ryenl/inovel/releases/latest/download/latest.json"
       ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZBMjNGQjdGRUI2MjdCNjEKUldUSjhDQUFBQT09Cg==",
       "windows": {
         "installMode": "passive"
       }
     }
-  }
+  },
+  "productName": "iNovel",
+  "version": "1.0.0"
 }

@@ -1,5 +1,15 @@
 pub mod commands;
 pub mod config;
+pub mod config_manager {
+    pub mod api;
+    pub mod encryption;
+    pub mod history;
+    pub mod loader;
+    pub mod model;
+
+    pub use api::*;
+    pub use model::*;
+}
 pub mod db;
 pub mod error;
 pub mod logging;
@@ -129,12 +139,13 @@ pub fn run() {
 
             let (final_width, final_height) = get_startup_window_size(&window_config);
 
-            let mut builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-                .title("iNovel")
-                .inner_size(final_width, final_height)
-                .min_inner_size(window_config.min_width, window_config.min_height)
-                .max_inner_size(window_config.max_width, window_config.max_height)
-                .data_directory(webview_data_dir.clone());
+            let mut builder =
+                WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+                    .title("iNovel")
+                    .inner_size(final_width, final_height)
+                    .min_inner_size(window_config.min_width, window_config.min_height)
+                    .max_inner_size(window_config.max_width, window_config.max_height)
+                    .data_directory(webview_data_dir.clone());
 
             if !window_config.resizable {
                 builder = builder.resizable(false);
@@ -147,6 +158,21 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
+            commands::config::get_config,
+            commands::config::get_config_value,
+            commands::config::get_config_by_category,
+            commands::config::set_config_value,
+            commands::config::set_config_values,
+            commands::config::update_app_version,
+            commands::config::reload_config,
+            commands::config::export_config,
+            commands::config::import_config,
+            commands::config::reset_config,
+            commands::config::get_config_history,
+            commands::config::rollback_config,
+            commands::config::read_toml_config,
+            commands::config::write_toml_config,
+            commands::config::reset_to_default_config,
             commands::project::create_project,
             commands::project::get_recent_projects,
             commands::project::open_project,

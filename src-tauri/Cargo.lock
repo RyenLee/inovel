@@ -2139,6 +2139,7 @@ dependencies = [
  "argon2",
  "base64 0.22.1",
  "chrono",
+ "dirs",
  "epub-builder",
  "flate2",
  "git2",
@@ -2161,6 +2162,7 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "uuid",
  "walkdir",
  "zip 8.6.0",
 ]

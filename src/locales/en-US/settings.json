@@ -1,0 +1,40 @@
+{
+  "pageTitle": "Settings",
+  "language": "Language",
+  "interfaceLanguage": "Interface Language",
+  "writingGoals": "Writing Goals",
+  "dailyWordGoal": "Daily Word Goal",
+  "wordsPerDay": "words/day",
+  "dailyWordGoalFeedback": "Set your daily writing goal. Progress will be shown in the editor status bar.",
+  "editorSettings": "Editor Settings",
+  "autoSaveInterval": "Auto-Save Interval",
+  "minutes": "minutes",
+  "autoSaveFeedback": "The editor will automatically save chapter content and create snapshots at the specified interval.",
+  "windowSize": "Window Size",
+  "windowDimension": "Window Dimension",
+  "windowSizeFeedback": "Set the application window size. Takes effect on next launch.",
+  "saveSettings": "Save Settings",
+  "settingsSaved": "Settings saved",
+  "settingsSaveFailed": "Failed to save settings",
+  "writingStats": "Writing Statistics",
+  "viewStatsDetail": "Click here to view detailed statistics",
+  "windowSizeOptions": {
+    "defaultLandscape": "Default Landscape (1200×800)",
+    "compactLandscape": "Compact Landscape (1024×768)",
+    "standardLandscape": "Standard Landscape (1280×800)",
+    "wideLandscape": "Wide (1440×900)",
+    "fullHDLandscape": "Full HD Landscape (1920×1080)",
+    "defaultPortrait": "Default Portrait (800×1200)",
+    "compactPortrait": "Compact Portrait (600×900)",
+    "standardPortrait": "Standard Portrait (720×1280)",
+    "largePortrait": "Large Portrait (800×1400)",
+    "fullHDPortrait": "Full HD Portrait (1080×1920)"
+  },
+  "autoSaveOptions": {
+    "30seconds": "30 seconds",
+    "1minute": "1 minute",
+    "2minutes": "2 minutes",
+    "5minutes": "5 minutes",
+    "10minutes": "10 minutes"
+  }
+}

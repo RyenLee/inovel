@@ -5,16 +5,25 @@ import {
   NMessageProvider,
   NDialogProvider,
   NLoadingBarProvider,
+  zhCN,
+  dateZhCN,
+  enUS,
+  dateEnUS,
 } from "naive-ui";
 import { RouterView } from "vue-router";
 import { useTheme } from "./composables/useTheme";
 import { useGlobalShortcuts } from "./composables/useGlobalShortcuts";
 import { lightThemeConfig, darkThemeConfig } from "./composables/themeConfig";
+import { useLocale } from "./i18n/composables/useLocale";
 
 const { isDark, toggleDark, theme } = useTheme();
+const { isZhCN } = useLocale();
 
 // Initialize global shortcuts
 useGlobalShortcuts();
+
+const naiveLocale = computed(() => isZhCN.value ? zhCN : enUS);
+const naiveDateLocale = computed(() => isZhCN.value ? dateZhCN : dateEnUS);
 
 // 主题覆盖配置
 const themeOverrides = computed(() => isDark.value ? darkThemeConfig : lightThemeConfig);
@@ -23,7 +32,7 @@ defineExpose({ toggleDark, isDark });
 </script>
 
 <template>
-  <n-config-provider :theme="theme" :theme-overrides="themeOverrides">
+  <n-config-provider :theme="theme" :theme-overrides="themeOverrides" :locale="naiveLocale" :date-locale="naiveDateLocale">
     <n-loading-bar-provider>
       <n-dialog-provider>
         <n-message-provider>
