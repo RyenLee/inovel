@@ -1,0 +1,24 @@
+{
+  "title": "版本历史",
+  "backToList": "返回版本列表",
+  "noHistory": "暂无版本记录",
+  "noHistoryHint": "每次保存或关闭应用时将自动创建版本快照",
+  "selectedA": "已选版本 A：{hash}，请选择对比的版本 B",
+  "confirmRestore": "确认恢复",
+  "cancel": "取消",
+  "restore": "恢复",
+  "restoreConfirmTitle": "恢复到该版本后：",
+  "restoreConfirmItem1": "工作区文件将被替换为该版本的内容",
+  "restoreConfirmItem2": "系统会自动创建一条新的\"恢复\"快照",
+  "restoreConfirmItem3": "所有现有历史版本均保留，不会丢失",
+  "restoreConfirmQuestion": "确认要恢复吗？",
+  "restoreHint": "恢复操作说明：点击「恢复」将硬重置到选中版本并自动创建恢复快照。现有历史不会被破坏。",
+  "compare": "对比：",
+  "diffLoadFailed": "无法加载差异内容",
+  "messages": {
+    "noHistoryWarning": "没有版本历史",
+    "diffLoadFailed": "加载差异失败: {error}",
+    "restoreSuccess": "已恢复到所选版本（自动创建了恢复快照，原历史未丢失）",
+    "restoreFailed": "恢复失败: {error}"
+  }
+}

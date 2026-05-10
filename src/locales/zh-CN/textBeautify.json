@@ -1,0 +1,14 @@
+{
+  "lineHeight": {
+    "compact": "紧凑",
+    "standard": "标准",
+    "loose": "宽松",
+    "extraLoose": "特宽"
+  },
+  "menu": {
+    "paragraphIndent": "段落缩进",
+    "paperEffect": "信纸效果",
+    "lineHeightSettings": "行间距设置",
+    "paragraphSplit": "段落拆分"
+  }
+}

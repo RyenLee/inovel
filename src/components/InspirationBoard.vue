@@ -1,9 +1,32 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from "vue";
-import { NButton, NInput, NIcon, NModal, useMessage, NDropdown, useDialog } from "naive-ui";
-import { Lightbulb, MessageCircle, Map, Plus, Trash2, Edit3, GripVertical, Send, X, MoreVertical } from "lucide-vue-next";
+import { ref, computed, onMounted, nextTick, watch } from "vue";
+import {
+  NButton,
+  NInput,
+  NIcon,
+  NModal,
+  useMessage,
+  NDropdown,
+  useDialog,
+} from "naive-ui";
+import {
+  Lightbulb,
+  MessageCircle,
+  Map,
+  Plus,
+  Trash2,
+  Edit3,
+  GripVertical,
+  Send,
+  X,
+  MoreVertical,
+} from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import draggable from "vuedraggable";
+import { useLocale } from "../i18n/composables/useLocale";
+import { getLocale } from "../i18n";
+
+const { t, locale } = useLocale();
 
 const props = defineProps<{
   projectId: number;
@@ -17,20 +40,24 @@ const emit = defineEmits<{
 const message = useMessage();
 const dialog = useDialog();
 
-// Default columns
-const defaultColumnNames = ["灵感", "对白", "场景"];
+const defaultColumnKeys = ["inspiration", "dialogue", "scene"];
 
-// Column icons mapping
-const columnIcons: Record<string, typeof Lightbulb> = {
-  "灵感": Lightbulb,
-  "对白": MessageCircle,
-  "场景": Map,
+const defaultColumnDefinitions = [
+  { key: "inspiration", icon: Lightbulb },
+  { key: "dialogue", icon: MessageCircle },
+  { key: "scene", icon: Map },
+];
+
+const columnIconMap: Record<string, typeof Lightbulb> = {
+  inspiration: Lightbulb,
+  dialogue: MessageCircle,
+  scene: Map,
 };
 
-// Board data
 interface InspirationItem {
   id: number;
   project_id: number;
+  column_key: string;
   column_name: string;
   content: string;
   sort_order: number;
@@ -39,59 +66,44 @@ interface InspirationItem {
 }
 
 interface ColumnInfo {
-  name: string;
+  column_key: string;
+  column_name: string;
   items: InspirationItem[];
 }
 
 const columns = ref<ColumnInfo[]>([]);
 const isLoading = ref(true);
 
-// New column name input
 const showNewColumnInput = ref(false);
 const newColumnName = ref("");
 
-// Card editing state
 const editingCardId = ref<number | null>(null);
 const editingContent = ref("");
-const contextMenuCard = ref<{ item: InspirationItem; x: number; y: number } | null>(null);
+const contextMenuCard = ref<{
+  item: InspirationItem;
+  x: number;
+  y: number;
+} | null>(null);
 
-// Get or create default columns
 const getDefaultColumns = (): ColumnInfo[] => {
-  return defaultColumnNames.map((name) => ({
-    name,
+  return defaultColumnDefinitions.map((def) => ({
+    column_key: def.key,
+    column_name: t(`inspiration.columns.${def.key}`),
     items: [],
   }));
 };
 
-// Load board data
 const loadBoard = async () => {
   isLoading.value = true;
   try {
-    const data = await invoke<{ columns: ColumnInfo[] }>("get_inspiration_board", {
-      projectId: props.projectId,
-    });
-
-    // Merge with defaults to ensure all default columns exist
-    const columnMap: Record<string, ColumnInfo> = {};
-    data.columns.forEach((col) => { columnMap[col.name] = col; });
-
-    const mergedColumns: ColumnInfo[] = [];
-    defaultColumnNames.forEach((name) => {
-      if (columnMap[name]) {
-        mergedColumns.push(columnMap[name]);
-      } else {
-        mergedColumns.push({ name, items: [] });
+    const data = await invoke<{ columns: ColumnInfo[] }>(
+      "get_inspiration_board",
+      {
+        projectId: props.projectId,
+        locale: getLocale(),
       }
-    });
-
-    // Add any custom columns
-    data.columns.forEach((col) => {
-      if (!defaultColumnNames.includes(col.name)) {
-        mergedColumns.push(col);
-      }
-    });
-
-    columns.value = mergedColumns;
+    );
+    columns.value = data.columns;
   } catch (error) {
     console.error("加载灵感看板失败:", error);
     columns.value = getDefaultColumns();
@@ -100,15 +112,14 @@ const loadBoard = async () => {
   }
 };
 
-// Save all items
 const saveAllItems = async () => {
-  const updates: { id: number; column_name: string; sort_order: number }[] = [];
+  const updates: { id: number; column_key: string; sort_order: number }[] = [];
 
   columns.value.forEach((col) => {
     col.items.forEach((item, index) => {
       updates.push({
         id: item.id,
-        column_name: col.name,
+        column_key: col.column_key,
         sort_order: index,
       });
     });
@@ -124,33 +135,30 @@ const saveAllItems = async () => {
   }
 };
 
-// Create new item in column
-const createItem = async (columnName: string) => {
+const createItem = async (columnKey: string) => {
   try {
     const newItem = await invoke<InspirationItem>("create_inspiration_item", {
       params: {
         project_id: props.projectId,
-        column_name: columnName,
+        column_key: columnKey,
         content: "",
       },
     });
 
-    const column = columns.value.find((c) => c.name === columnName);
+    const column = columns.value.find((c) => c.column_key === columnKey);
     if (column) {
       column.items.push(newItem);
     }
 
-    // Start editing the new item
     nextTick(() => {
       startEditing(newItem.id, newItem.content);
     });
   } catch (error) {
     console.error("创建条目失败:", error);
-    message.error("创建条目失败");
+    message.error(t("inspiration.messages.createFailed"));
   }
 };
 
-// Update item content
 const updateItem = async (itemId: number) => {
   const item = findItem(itemId);
   if (!item) return;
@@ -167,17 +175,16 @@ const updateItem = async (itemId: number) => {
     editingCardId.value = null;
   } catch (error) {
     console.error("更新条目失败:", error);
-    message.error("更新条目失败");
+    message.error(t("inspiration.messages.updateFailed"));
   }
 };
 
-// Delete item
 const deleteItem = async (itemId: number) => {
   dialog.warning({
-    title: "确认删除",
-    content: "确定要删除这个灵感条目吗？",
-    positiveText: "删除",
-    negativeText: "取消",
+    title: t("inspiration.confirmDelete"),
+    content: t("inspiration.deleteItemConfirm"),
+    positiveText: t("inspiration.delete"),
+    negativeText: t("inspiration.cancel"),
     onPositiveClick: async () => {
       try {
         await invoke("delete_inspiration_item", { itemId });
@@ -186,16 +193,15 @@ const deleteItem = async (itemId: number) => {
           col.items = col.items.filter((item) => item.id !== itemId);
         });
 
-        message.success("已删除");
+        message.success(t("inspiration.deleted"));
       } catch (error) {
         console.error("删除条目失败:", error);
-        message.error("删除条目失败");
+        message.error(t("inspiration.messages.deleteFailed"));
       }
     },
   });
 };
 
-// Find item by id
 const findItem = (itemId: number): InspirationItem | undefined => {
   for (const col of columns.value) {
     const item = col.items.find((i) => i.id === itemId);
@@ -204,33 +210,28 @@ const findItem = (itemId: number): InspirationItem | undefined => {
   return undefined;
 };
 
-// Start editing
 const startEditing = (itemId: number, content: string) => {
   editingCardId.value = itemId;
   editingContent.value = content;
 };
 
-// Cancel editing
 const cancelEditing = () => {
   editingCardId.value = null;
   editingContent.value = "";
 };
 
-// Handle column change during drag
 const onColumnChange = () => {
   saveAllItems();
 };
 
-// Insert content to editor
 const insertToEditor = (content: string) => {
   if (content.trim()) {
     emit("insert-content", content);
-    message.success("已插入到编辑器");
+    message.success(t("inspiration.insertedToEditor"));
   }
   closeContextMenu();
 };
 
-// Context menu
 const showContextMenu = (event: MouseEvent, item: InspirationItem) => {
   event.preventDefault();
   contextMenuCard.value = {
@@ -244,53 +245,58 @@ const closeContextMenu = () => {
   contextMenuCard.value = null;
 };
 
-// Add new column
 const addColumn = () => {
   if (!newColumnName.value.trim()) {
-    message.warning("请输入列名称");
+    message.warning(t("inspiration.enterColumnName"));
     return;
   }
 
-  if (columns.value.some((c) => c.name === newColumnName.value.trim())) {
-    message.warning("该列已存在");
+  const customKey = `custom-${Date.now()}`;
+  if (columns.value.some((c) => c.column_name === newColumnName.value.trim())) {
+    message.warning(t("inspiration.columnExists"));
     return;
   }
 
   columns.value.push({
-    name: newColumnName.value.trim(),
+    column_key: customKey,
+    column_name: newColumnName.value.trim(),
     items: [],
   });
 
   newColumnName.value = "";
   showNewColumnInput.value = false;
-  message.success("已添加新列");
+  message.success(t("inspiration.columnAdded"));
 };
 
-// Delete column
-const deleteColumn = (columnName: string) => {
-  if (defaultColumnNames.includes(columnName)) {
-    message.warning("默认列不能删除");
+const deleteColumn = (columnKey: string) => {
+  if (defaultColumnKeys.includes(columnKey)) {
+    message.warning(t("inspiration.defaultColumnCannotDelete"));
     return;
   }
 
+  const col = columns.value.find((c) => c.column_key === columnKey);
+  const colName = col?.column_name || columnKey;
+
   dialog.warning({
-    title: "确认删除",
-    content: `确定要删除"${columnName}"列吗？该列下的所有内容也会被删除。`,
-    positiveText: "删除",
-    negativeText: "取消",
+    title: t("inspiration.confirmDelete"),
+    content: t("inspiration.deleteColumnConfirm", { name: colName }),
+    positiveText: t("inspiration.delete"),
+    negativeText: t("inspiration.cancel"),
     onPositiveClick: () => {
-      columns.value = columns.value.filter((c) => c.name !== columnName);
-      message.success("已删除列");
+      columns.value = columns.value.filter((c) => c.column_key !== columnKey);
+      message.success(t("inspiration.columnDeleted"));
     },
   });
 };
 
-// Get column icon
-const getColumnIcon = (columnName: string) => {
-  return columnIcons[columnName] || Lightbulb;
+const getColumnIcon = (columnKey: string) => {
+  return columnIconMap[columnKey] || Lightbulb;
 };
 
-// Click outside to close context menu
+const isDefaultColumn = (columnKey: string) => {
+  return defaultColumnKeys.includes(columnKey);
+};
+
 const handleGlobalClick = () => {
   closeContextMenu();
 };
@@ -298,6 +304,10 @@ const handleGlobalClick = () => {
 onMounted(() => {
   loadBoard();
   document.addEventListener("click", handleGlobalClick);
+});
+
+watch(locale, () => {
+  loadBoard();
 });
 </script>
 
@@ -314,7 +324,7 @@ onMounted(() => {
         v-model="columns"
         class="board"
         :animation="200"
-        item-key="name"
+        item-key="column_key"
         handle=".column-header"
         ghost-class="ghost-column"
       >
@@ -323,23 +333,23 @@ onMounted(() => {
             <!-- Column Header -->
             <div class="column-header">
               <div class="column-title">
-                <component :is="getColumnIcon(column.name)" class="w-4 h-4" />
-                <span>{{ column.name }}</span>
+                <component :is="getColumnIcon(column.column_key)" class="w-4 h-4" />
+                <span>{{ column.column_name }}</span>
                 <span class="item-count">({{ column.items.length }})</span>
               </div>
               <div class="column-actions">
                 <button
-                  v-if="!defaultColumnNames.includes(column.name)"
+                  v-if="!isDefaultColumn(column.column_key)"
                   class="action-btn delete"
-                  @click="deleteColumn(column.name)"
-                  title="删除列"
+                  @click="deleteColumn(column.column_key)"
+                  :title="t('inspiration.deleteColumn')"
                 >
                   <Trash2 class="w-3.5 h-3.5" />
                 </button>
                 <button
                   class="action-btn"
-                  @click="createItem(column.name)"
-                  title="添加条目"
+                  @click="createItem(column.column_key)"
+                  :title="t('inspiration.addItem')"
                 >
                   <Plus class="w-4 h-4" />
                 </button>
@@ -365,7 +375,9 @@ onMounted(() => {
                 >
                   <!-- Card Content -->
                   <div v-if="editingCardId !== item.id" class="card-content">
-                    <pre class="card-text">{{ item.content || '双击编辑...' }}</pre>
+                    <pre class="card-text">{{
+                      item.content || t("inspiration.doubleClickToEdit")
+                    }}</pre>
                     <div class="card-drag-handle">
                       <GripVertical class="w-4 h-4" />
                     </div>
@@ -376,7 +388,7 @@ onMounted(() => {
                     <textarea
                       v-model="editingContent"
                       class="edit-textarea"
-                      placeholder="输入灵感内容..."
+                      :placeholder="t('inspiration.editPlaceholder')"
                       rows="4"
                       @keydown.ctrl.enter="updateItem(item.id)"
                       @keydown.escape="cancelEditing"
@@ -385,8 +397,12 @@ onMounted(() => {
                       <n-button size="tiny" @click="cancelEditing">
                         <X class="w-3 h-3" />
                       </n-button>
-                      <n-button size="tiny" type="primary" @click="updateItem(item.id)">
-                        保存
+                      <n-button
+                        size="tiny"
+                        type="primary"
+                        @click="updateItem(item.id)"
+                      >
+                        {{ t("inspiration.save") }}
                       </n-button>
                     </div>
                   </div>
@@ -395,9 +411,9 @@ onMounted(() => {
             </draggable>
 
             <!-- Add Card Button -->
-            <button class="add-card-btn" @click="createItem(column.name)">
+            <button class="add-card-btn" @click="createItem(column.column_key)">
               <Plus class="w-4 h-4" />
-              <span>添加条目</span>
+              <span>{{ t("inspiration.addItem") }}</span>
             </button>
           </div>
         </template>
@@ -409,20 +425,35 @@ onMounted(() => {
       <div
         v-if="contextMenuCard"
         class="context-menu"
-        :style="{ left: `${contextMenuCard.x}px`, top: `${contextMenuCard.y}px` }"
+        :style="{
+          left: `${contextMenuCard.x}px`,
+          top: `${contextMenuCard.y}px`,
+        }"
         @click.stop
       >
-        <button class="context-menu-item" @click="insertToEditor(contextMenuCard.item.content)">
+        <button
+          class="context-menu-item"
+          @click="insertToEditor(contextMenuCard.item.content)"
+        >
           <Send class="w-4 h-4" />
-          <span>插入到编辑器</span>
+          <span>{{ t("inspiration.insertToEditor") }}</span>
         </button>
-        <button class="context-menu-item" @click="startEditing(contextMenuCard.item.id, contextMenuCard.item.content); closeContextMenu()">
+        <button
+          class="context-menu-item"
+          @click="
+            startEditing(contextMenuCard.item.id, contextMenuCard.item.content);
+            closeContextMenu();
+          "
+        >
           <Edit3 class="w-4 h-4" />
-          <span>编辑</span>
+          <span>{{ t("inspiration.edit") }}</span>
         </button>
-        <button class="context-menu-item danger" @click="deleteItem(contextMenuCard.item.id)">
+        <button
+          class="context-menu-item danger"
+          @click="deleteItem(contextMenuCard.item.id)"
+        >
           <Trash2 class="w-4 h-4" />
-          <span>删除</span>
+          <span>{{ t("inspiration.delete") }}</span>
         </button>
       </div>
     </Teleport>
@@ -666,7 +697,6 @@ onMounted(() => {
   gap: 8px;
 }
 
-/* Ghost styles for drag */
 .ghost-card {
   opacity: 0.5;
   background: #3b82f6 !important;
@@ -676,7 +706,6 @@ onMounted(() => {
   opacity: 0.5;
 }
 
-/* Context Menu */
 .context-menu {
   position: fixed;
   z-index: 9999;
@@ -726,7 +755,6 @@ onMounted(() => {
   background: #fee2e2;
 }
 
-/* Scrollbar */
 .cards-list::-webkit-scrollbar {
   width: 6px;
 }

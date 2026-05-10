@@ -2,9 +2,9 @@
   <div class="config-manager">
     <div class="config-header">
       <div class="header-left">
-        <h2 class="config-title">配置管理</h2>
+        <h2 class="config-title">{{ t('configManager.title') }}</h2>
         <div class="config-version">
-          当前版本: {{ configData?.app.version || "1.0.0" }}
+          {{ t('configManager.currentVersion') }}: {{ configData?.app.version || "1.0.0" }}
         </div>
       </div>
     </div>
@@ -16,7 +16,7 @@
         :disabled="isLoading"
       >
         <span class="btn-icon">💾</span>
-        保存所有配置
+        {{ t('configManager.saveAll') }}
       </button>
       <button
         class="btn btn-secondary"
@@ -24,7 +24,7 @@
         :disabled="isLoading"
       >
         <span class="btn-icon">📥</span>
-        导出配置
+        {{ t('configManager.export') }}
       </button>
       <button
         class="btn btn-warning"
@@ -32,15 +32,15 @@
         :disabled="isLoading"
       >
         <span class="btn-icon">🔄</span>
-        重置配置
+        {{ t('configManager.reset') }}
       </button>
       <button class="btn btn-info" @click="handleReload" :disabled="isLoading">
         <span class="btn-icon">🔃</span>
-        重新加载
+        {{ t('configManager.reload') }}
       </button>
       <button class="btn btn-success" @click="testButtonClick">
         <span class="btn-icon">🔍</span>
-        测试点击
+        {{ t('configManager.testClick') }}
       </button>
     </div>
 
@@ -90,7 +90,7 @@
               class="value-input"
               :value="(editingValues[item.key] as string[])?.join(', ') || ''"
               @input="handleArrayInput(item.key, $event)"
-              placeholder="多个值用逗号分隔"
+              :placeholder="t('configManager.arrayPlaceholder')"
             />
             <input
               v-else
@@ -107,7 +107,7 @@
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-container">
         <div class="loading-spinner"></div>
-        <span class="loading-text">加载中...</span>
+        <span class="loading-text">{{ t('configManager.loading') }}</span>
       </div>
     </div>
   </div>
@@ -134,6 +134,8 @@ import { useMessage } from "naive-ui";
 import type { TomlConfig } from "../config/types";
 import { configService } from "../services/configService";
 import CategoryTabs from "./CategoryTabs.vue";
+import { useLocale } from "../i18n/composables/useLocale";
+import { invoke } from "@tauri-apps/api/core";
 
 /**
  * 配置字段接口定义
@@ -149,6 +151,7 @@ interface ConfigField {
 
 // Naive UI 消息提示组件
 const message = useMessage();
+const { t } = useLocale();
 
 // 当前加载的配置数据（从后端获取）
 const configData = ref<TomlConfig | null>(null);
@@ -167,46 +170,46 @@ const isLoading = ref(false);
  * 定义了配置管理页面中显示的各个分类标签
  */
 const categories = computed(() => [
-  { name: "app", label: "应用配置", description: "应用基本信息" },
-  { name: "api", label: "API配置", description: "接口相关配置" },
-  { name: "window", label: "窗口配置", description: "窗口尺寸设置" },
-  { name: "editor", label: "编辑器配置", description: "编辑器相关设置" },
-  { name: "features", label: "功能开关", description: "功能特性配置" },
-  { name: "performance", label: "性能配置", description: "性能监控设置" },
-  { name: "cache", label: "缓存配置", description: "缓存相关设置" },
-  { name: "gzip", label: "Gzip配置", description: "压缩相关设置" },
-  { name: "pagination", label: "分页配置", description: "分页参数设置" },
-  { name: "requestMerging", label: "请求合并", description: "请求合并配置" },
-  { name: "security", label: "安全配置", description: "敏感配置项" },
-  { name: "entryConfig", label: "入口配置", description: "配置页面入口设置" },
+  { name: "app", label: t('configManager.categories.app.label'), description: t('configManager.categories.app.description') },
+  { name: "api", label: t('configManager.categories.api.label'), description: t('configManager.categories.api.description') },
+  { name: "window", label: t('configManager.categories.window.label'), description: t('configManager.categories.window.description') },
+  { name: "editor", label: t('configManager.categories.editor.label'), description: t('configManager.categories.editor.description') },
+  { name: "features", label: t('configManager.categories.features.label'), description: t('configManager.categories.features.description') },
+  { name: "performance", label: t('configManager.categories.performance.label'), description: t('configManager.categories.performance.description') },
+  { name: "cache", label: t('configManager.categories.cache.label'), description: t('configManager.categories.cache.description') },
+  { name: "gzip", label: t('configManager.categories.gzip.label'), description: t('configManager.categories.gzip.description') },
+  { name: "pagination", label: t('configManager.categories.pagination.label'), description: t('configManager.categories.pagination.description') },
+  { name: "requestMerging", label: t('configManager.categories.requestMerging.label'), description: t('configManager.categories.requestMerging.description') },
+  { name: "security", label: t('configManager.categories.security.label'), description: t('configManager.categories.security.description') },
+  { name: "entryConfig", label: t('configManager.categories.entryConfig.label'), description: t('configManager.categories.entryConfig.description') },
 ]);
 
 const configFields: Record<string, ConfigField[]> = {
   app: [
     {
       key: "name",
-      description: "应用名称",
+      description: t('configManager.fields.app.name'),
       type: "string",
       default: "iNovel",
       path: ["app", "name"],
     },
     {
       key: "version",
-      description: "应用版本号",
+      description: t('configManager.fields.app.version'),
       type: "string",
       default: "1.1.2",
       path: ["app", "version"],
     },
     {
       key: "environment",
-      description: "运行环境",
+      description: t('configManager.fields.app.environment'),
       type: "string",
       default: "development",
       path: ["app", "environment"],
     },
     {
       key: "description",
-      description: "应用描述",
+      description: t('configManager.fields.app.description'),
       type: "string",
       default: "一款现代化的小说创作工具",
       path: ["app", "description"],
@@ -215,21 +218,21 @@ const configFields: Record<string, ConfigField[]> = {
   api: [
     {
       key: "base_url",
-      description: "API基础地址",
+      description: t('configManager.fields.api.base_url'),
       type: "string",
       default: "http://localhost:8080",
       path: ["api", "base_url"],
     },
     {
       key: "timeout_ms",
-      description: "API超时时间(毫秒)",
+      description: t('configManager.fields.api.timeout_ms'),
       type: "number",
       default: 30000,
       path: ["api", "timeout_ms"],
     },
     {
       key: "max_retries",
-      description: "最大重试次数",
+      description: t('configManager.fields.api.max_retries'),
       type: "number",
       default: 3,
       path: ["api", "max_retries"],
@@ -238,49 +241,49 @@ const configFields: Record<string, ConfigField[]> = {
   window: [
     {
       key: "default_width",
-      description: "默认窗口宽度",
+      description: t('configManager.fields.window.default_width'),
       type: "number",
       default: 1200,
       path: ["window", "default_width"],
     },
     {
       key: "default_height",
-      description: "默认窗口高度",
+      description: t('configManager.fields.window.default_height'),
       type: "number",
       default: 800,
       path: ["window", "default_height"],
     },
     {
       key: "min_width",
-      description: "最小窗口宽度",
+      description: t('configManager.fields.window.min_width'),
       type: "number",
       default: 600,
       path: ["window", "min_width"],
     },
     {
       key: "min_height",
-      description: "最小窗口高度",
+      description: t('configManager.fields.window.min_height'),
       type: "number",
       default: 800,
       path: ["window", "min_height"],
     },
     {
       key: "max_width",
-      description: "最大窗口宽度",
+      description: t('configManager.fields.window.max_width'),
       type: "number",
       default: 1920,
       path: ["window", "max_width"],
     },
     {
       key: "max_height",
-      description: "最大窗口高度",
+      description: t('configManager.fields.window.max_height'),
       type: "number",
       default: 1200,
       path: ["window", "max_height"],
     },
     {
       key: "resizable",
-      description: "允许调整大小",
+      description: t('configManager.fields.window.resizable'),
       type: "boolean",
       default: false,
       path: ["window", "resizable"],
@@ -289,35 +292,35 @@ const configFields: Record<string, ConfigField[]> = {
   editor: [
     {
       key: "default_font_size",
-      description: "默认字体大小",
+      description: t('configManager.fields.editor.default_font_size'),
       type: "number",
       default: 16,
       path: ["editor", "default_font_size"],
     },
     {
       key: "default_font",
-      description: "默认字体",
+      description: t('configManager.fields.editor.default_font'),
       type: "string",
       default: "微软雅黑",
       path: ["editor", "default_font"],
     },
     {
       key: "line_spacing",
-      description: "行间距",
+      description: t('configManager.fields.editor.line_spacing'),
       type: "number",
       default: 1.5,
       path: ["editor", "line_spacing"],
     },
     {
       key: "show_line_numbers",
-      description: "显示行号",
+      description: t('configManager.fields.editor.show_line_numbers'),
       type: "boolean",
       default: true,
       path: ["editor", "show_line_numbers"],
     },
     {
       key: "spell_check_enabled",
-      description: "拼写检查",
+      description: t('configManager.fields.editor.spell_check_enabled'),
       type: "boolean",
       default: true,
       path: ["editor", "spell_check_enabled"],
@@ -326,28 +329,28 @@ const configFields: Record<string, ConfigField[]> = {
   features: [
     {
       key: "auto_save_enabled",
-      description: "自动保存开关",
+      description: t('configManager.fields.features.auto_save_enabled'),
       type: "boolean",
       default: true,
       path: ["features", "auto_save_enabled"],
     },
     {
       key: "sync_enabled",
-      description: "云同步开关",
+      description: t('configManager.fields.features.sync_enabled'),
       type: "boolean",
       default: false,
       path: ["features", "sync_enabled"],
     },
     {
       key: "writing_stats_enabled",
-      description: "写作统计开关",
+      description: t('configManager.fields.features.writing_stats_enabled'),
       type: "boolean",
       default: true,
       path: ["features", "writing_stats_enabled"],
     },
     {
       key: "inspiration_board_enabled",
-      description: "灵感面板开关",
+      description: t('configManager.fields.features.inspiration_board_enabled'),
       type: "boolean",
       default: true,
       path: ["features", "inspiration_board_enabled"],
@@ -356,21 +359,21 @@ const configFields: Record<string, ConfigField[]> = {
   performance: [
     {
       key: "monitoring_enabled",
-      description: "性能监控",
+      description: t('configManager.fields.performance.monitoring_enabled'),
       type: "boolean",
       default: true,
       path: ["performance", "monitoring_enabled"],
     },
     {
       key: "slow_request_threshold_ms",
-      description: "慢请求阈值(毫秒)",
+      description: t('configManager.fields.performance.slow_request_threshold_ms'),
       type: "number",
       default: 1000,
       path: ["performance", "slow_request_threshold_ms"],
     },
     {
       key: "log_payload_size",
-      description: "记录请求大小",
+      description: t('configManager.fields.performance.log_payload_size'),
       type: "boolean",
       default: true,
       path: ["performance", "log_payload_size"],
@@ -379,28 +382,28 @@ const configFields: Record<string, ConfigField[]> = {
   cache: [
     {
       key: "enabled",
-      description: "启用缓存",
+      description: t('configManager.fields.cache.enabled'),
       type: "boolean",
       default: true,
       path: ["cache", "enabled"],
     },
     {
       key: "max_entries",
-      description: "最大缓存条目",
+      description: t('configManager.fields.cache.max_entries'),
       type: "number",
       default: 1000,
       path: ["cache", "max_entries"],
     },
     {
       key: "ttl_seconds",
-      description: "缓存过期时间(秒)",
+      description: t('configManager.fields.cache.ttl_seconds'),
       type: "number",
       default: 300,
       path: ["cache", "ttl_seconds"],
     },
     {
       key: "cached_commands",
-      description: "缓存命令列表",
+      description: t('configManager.fields.cache.cached_commands'),
       type: "array",
       default: [],
       path: ["cache", "cached_commands"],
@@ -409,28 +412,28 @@ const configFields: Record<string, ConfigField[]> = {
   gzip: [
     {
       key: "enabled",
-      description: "启用Gzip压缩",
+      description: t('configManager.fields.gzip.enabled'),
       type: "boolean",
       default: true,
       path: ["gzip", "enabled"],
     },
     {
       key: "level",
-      description: "压缩级别(0-9)",
+      description: t('configManager.fields.gzip.level'),
       type: "number",
       default: 6,
       path: ["gzip", "level"],
     },
     {
       key: "min_size",
-      description: "最小压缩阈值(字节)",
+      description: t('configManager.fields.gzip.min_size'),
       type: "number",
       default: 1024,
       path: ["gzip", "min_size"],
     },
     {
       key: "compress_types",
-      description: "压缩MIME类型",
+      description: t('configManager.fields.gzip.compress_types'),
       type: "array",
       default: [],
       path: ["gzip", "compress_types"],
@@ -439,14 +442,14 @@ const configFields: Record<string, ConfigField[]> = {
   pagination: [
     {
       key: "default_page_size",
-      description: "默认每页条数",
+      description: t('configManager.fields.pagination.default_page_size'),
       type: "number",
       default: 20,
       path: ["pagination", "default_page_size"],
     },
     {
       key: "max_page_size",
-      description: "最大每页条数",
+      description: t('configManager.fields.pagination.max_page_size'),
       type: "number",
       default: 100,
       path: ["pagination", "max_page_size"],
@@ -455,21 +458,21 @@ const configFields: Record<string, ConfigField[]> = {
   requestMerging: [
     {
       key: "enabled",
-      description: "启用请求合并",
+      description: t('configManager.fields.requestMerging.enabled'),
       type: "boolean",
       default: true,
       path: ["request_merging", "enabled"],
     },
     {
       key: "window_ms",
-      description: "合并窗口时间(毫秒)",
+      description: t('configManager.fields.requestMerging.window_ms'),
       type: "number",
       default: 300,
       path: ["request_merging", "window_ms"],
     },
     {
       key: "max_batch_size",
-      description: "最大批量大小",
+      description: t('configManager.fields.requestMerging.max_batch_size'),
       type: "number",
       default: 50,
       path: ["request_merging", "max_batch_size"],
@@ -478,14 +481,14 @@ const configFields: Record<string, ConfigField[]> = {
   security: [
     {
       key: "api_key",
-      description: "API密钥",
+      description: t('configManager.fields.security.api_key'),
       type: "string",
       default: "",
       path: ["security", "api_key"],
     },
     {
       key: "secret_token",
-      description: "安全令牌",
+      description: t('configManager.fields.security.secret_token'),
       type: "string",
       default: "",
       path: ["security", "secret_token"],
@@ -494,57 +497,56 @@ const configFields: Record<string, ConfigField[]> = {
   entryConfig: [
     {
       key: "entry_enabled",
-      description: "启用配置页面入口",
+      description: t('configManager.fields.entryConfig.entry_enabled'),
       type: "boolean",
       default: true,
       path: ["entry_config", "enabled"],
     },
     {
       key: "entry_display_name",
-      description: "入口显示名称",
+      description: t('configManager.fields.entryConfig.entry_display_name'),
       type: "string",
       default: "配置管理",
       path: ["entry_config", "display_name"],
     },
     {
       key: "entry_icon",
-      description: "入口图标",
+      description: t('configManager.fields.entryConfig.entry_icon'),
       type: "string",
       default: "settings",
       path: ["entry_config", "icon"],
     },
     {
       key: "entry_tooltip",
-      description: "入口提示文本",
+      description: t('configManager.fields.entryConfig.entry_tooltip'),
       type: "string",
       default: "打开配置管理页面",
       path: ["entry_config", "tooltip"],
     },
     {
       key: "entry_locations",
-      description:
-        "入口位置(逗号分隔: menu_bar, toolbar, system_tray, keyboard)",
+      description: t('configManager.fields.entryConfig.entry_locations'),
       type: "array",
       default: ["menu_bar", "toolbar"],
       path: ["entry_config", "locations"],
     },
     {
       key: "entry_roles",
-      description: "允许访问的角色(逗号分隔: admin, advanced, standard, guest)",
+      description: t('configManager.fields.entryConfig.entry_roles'),
       type: "array",
       default: ["admin", "advanced"],
       path: ["entry_config", "allowed_roles"],
     },
     {
       key: "entry_shortcut_key",
-      description: "快捷键按键",
+      description: t('configManager.fields.entryConfig.entry_shortcut_key'),
       type: "string",
       default: "C",
       path: ["entry_config", "shortcut_key"],
     },
     {
       key: "entry_shortcut_modifiers",
-      description: "快捷键修饰键(逗号分隔: Ctrl, Shift, Alt, Meta)",
+      description: t('configManager.fields.entryConfig.entry_shortcut_modifiers'),
       type: "array",
       default: ["Ctrl", "Shift"],
       path: ["entry_config", "shortcut_modifiers"],
@@ -639,14 +641,14 @@ async function loadConfig() {
     const loadError = configService.getLoadError();
     if (loadError) {
       console.warn("Config loaded with fallback:", loadError.message);
-      message.warning("配置文件不存在或读取失败，已使用默认配置");
+      message.warning(t('configManager.messages.loadFallback'));
     } else {
-      message.success("配置加载成功");
+      message.success(t('configManager.messages.loadSuccess'));
     }
   } catch (e) {
     console.error("Error loading config:", e);
     const errorMessage = e instanceof Error ? e.message : String(e);
-    message.error("加载配置失败: " + (errorMessage || "未知错误"));
+    message.error(t('configManager.messages.loadFailed') + ": " + (errorMessage || t('configManager.messages.unknownError')));
   } finally {
     isLoading.value = false;
     console.log("loadConfig finished, isLoading:", isLoading.value);
@@ -694,7 +696,7 @@ async function handleSaveAll() {
   console.log("handleSaveAll called");
   if (!configData.value) {
     console.log("No config data to save");
-    message.error("没有可保存的配置");
+    message.error(t('configManager.messages.noConfig'));
     return;
   }
 
@@ -712,13 +714,13 @@ async function handleSaveAll() {
     console.log("Saving config via configService:", newConfig);
     await configService.saveConfig(newConfig);
     configData.value = configService.getConfig();
-    message.success("所有配置保存成功");
+    message.success(t('configManager.messages.saveSuccess'));
 
     emit("configUpdated", configData.value);
   } catch (e) {
     console.error("Error saving config:", e);
     const errorMessage = e instanceof Error ? e.message : String(e);
-    message.error("保存配置失败: " + (errorMessage || "未知错误"));
+    message.error(t('configManager.messages.saveFailed') + ": " + (errorMessage || t('configManager.messages.unknownError')));
   } finally {
     isLoading.value = false;
   }
@@ -748,7 +750,7 @@ async function handleExport() {
       const path = await window.showSaveFilePicker({
         suggestedName: `config_export_${Date.now()}.toml`,
         types: [
-          { description: "TOML文件", accept: { "text/plain": [".toml"] } },
+          { description: t('configManager.messages.tomlFile'), accept: { "text/plain": [".toml"] } },
         ],
       });
 
@@ -764,10 +766,10 @@ async function handleExport() {
       URL.revokeObjectURL(url);
     }
 
-    message.success("配置导出成功");
+    message.success(t('configManager.messages.exportSuccess'));
   } catch (e: unknown) {
     if ((e as Error).name !== "AbortError") {
-      message.error("导出失败: " + (e as Error).message);
+      message.error(t('configManager.messages.exportFailed') + ": " + (e as Error).message);
     }
   }
 }
@@ -778,7 +780,7 @@ async function handleExport() {
  */
 async function handleReset() {
   console.log("handleReset called");
-  if (!confirm("确定要重置所有配置吗？此操作不可撤销！")) return;
+  if (!confirm(t('configManager.messages.resetConfirm'))) return;
 
   isLoading.value = true;
   try {
@@ -788,12 +790,12 @@ async function handleReset() {
 
     configData.value = defaultConfig;
     initEditingValues();
-    message.success("配置已重置为默认值");
+    message.success(t('configManager.messages.resetSuccess'));
 
     emit("configUpdated", defaultConfig);
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
-    message.error("重置失败: " + (errorMessage || "未知错误"));
+    message.error(t('configManager.messages.resetFailed') + ": " + (errorMessage || t('configManager.messages.unknownError')));
   } finally {
     isLoading.value = false;
   }
@@ -808,10 +810,10 @@ async function handleReload() {
   isLoading.value = true;
   try {
     await loadConfig();
-    message.success("配置重新加载成功");
+    message.success(t('configManager.messages.reloadSuccess'));
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
-    message.error("重新加载失败: " + (errorMessage || "未知错误"));
+    message.error(t('configManager.messages.reloadFailed') + ": " + (errorMessage || t('configManager.messages.unknownError')));
   } finally {
     isLoading.value = false;
   }
@@ -826,7 +828,7 @@ const emit = defineEmits<{
  */
 function testButtonClick() {
   console.log("Button click handler works!");
-  message.success("按钮点击测试成功");
+  message.success(t('configManager.messages.testSuccess'));
 }
 
 /**

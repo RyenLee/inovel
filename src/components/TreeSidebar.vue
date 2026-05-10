@@ -19,6 +19,9 @@ import draggable from "vuedraggable";
 import DeleteConfirmModal from "./DeleteConfirmModal.vue";
 import TemplateSelector from "./TemplateSelector.vue";
 import { CHAPTER_STATUS_OPTIONS, getStatusColor, getStatusLabel, type ChapterStatus } from "../types/chapter";
+import { useLocale } from "../i18n/composables/useLocale";
+
+const { t } = useLocale();
 
 interface Chapter {
   id: number;
@@ -69,13 +72,13 @@ const showTemplateSelector = ref(false);
 const currentVolumeIdForTemplate = ref<number | null>(null);
 
 const statusFilterOptions = computed(() => {
-  const base: Array<{ label: string; value: string; color?: string }> = [{ label: '全部章节', value: 'all' }];
+  const base: Array<{ label: string; value: string; color?: string }> = [{ label: t('treeSidebar.allChapters'), value: 'all' }];
   const hardcoded: Array<{ label: string; value: string; color: string }> = [
-    { label: '大纲', value: 'outline', color: '#9CA3AF' },
-    { label: '草稿', value: 'draft', color: '#F59E0B' },
-    { label: '修订', value: 'revised', color: '#3B82F6' },
-    { label: '定稿', value: 'final', color: '#10B981' },
-    { label: '废弃', value: 'abandoned', color: '#EF4444' },
+    { label: t('treeSidebar.status.outline'), value: 'outline', color: '#9CA3AF' },
+    { label: t('treeSidebar.status.draft'), value: 'draft', color: '#F59E0B' },
+    { label: t('treeSidebar.status.revised'), value: 'revised', color: '#3B82F6' },
+    { label: t('treeSidebar.status.final'), value: 'final', color: '#10B981' },
+    { label: t('treeSidebar.status.abandoned'), value: 'abandoned', color: '#EF4444' },
   ];
   return [...base, ...hardcoded];
 });
@@ -125,10 +128,10 @@ const updateChapterStatus = async (chapterId: number, newStatus: ChapterStatus) 
         break;
       }
     }
-    message.success(`章节状态已更新为: ${getStatusLabel(newStatus)}`);
+    message.success(t('treeSidebar.statusUpdated') + `: ${getStatusLabel(newStatus)}`);
   } catch (error) {
-    console.error("更新章节状态失败:", error);
-    message.error("更新章节状态失败");
+    console.error(t('treeSidebar.updateStatusFailed') + ":", error);
+    message.error(t('treeSidebar.updateStatusFailed'));
   }
 };
 
@@ -166,7 +169,7 @@ const loadChapterTree = async () => {
     });
     volumes.value = tree;
   } catch (error) {
-    console.error("加载章节树失败:", error);
+    console.error(t('treeSidebar.loadTreeFailed') + ":", error);
   } finally {
     isLoading.value = false;
   }
@@ -177,7 +180,7 @@ const createVolume = async () => {
   try {
     const newVolume = await invoke<VolumeWithChapters>("create_volume", {
       projectId: Number(props.projectId),
-      name: "新建卷",
+      name: t('treeSidebar.newVolume'),
     });
     // 后端返回的 Volume 缺少 chapters 数组，需要补充
     newVolume.chapters = [];
@@ -185,7 +188,7 @@ const createVolume = async () => {
     expandedVolumes.value.push(newVolume.id);
     startEditVolume(newVolume.id, newVolume.name);
   } catch (error) {
-    console.error("创建卷失败:", error);
+    console.error(t('treeSidebar.createVolumeFailed') + ":", error);
   }
 };
 
@@ -199,7 +202,7 @@ const doCreateChapter = async (volumeId: number, initialContent?: string) => {
     const newChapter = await invoke<Chapter>("create_chapter", {
       projectId: Number(props.projectId),
       volumeId,
-      title: "新建章节",
+      title: t('treeSidebar.newChapter'),
       initialContent: initialContent || null,
     });
     const volume = volumes.value.find((v) => v.id === volumeId);
@@ -211,7 +214,7 @@ const doCreateChapter = async (volumeId: number, initialContent?: string) => {
     // 然后开始编辑标题
     startEditChapter(newChapter.id, newChapter.title);
   } catch (error) {
-    console.error("创建章节失败:", error);
+    console.error(t('treeSidebar.createChapterFailed') + ":", error);
   }
 };
 
@@ -270,7 +273,7 @@ const updateVolumeName = async (volumeId: number, newName: string) => {
       volume.name = newName;
     }
   } catch (error) {
-    console.error("更新卷名失败:", error);
+    console.error(t('treeSidebar.updateVolumeNameFailed') + ":", error);
   }
 };
 
@@ -289,7 +292,7 @@ const updateChapterTitle = async (chapterId: number, newTitle: string) => {
       }
     }
   } catch (error) {
-    console.error("更新章节标题失败:", error);
+    console.error(t('treeSidebar.updateChapterTitleFailed') + ":", error);
   }
 };
 
@@ -298,10 +301,10 @@ const deleteVolume = async (volumeId: number) => {
   try {
     await invoke("delete_volume", { volumeId });
     volumes.value = volumes.value.filter((v) => v.id !== volumeId);
-    message.success("卷已删除");
+    message.success(t('treeSidebar.volumeDeleted'));
   } catch (error) {
-    console.error("删除卷失败:", error);
-    message.error("删除卷失败");
+    console.error(t('treeSidebar.deleteVolumeFailed') + ":", error);
+    message.error(t('treeSidebar.deleteVolumeFailed'));
   }
 };
 
@@ -315,10 +318,10 @@ const deleteChapter = async (chapterId: number) => {
     if (selectedChapterId.value === chapterId) {
       selectedChapterId.value = null;
     }
-    message.success("章节已删除");
+    message.success(t('treeSidebar.chapterDeleted'));
   } catch (error) {
-    console.error("删除章节失败:", error);
-    message.error("删除章节失败");
+    console.error(t('treeSidebar.deleteChapterFailed') + ":", error);
+    message.error(t('treeSidebar.deleteChapterFailed'));
   }
 };
 
@@ -353,10 +356,10 @@ const handleConfirmDeleteChapter = async (keepFile: boolean) => {
     if (selectedChapterId.value === chapterToDelete.value.id) {
       selectedChapterId.value = null;
     }
-    message.success(keepFile ? "章节已从列表移除" : "章节已删除");
+    message.success(keepFile ? t('treeSidebar.chapterRemoved') : t('treeSidebar.chapterDeleted'));
   } catch (error) {
-    console.error("删除章节失败:", error);
-    message.error("删除章节失败");
+    console.error(t('treeSidebar.deleteChapterFailed') + ":", error);
+    message.error(t('treeSidebar.deleteChapterFailed'));
   }
   showDeleteChapterModal.value = false;
   chapterToDelete.value = null;
@@ -371,7 +374,7 @@ const onVolumeReorder = async () => {
       orderedIds,
     });
   } catch (error) {
-    console.error("排序卷失败:", error);
+    console.error(t('treeSidebar.reorderVolumesFailed') + ":", error);
     loadChapterTree();
   }
 };
@@ -388,7 +391,7 @@ const onChapterReorder = async (volumeId: number) => {
       });
     }
   } catch (error) {
-    console.error("排序章节失败:", error);
+    console.error(t('treeSidebar.reorderChaptersFailed') + ":", error);
     loadChapterTree();
   }
 };
@@ -428,7 +431,7 @@ const onChapterAdd = async (evt: { item: HTMLElement; from: HTMLElement; to: HTM
       orderedIds,
     });
   } catch (error) {
-    console.error("移动章节失败:", error);
+    console.error(t('treeSidebar.moveChapterFailed') + ":", error);
     loadChapterTree();
   }
 };
@@ -469,17 +472,17 @@ const contextMenuOptions = computed(() => {
   if (contextMenuType.value === "volume" && contextMenuVolumeId.value !== null) {
     return [
       {
-        label: "新增章节",
+        label: t('treeSidebar.addChapter'),
         key: "add-chapter",
         icon: () => null,
       },
       {
-        label: "重命名",
+        label: t('treeSidebar.rename'),
         key: "rename",
         icon: () => null,
       },
       {
-        label: "删除",
+        label: t('treeSidebar.delete'),
         key: "delete",
         icon: () => null,
       },
@@ -505,18 +508,18 @@ const contextMenuOptions = computed(() => {
 
     return [
       {
-        label: "修改状态",
+        label: t('treeSidebar.changeStatus'),
         key: "change-status",
         icon: () => null,
         children: statusOptions,
       },
       {
-        label: "重命名",
+        label: t('treeSidebar.rename'),
         key: "rename",
         icon: () => null,
       },
       {
-        label: "删除",
+        label: t('treeSidebar.delete'),
         key: "delete",
         icon: () => null,
       },
@@ -524,7 +527,7 @@ const contextMenuOptions = computed(() => {
   } else {
     return [
       {
-        label: "新增卷",
+        label: t('treeSidebar.addVolume'),
         key: "add-volume",
         icon: () => null,
       },
@@ -643,7 +646,7 @@ onMounted(async () => {
   >
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200">章节结构</h2>
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ t('treeSidebar.title') }}</h2>
       <div class="flex items-center gap-2">
         <!-- Status Filter -->
         <NButton size="tiny" quaternary @click="showStatusFilter = !showStatusFilter" :type="statusFilter !== 'all' ? 'primary' : undefined">
@@ -662,7 +665,7 @@ onMounted(async () => {
     <!-- Status Filter Bar -->
     <div v-if="showStatusFilter" class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
       <div class="flex items-center gap-2 flex-wrap">
-        <span class="text-xs text-gray-500">筛选:</span>
+        <span class="text-xs text-gray-500">{{ t('treeSidebar.filter') }}</span>
         <button
           v-for="opt in statusFilterOptions"
           :key="opt.value"
@@ -684,10 +687,10 @@ onMounted(async () => {
 
     <!-- Tree Content -->
     <div class="flex-1 overflow-y-auto p-2">
-      <NEmpty v-if="!isLoading && filteredVolumes.length === 0" description="暂无章节" class="py-8">
+      <NEmpty v-if="!isLoading && filteredVolumes.length === 0" :description="t('treeSidebar.noChapters')" class="py-8">
         <template #extra>
-          <NButton v-if="volumes.length === 0" size="small" @click="createVolume">创建第一个卷</NButton>
-          <span v-else class="text-sm text-gray-500">没有符合条件的章节</span>
+          <NButton v-if="volumes.length === 0" size="small" @click="createVolume">{{ t('treeSidebar.createFirstVolume') }}</NButton>
+          <span v-else class="text-sm text-gray-500">{{ t('treeSidebar.noMatchingChapters') }}</span>
         </template>
       </NEmpty>
 
@@ -748,14 +751,14 @@ onMounted(async () => {
                 <button
                   class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                   @click.stop="createChapter(volume.id)"
-                  title="新增章节"
+                  :title="t('treeSidebar.addChapter')"
                 >
                   <Plus class="w-3 h-3 text-gray-500" />
                 </button>
                 <button
                   class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                   @click.stop="showContextMenu($event, 'volume', volume.id)"
-                  title="更多操作"
+                  :title="t('treeSidebar.moreActions')"
                 >
                   <MoreVertical class="w-3 h-3 text-gray-500" />
                 </button>
@@ -792,7 +795,7 @@ onMounted(async () => {
                     <span
                       class="w-2 h-2 rounded-full shrink-0 cursor-pointer hover:scale-125 transition-transform"
                       :style="{ backgroundColor: getStatusColor(chapter.status) }"
-                      :title="`状态: ${getStatusLabel(chapter.status)}`"
+                      :title="t('treeSidebar.statusTitle', { status: getStatusLabel(chapter.status) })"
                       @click.stop="startEditChapterStatus(chapter)"
                     ></span>
 
@@ -820,7 +823,7 @@ onMounted(async () => {
 
                     <!-- Word count -->
                     <span class="text-xs text-gray-400">
-                      {{ chapter.word_count_cache }}字
+                      {{ chapter.word_count_cache }}{{ t('treeSidebar.wordCountSuffix') }}
                     </span>
 
                     <!-- Status edit dropdown -->
@@ -846,7 +849,7 @@ onMounted(async () => {
                 @click="createChapter(volume.id)"
               >
                 <Plus class="w-4 h-4" />
-                新增章节
+                {{ t('treeSidebar.addChapter') }}
               </button>
             </div>
           </div>
@@ -870,7 +873,7 @@ onMounted(async () => {
               <span class="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
                 {{ volume.name }}
               </span>
-              <span class="text-xs text-gray-400">{{ volume.chapters.length }}章节</span>
+              <span class="text-xs text-gray-400">{{ volume.chapters.length }}{{ t('treeSidebar.chapterCountSuffix') }}</span>
             </div>
 
             <!-- Chapters -->
@@ -889,7 +892,7 @@ onMounted(async () => {
                 <span
                   class="w-2 h-2 rounded-full shrink-0 cursor-pointer hover:scale-125 transition-transform"
                   :style="{ backgroundColor: getStatusColor(chapter.status) }"
-                  :title="`状态: ${getStatusLabel(chapter.status)}`"
+                  :title="t('treeSidebar.statusTitle', { status: getStatusLabel(chapter.status) })"
                   @click.stop="startEditChapterStatus(chapter)"
                 ></span>
 
@@ -898,7 +901,7 @@ onMounted(async () => {
                 </span>
 
                 <span class="text-xs text-gray-400">
-                  {{ chapter.word_count_cache }}字
+                  {{ chapter.word_count_cache }}{{ t('treeSidebar.wordCountSuffix') }}
                 </span>
 
                 <!-- Status edit dropdown -->
@@ -928,7 +931,7 @@ onMounted(async () => {
         @contextmenu="showContextMenu($event, 'empty')"
       >
         <Plus class="w-4 h-4" />
-        新增卷
+        {{ t('treeSidebar.addVolume') }}
       </button>
     </div>
 
@@ -946,18 +949,18 @@ onMounted(async () => {
     <!-- 删除卷确认弹窗 -->
     <DeleteConfirmModal
       v-model:show="showDeleteVolumeModal"
-      title="确认删除卷"
-      :message="`确定要删除卷 &quot;${volumeToDelete?.name}&quot; 吗？该卷下的所有章节也会被删除。`"
-      confirm-text="删除"
+      :title="t('treeSidebar.deleteVolumeTitle')"
+      :message="t('treeSidebar.deleteVolumeMessage', { name: volumeToDelete?.name })"
+      :confirm-text="t('treeSidebar.delete')"
       @confirm="handleConfirmDeleteVolume"
     />
 
     <!-- 删除章节确认弹窗 -->
     <DeleteConfirmModal
       v-model:show="showDeleteChapterModal"
-      title="确认删除章节"
-      :message="`确定要删除章节 &quot;${chapterToDelete?.title}&quot; 吗？`"
-      confirm-text="删除"
+      :title="t('treeSidebar.deleteChapterTitle')"
+      :message="t('treeSidebar.deleteChapterMessage', { title: chapterToDelete?.title })"
+      :confirm-text="t('treeSidebar.delete')"
       :show-keep-files="true"
       :default-keep-files="false"
       @confirm="handleConfirmDeleteChapter"

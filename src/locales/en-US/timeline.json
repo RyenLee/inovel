@@ -1,0 +1,28 @@
+{
+  "title": "Story Timeline",
+  "eventCount": "{count} events",
+  "addEvent": "Add Event",
+  "emptyDescription": "No events yet, click the add button to create the first event",
+  "noChapter": "No related chapter",
+  "editEvent": "Edit Event",
+  "addEventTitle": "Add Event",
+  "eventTitle": "Event Title",
+  "eventTitleRequired": "*",
+  "eventTitlePlaceholder": "Enter event title",
+  "storyTime": "Story Time",
+  "storyTimePlaceholder": "Select the time when the story takes place",
+  "eventDescription": "Event Description",
+  "eventDescriptionPlaceholder": "Describe the content of this event...",
+  "relatedChapter": "Related Chapter",
+  "relatedChapterPlaceholder": "Select a related chapter (optional)",
+  "deleteConfirm": "Are you sure you want to delete this event?",
+  "messages": {
+    "loadFailed": "Failed to load data",
+    "titleRequired": "Please enter an event title",
+    "eventUpdated": "Event updated",
+    "eventCreated": "Event created",
+    "saveFailed": "Failed to save",
+    "eventDeleted": "Event deleted",
+    "deleteFailed": "Failed to delete"
+  }
+}

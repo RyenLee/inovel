@@ -33,6 +33,9 @@ import { readFile } from "@tauri-apps/plugin-fs";
 import type { EditorMode } from "../stores/editor";
 import TemplateSelector from "./TemplateSelector.vue";
 import TextImportDialog from "./TextImportDialog.vue";
+import { useLocale } from "../i18n/composables/useLocale";
+
+const { t } = useLocale();
 const props = defineProps<{
   modelValue: string;
   chapterId: number | null;
@@ -256,7 +259,7 @@ const handleTemplateSelect = async (payload: string | {
   mode: 'replace' | 'insert';
 }) => {
   if (!editor.value) {
-    console.error('编辑器实例未初始化');
+    console.error(t('markdownEditor.messages.editorNotInitialized'));
     return;
   }
   let content: string;
@@ -327,7 +330,7 @@ const toggleTemplateMode = () => {
 };
 const selectImageForImg = async (img: HTMLImageElement) => {
   const { path, error } = await selectFile({
-    title: "选择图片",
+    title: t('markdownEditor.imageDialog.title'),
     filters: [{
       name: 'Image',
       extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']
@@ -382,7 +385,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          加粗 (Ctrl+B)
+          {{ t('markdownEditor.toolbar.bold') }}
         </NTooltip>
 
         <NTooltip trigger="hover">
@@ -396,7 +399,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          斜体 (Ctrl+I)
+          {{ t('markdownEditor.toolbar.italic') }}
         </NTooltip>
 
         <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
@@ -412,7 +415,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          一级标题
+          {{ t('markdownEditor.toolbar.heading1') }}
         </NTooltip>
 
         <NTooltip trigger="hover">
@@ -426,7 +429,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          二级标题
+          {{ t('markdownEditor.toolbar.heading2') }}
         </NTooltip>
 
         <NTooltip trigger="hover">
@@ -440,7 +443,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          三级标题
+          {{ t('markdownEditor.toolbar.heading3') }}
         </NTooltip>
 
         <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
@@ -456,7 +459,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          无序列表
+          {{ t('markdownEditor.toolbar.bulletList') }}
         </NTooltip>
 
         <NTooltip trigger="hover">
@@ -470,7 +473,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          有序列表
+          {{ t('markdownEditor.toolbar.orderedList') }}
         </NTooltip>
 
         <NTooltip trigger="hover">
@@ -484,7 +487,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          引用
+          {{ t('markdownEditor.toolbar.blockquote') }}
         </NTooltip>
 
         <NTooltip trigger="hover">
@@ -497,7 +500,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          分割线
+          {{ t('markdownEditor.toolbar.horizontalRule') }}
         </NTooltip>
 
         <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
@@ -512,7 +515,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          版本历史
+          {{ t('markdownEditor.toolbar.history') }}
         </NTooltip>
 
         <NTooltip trigger="hover">
@@ -525,7 +528,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          创建快照
+          {{ t('markdownEditor.toolbar.snapshot') }}
         </NTooltip>
 
         <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
@@ -540,7 +543,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          打开模板库
+          {{ t('markdownEditor.toolbar.template') }}
         </NTooltip>
 
         <NTooltip trigger="hover">
@@ -553,7 +556,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          名称生成
+          {{ t('markdownEditor.toolbar.nameGenerator') }}
         </NTooltip>
         
         <NDropdown trigger="hover" :options="beautifyDropdownOptions" @select="beautify.handleBeautifyDropdown">
@@ -576,13 +579,13 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          导入文本文件 (.txt)
+          {{ t('markdownEditor.toolbar.importText') }}
         </NTooltip>
 
         <div v-if="showLineHeightControl"
           class="absolute top-full right-0 mt-2 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 min-w-[240px]">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">行间距</span>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('markdownEditor.lineHeight.title') }}</span>
             <button @click="beautify.toggleLineHeightControl"
               class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <X class="w-4 h-4" />
@@ -602,15 +605,15 @@ defineExpose({
           <div class="space-y-2">
             <NSlider v-model:value="lineHeight" :min="16" :max="50" :step="1" :tooltip="false" />
             <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-              <span>紧凑</span>
+              <span>{{ t('markdownEditor.lineHeight.compact') }}</span>
               <span class="font-medium text-blue-500">{{ lineHeight }}px</span>
-              <span>宽松</span>
+              <span>{{ t('markdownEditor.lineHeight.loose') }}</span>
             </div>
           </div>
 
           <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
             <p class="text-xs text-gray-500 dark:text-gray-400">
-              当前行高：{{ lineHeight }}px
+              {{ t('markdownEditor.lineHeight.current', { height: lineHeight }) }}
             </p>
           </div>
         </div>
@@ -628,17 +631,17 @@ defineExpose({
       <div class="flex items-center gap-4">
         <div class="flex items-center gap-1">
           <Type class="w-4 h-4" />
-          <span>本章字数：</span>
+          <span>{{ t('markdownEditor.statusBar.chapterWordCount') }}</span>
           <span class="font-medium text-blue-600 dark:text-blue-400">{{ editorWordCount }}</span>
         </div>
         <div v-if="volumeWordCount !== undefined" class="flex items-center gap-1">
           <BookOpen class="w-4 h-4" />
-          <span>本卷字数：</span>
+          <span>{{ t('markdownEditor.statusBar.volumeWordCount') }}</span>
           <span class="font-medium">{{ volumeWordCount.toLocaleString() }}</span>
         </div>
         <div v-if="totalWordCount !== undefined" class="flex items-center gap-1">
           <BookOpen class="w-4 h-4" />
-          <span>全书字数：</span>
+          <span>{{ t('markdownEditor.statusBar.totalWordCount') }}</span>
           <span class="font-medium">{{ totalWordCount.toLocaleString() }}</span>
         </div>
       </div>
@@ -650,13 +653,13 @@ defineExpose({
     <TextImportDialog v-model:show="showTextImportDialog" :is-dark="isDark"
       @import="handleTextImport" />
 
-    <NModal v-model:show="showSplitDialog" preset="card" title="段落拆分" style="width: 600px; max-width: 90vw"
+    <NModal v-model:show="showSplitDialog" preset="card" :title="t('markdownEditor.splitDialog.title')" style="width: 600px; max-width: 90vw"
       :segmented="{ content: true, footer: true }">
       <div class="space-y-4">
         <div class="flex items-center gap-4">
-          <NText>拆分阈值：</NText>
+          <NText>{{ t('markdownEditor.splitDialog.threshold') }}</NText>
           <NSlider v-model:value="splitThreshold" :min="100" :max="500" :step="10" style="width: 200px" />
-          <NText>{{ splitThreshold }} 字符</NText>
+          <NText>{{ splitThreshold }} {{ t('markdownEditor.splitDialog.characters') }}</NText>
         </div>
 
         <NButton @click="beautify.previewSplitParagraphs" secondary>
@@ -665,21 +668,21 @@ defineExpose({
               <Eye />
             </NIcon>
           </template>
-          刷新预览
+          {{ t('markdownEditor.splitDialog.refreshPreview') }}
         </NButton>
 
         <div v-if="splitPreview && splitPreview.length > 0"
           class="max-h-80 overflow-auto border rounded-lg p-4 space-y-4">
           <div v-for="(item, index) in splitPreview" :key="index">
-            <NText depth="3" class="text-xs mb-1 block">原文（{{ item.original.length }} 字）：</NText>
+            <NText depth="3" class="text-xs mb-1 block">{{ t('markdownEditor.splitDialog.original', { length: item.original.length }) }}</NText>
             <div class="bg-gray-100 dark:bg-gray-800 rounded p-2 mb-2 text-sm">
               {{ item.original.slice(0, 100) }}{{ item.original.length > 100 ? '...' : '' }}
             </div>
 
-            <NText depth="3" class="text-xs mb-1 block">拆分后（{{ item.split.length }} 段）：</NText>
+            <NText depth="3" class="text-xs mb-1 block">{{ t('markdownEditor.splitDialog.splitResult', { count: item.split.length }) }}</NText>
             <div class="bg-blue-50 dark:bg-blue-900/30 rounded p-2 space-y-1">
               <div v-for="(split, si) in item.split" :key="si" class="text-sm">
-                <span class="text-blue-500 font-medium">[段{{ si + 1 }}]</span>
+                <span class="text-blue-500 font-medium">[{{ t('markdownEditor.splitDialog.segment', { index: si + 1 }) }}]</span>
                 {{ split.slice(0, 50) }}{{ split.length > 50 ? '...' : '' }}
               </div>
             </div>
@@ -687,16 +690,16 @@ defineExpose({
         </div>
 
         <div v-else class="flex items-center justify-center py-8">
-          <NText depth="3">当前没有超过阈值的段落</NText>
+          <NText depth="3">{{ t('markdownEditor.splitDialog.noParagraphs') }}</NText>
         </div>
       </div>
 
       <template #footer>
         <NSpace justify="end">
-          <NButton @click="showSplitDialog = false">取消</NButton>
+          <NButton @click="showSplitDialog = false">{{ t('common.action.cancel') }}</NButton>
           <NButton type="primary" :disabled="!splitPreview || splitPreview.length === 0"
             @click="beautify.applySplitParagraphs">
-            确认拆分
+            {{ t('markdownEditor.splitDialog.confirmSplit') }}
           </NButton>
         </NSpace>
       </template>

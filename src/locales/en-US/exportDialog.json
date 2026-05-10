@@ -1,0 +1,20 @@
+{
+  "title": "Export Document",
+  "selectFormat": "Select export format",
+  "exporting": "Exporting...",
+  "startExport": "Start Export",
+  "exportComplete": "Export complete, files saved to:",
+  "openFolder": "Open Folder",
+  "formats": {
+    "txt": "Plain Text (.txt)",
+    "markdown": "Markdown (.md)",
+    "epub": "EPUB eBook (.epub)",
+    "pdf": "PDF Document (.pdf)"
+  },
+  "messages": {
+    "selectAtLeastOne": "Please select at least one export format",
+    "exportFailed": "Export {format} failed",
+    "exportSuccess": "Export complete, {success}/{total} files succeeded",
+    "cannotOpenFolder": "Cannot open folder"
+  }
+}

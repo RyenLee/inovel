@@ -1,0 +1,14 @@
+{
+  "lineHeight": {
+    "compact": "Compact",
+    "standard": "Standard",
+    "loose": "Loose",
+    "extraLoose": "Extra Loose"
+  },
+  "menu": {
+    "paragraphIndent": "Paragraph Indent",
+    "paperEffect": "Paper Effect",
+    "lineHeightSettings": "Line Height",
+    "paragraphSplit": "Paragraph Split"
+  }
+}

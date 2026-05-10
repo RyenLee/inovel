@@ -1,0 +1,16 @@
+{
+  "types": {
+    "character": "人物",
+    "location": "地点",
+    "organization": "组织"
+  },
+  "labels": {
+    "gender": "性别",
+    "age": "年龄",
+    "personality": "性格",
+    "type": "类型",
+    "leader": "首领"
+  },
+  "clickToView": "点击查看详情",
+  "noResults": "无匹配结果"
+}

@@ -1,0 +1,88 @@
+{
+  "title": "Project Settings",
+  "tabs": {
+    "basic": "Basic",
+    "security": "Security"
+  },
+  "cover": {
+    "title": "Cover Image",
+    "alt": "Project Cover",
+    "changeButton": "Change Cover",
+    "formatHint": "Supports JPG, PNG formats",
+    "updated": "Cover updated",
+    "changeFailed": "Failed to change cover: {error}",
+    "selectTitle": "Select Cover Image"
+  },
+  "projectInfo": {
+    "title": "Project Info",
+    "projectId": "Project ID",
+    "projectIdPlaceholder": "Project ID",
+    "projectIdReadonly": "Read-only",
+    "name": "Title",
+    "namePlaceholder": "Enter book title",
+    "nameRequired": "Please enter a book title",
+    "author": "Pen Name",
+    "authorPlaceholder": "Enter author pen name",
+    "description": "Description",
+    "descriptionPlaceholder": "Enter novel description",
+    "path": "Storage Path",
+    "saveButton": "Save Project Info",
+    "saved": "Project info saved",
+    "saveFailed": "Save failed: {error}"
+  },
+  "writingGoal": {
+    "title": "Writing Goal",
+    "dailyGoal": "Daily Word Count Goal",
+    "unit": "words/day",
+    "feedback": "Set the daily writing goal for this project. This will override the global setting.",
+    "saveButton": "Save Goal",
+    "saved": "Daily goal saved",
+    "saveFailed": "Save failed"
+  },
+  "encryption": {
+    "status": {
+      "title": "Encryption Status",
+      "encrypted": "Encrypted",
+      "notEncrypted": "Not Encrypted",
+      "encryptedDesc": "Project files are encrypted",
+      "notEncryptedDesc": "Project files are not encrypted"
+    },
+    "enable": {
+      "title": "Enable Encryption",
+      "password": "Set Password",
+      "passwordPlaceholder": "Enter password (at least 8 characters)",
+      "confirmPassword": "Confirm Password",
+      "confirmPasswordPlaceholder": "Re-enter password",
+      "button": "Enable Encryption",
+      "passwordMismatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "success": "Project encrypted",
+      "failed": "Encryption failed: {error}",
+      "progress": "Encrypting: {current} / {total} ({file})"
+    },
+    "change": {
+      "title": "Change Password",
+      "oldPassword": "Current Password",
+      "oldPasswordPlaceholder": "Enter current password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter new password (at least 8 characters)",
+      "confirmNewPassword": "Confirm New Password",
+      "confirmNewPasswordPlaceholder": "Re-enter new password",
+      "button": "Change Password",
+      "passwordMismatch": "New passwords do not match",
+      "passwordTooShort": "New password must be at least 8 characters",
+      "success": "Password changed",
+      "failed": "Failed to change password: {error}"
+    },
+    "disable": {
+      "title": "Disable Encryption",
+      "description": "Disabling encryption will decrypt all project files. Password confirmation required.",
+      "password": "Password",
+      "passwordPlaceholder": "Enter password",
+      "button": "Disable Encryption",
+      "success": "Project decrypted, encryption disabled",
+      "failed": "Failed to disable encryption: {error}"
+    }
+  },
+  "project": "Project"
+}

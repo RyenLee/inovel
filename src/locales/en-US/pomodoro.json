@@ -1,0 +1,39 @@
+{
+  "sessionTypes": {
+    "work": "Focus",
+    "short_break": "Short Break",
+    "long_break": "Long Break"
+  },
+  "status": {
+    "running": "Running",
+    "paused": "Paused",
+    "idle": "Idle"
+  },
+  "taskPlaceholder": "Enter task name...",
+  "focusModeDisabled": "Disabled in focus mode",
+  "reset": "Reset",
+  "skip": "Skip",
+  "soundOn": "Sound On",
+  "soundOff": "Sound Off",
+  "focusModeOn": "Enable Focus Mode",
+  "focusModeOff": "Disable Focus Mode",
+  "settings": "Settings",
+  "settingsTitle": "Pomodoro Settings",
+  "workDuration": "Work Duration",
+  "shortBreak": "Short Break",
+  "longBreak": "Long Break",
+  "longBreakInterval": "Long Break Interval",
+  "minutes": "min",
+  "perPomodoros": "Every {n} pomodoros",
+  "autoStartBreaks": "Auto-start Breaks",
+  "autoStartWork": "Auto-start Work",
+  "completed": "Completed",
+  "confirm": "OK",
+  "completionMessages": {
+    "work": "🎉 Congratulations on completing a pomodoro! {streak} consecutive focus sessions",
+    "break": "☕ Break is over, ready for the next pomodoro!"
+  },
+  "messages": {
+    "pauseFirst": "Please pause or complete the current focus session first"
+  }
+}

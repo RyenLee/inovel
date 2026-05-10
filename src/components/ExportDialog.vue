@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import {
   NModal,
   NButton,
@@ -11,6 +11,9 @@ import {
 } from "naive-ui";
 import { Download, FolderOpen } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
+import { useLocale } from "../i18n/composables/useLocale";
+
+const { t } = useLocale();
 
 const props = defineProps<{
   show: boolean;
@@ -27,18 +30,18 @@ const formats = ref<string[]>(["txt"]);
 const isExporting = ref(false);
 const exportResult = ref<{ folderPath: string; formats: string[] } | null>(null);
 
-const formatOptions = [
-  { label: "纯文本 (.txt)", value: "txt" },
-  { label: "Markdown (.md)", value: "markdown" },
-  { label: "EPUB 电子书 (.epub)", value: "epub" },
-  { label: "PDF 文档 (.pdf)", value: "pdf" },
-];
+const formatOptions = computed(() => [
+  { label: t('exportDialog.formats.txt'), value: "txt" },
+  { label: t('exportDialog.formats.markdown'), value: "markdown" },
+  { label: t('exportDialog.formats.epub'), value: "epub" },
+  { label: t('exportDialog.formats.pdf'), value: "pdf" },
+]);
 
 
 
 const doExport = async () => {
   if (formats.value.length === 0) {
-    message.warning("请至少选择一种导出格式");
+    message.warning(t('exportDialog.messages.selectAtLeastOne'));
     return;
   }
 
@@ -83,7 +86,7 @@ const doExport = async () => {
       }
     } catch (error) {
       console.error(`导出 ${fmt} 失败:`, error);
-      message.error(`导出 ${fmt.toUpperCase()} 失败`);
+      message.error(t('exportDialog.messages.exportFailed', { format: fmt.toUpperCase() }));
     }
   }
 
@@ -100,7 +103,7 @@ const doExport = async () => {
   }
 
   if (successCount > 0) {
-    message.success(`导出完成，成功 ${successCount}/${formats.value.length} 个文件`);
+    message.success(t('exportDialog.messages.exportSuccess', { success: successCount, total: formats.value.length }));
   }
 
   isExporting.value = false;
@@ -112,7 +115,7 @@ const openExportFolder = async () => {
     await invoke("open_folder_in_explorer", { projectId: props.projectId });
   } catch (error) {
     console.error("打开文件夹失败:", error);
-    message.error("无法打开文件夹");
+    message.error(t('exportDialog.messages.cannotOpenFolder'));
   }
 };
 </script>
@@ -122,14 +125,14 @@ const openExportFolder = async () => {
     :show="show"
     @update:show="(v: boolean) => emit('update:show', v)"
     preset="card"
-    title="导出文档"
+    :title="t('exportDialog.title')"
     :style="{ width: '460px', maxWidth: '90vw' }"
     :mask-closable="true"
   >
     <div class="space-y-5">
       <!-- 格式选择 -->
       <div>
-        <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">选择导出格式</label>
+        <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{{ t('exportDialog.selectFormat') }}</label>
         <n-checkbox-group v-model:value="formats">
           <n-space vertical :size="10">
             <n-checkbox
@@ -154,13 +157,13 @@ const openExportFolder = async () => {
         <template #icon>
           <n-icon><Download /></n-icon>
         </template>
-        {{ isExporting ? "导出中..." : "开始导出" }}
+        {{ isExporting ? t('exportDialog.exporting') : t('exportDialog.startExport') }}
       </n-button>
 
       <!-- 导出结果 -->
       <div v-if="exportResult" class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
         <p class="text-sm text-green-700 dark:text-green-300 mb-2">
-          导出完成，文件保存在：
+          {{ t('exportDialog.exportComplete') }}
         </p>
         <p class="text-xs text-gray-500 dark:text-gray-400 break-all mb-3 font-mono">
           {{ exportResult.folderPath }}
@@ -169,7 +172,7 @@ const openExportFolder = async () => {
           <template #icon>
             <n-icon><FolderOpen /></n-icon>
           </template>
-          打开文件夹
+          {{ t('exportDialog.openFolder') }}
         </n-button>
       </div>
     </div>

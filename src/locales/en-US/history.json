@@ -1,0 +1,24 @@
+{
+  "title": "Version History",
+  "backToList": "Back to Version List",
+  "noHistory": "No version history",
+  "noHistoryHint": "Version snapshots are automatically created each time you save or close the application",
+  "selectedA": "Selected Version A: {hash}, please select Version B to compare",
+  "confirmRestore": "Confirm Restore",
+  "cancel": "Cancel",
+  "restore": "Restore",
+  "restoreConfirmTitle": "After restoring to this version:",
+  "restoreConfirmItem1": "Workspace files will be replaced with the content of this version",
+  "restoreConfirmItem2": "A new \"restore\" snapshot will be automatically created",
+  "restoreConfirmItem3": "All existing version history is preserved and will not be lost",
+  "restoreConfirmQuestion": "Are you sure you want to restore?",
+  "restoreHint": "Restore instructions: Click \"Restore\" to hard reset to the selected version and automatically create a restore snapshot. Existing history will not be destroyed.",
+  "compare": "Compare:",
+  "diffLoadFailed": "Unable to load diff content",
+  "messages": {
+    "noHistoryWarning": "No version history",
+    "diffLoadFailed": "Failed to load diff: {error}",
+    "restoreSuccess": "Restored to the selected version (a restore snapshot was automatically created, original history is preserved)",
+    "restoreFailed": "Restore failed: {error}"
+  }
+}

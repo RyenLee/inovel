@@ -3,6 +3,9 @@ import { ref, watch } from 'vue'
 import { NModal, NButton, NIcon, NSpin, NEmpty, NPopconfirm, NTag, useMessage, NAlert } from 'naive-ui'
 import { invoke } from '@tauri-apps/api/core'
 import { History, RotateCcw, ArrowLeft } from 'lucide-vue-next'
+import { useLocale } from '../i18n/composables/useLocale'
+
+const { t } = useLocale()
 
 interface Snapshot {
   hash: string
@@ -44,7 +47,7 @@ const loadSnapshots = async () => {
     snapshots.value = await invoke<Snapshot[]>('get_snapshots', { projectId: props.projectId })
   } catch (e) {
     console.error('加载版本失败:', e)
-    message.warning('没有版本历史')
+    message.warning(t('history.messages.noHistoryWarning'))
   } finally {
     loading.value = false
   }
@@ -92,7 +95,7 @@ async function loadDiff() {
       toHash: selectedB.value,
     })
   } catch (e) {
-    diffResult.value = '加载差异失败: ' + e
+    diffResult.value = t('history.messages.diffLoadFailed', { error: String(e) })
   } finally {
     diffLoading.value = false
   }
@@ -133,11 +136,11 @@ const doRestore = async (hash: string) => {
   restoring.value = true
   try {
     await invoke('restore_snapshot', { projectId: props.projectId, commitHash: hash })
-    message.success('已恢复到所选版本（自动创建了恢复快照，原历史未丢失）')
+    message.success(t('history.messages.restoreSuccess'))
     emit('restore', '')
     emit('update:show', false)
   } catch (e) {
-    message.error('恢复失败: ' + e)
+    message.error(t('history.messages.restoreFailed', { error: String(e) }))
   } finally {
     restoring.value = false
   }
@@ -149,7 +152,7 @@ const doRestore = async (hash: string) => {
     :show="show"
     @update:show="$emit('update:show', $event)"
     preset="card"
-    title="版本历史"
+    :title="t('history.title')"
     style="width: 750px; max-width: 90vw;"
     :mask-closable="false"
   >
@@ -158,7 +161,7 @@ const doRestore = async (hash: string) => {
       <div v-if="showDiffPanel" class="mb-3">
         <NButton size="tiny" quaternary @click="backToList">
           <template #icon><NIcon><ArrowLeft /></NIcon></template>
-          返回版本列表
+          {{ t('history.backToList') }}
         </NButton>
       </div>
 
@@ -169,9 +172,9 @@ const doRestore = async (hash: string) => {
 
       <!-- Empty -->
       <div v-else-if="snapshots.length === 0 && !showDiffPanel" class="py-8">
-        <NEmpty description="暂无版本记录">
+        <NEmpty :description="t('history.noHistory')">
           <template #extra>
-            <p class="text-sm text-gray-500">每次保存或关闭应用时将自动创建版本快照</p>
+            <p class="text-sm text-gray-500">{{ t('history.noHistoryHint') }}</p>
           </template>
         </NEmpty>
       </div>
@@ -181,7 +184,7 @@ const doRestore = async (hash: string) => {
         <!-- Selected version hint -->
         <NAlert v-if="selectedA" type="info" :bordered="false" class="mb-3">
           <template #header>
-            已选版本 A：{{ shortHash(selectedA) }}，请选择对比的版本 B
+            {{ t('history.selectedA', { hash: shortHash(selectedA) }) }}
           </template>
         </NAlert>
 
@@ -220,24 +223,24 @@ const doRestore = async (hash: string) => {
               <div class="history-item-actions">
                 <NPopconfirm
                   @positive-click="doRestore(snap.hash)"
-                  positive-text="确认恢复"
-                  negative-text="取消"
+                  :positive-text="t('history.confirmRestore')"
+                  :negative-text="t('history.cancel')"
                 >
                   <template #default>
                     <div style="max-width: 280px">
-                      <p><strong>恢复到该版本后：</strong></p>
+                      <p><strong>{{ t('history.restoreConfirmTitle') }}</strong></p>
                       <ul style="padding-left: 16px; margin: 8px 0;">
-                        <li>工作区文件将被替换为该版本的内容</li>
-                        <li>系统会自动创建一条新的"恢复"快照</li>
-                        <li>所有现有历史版本均保留，不会丢失</li>
+                        <li>{{ t('history.restoreConfirmItem1') }}</li>
+                        <li>{{ t('history.restoreConfirmItem2') }}</li>
+                        <li>{{ t('history.restoreConfirmItem3') }}</li>
                       </ul>
-                      <p class="text-xs text-gray-400">确认要恢复吗？</p>
+                      <p class="text-xs text-gray-400">{{ t('history.restoreConfirmQuestion') }}</p>
                     </div>
                   </template>
                   <template #trigger>
                     <NButton size="tiny" quaternary type="warning" :loading="restoring">
                       <template #icon><NIcon><RotateCcw /></NIcon></template>
-                      恢复
+                      {{ t('history.restore') }}
                     </NButton>
                   </template>
                 </NPopconfirm>
@@ -249,7 +252,7 @@ const doRestore = async (hash: string) => {
         <!-- Restore hint -->
         <NAlert v-if="snapshots.length > 0" type="warning" :bordered="false" class="mt-3">
           <template #header>
-            恢复操作说明：点击「恢复」将硬重置到选中版本并自动创建恢复快照。现有历史不会被破坏。
+            {{ t('history.restoreHint') }}
           </template>
         </NAlert>
       </template>
@@ -257,7 +260,7 @@ const doRestore = async (hash: string) => {
       <!-- Diff Panel -->
       <div v-if="showDiffPanel" class="diff-panel">
         <div class="diff-info" v-if="selectedA && selectedB">
-          <span class="text-sm font-medium">对比：</span>
+          <span class="text-sm font-medium">{{ t('history.compare') }}</span>
           <NTag size="small" type="primary">{{ shortHash(selectedA) }}</NTag>
           <span class="text-sm text-gray-500"> → </span>
           <NTag size="small" type="primary">{{ shortHash(selectedB) }}</NTag>
@@ -268,7 +271,7 @@ const doRestore = async (hash: string) => {
         </div>
 
         <div v-else-if="!diffResult" class="py-4 text-center text-sm text-gray-400">
-          无法加载差异内容
+          {{ t('history.diffLoadFailed') }}
         </div>
 
         <div

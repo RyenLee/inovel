@@ -2,6 +2,9 @@ import Mention from '@tiptap/extension-mention'
 import { VueNodeViewRenderer } from '@tiptap/vue-3'
 import { useWorldbuildingStore } from '../stores/worldbuilding'
 import MentionNodeComponent from './MentionNode.vue'
+import i18n from '../i18n'
+
+const t = i18n.global.t;
 
 export interface MentionItem {
   id: string
@@ -83,7 +86,7 @@ export function createMentionExtension() {
             if (items.length === 0) {
               const empty = document.createElement('div')
               empty.style.cssText = `padding:12px 16px;font-size:14px;text-align:center;color:${dark ? '#6b7280' : '#9ca3af'}`
-              empty.textContent = '无匹配结果'
+              empty.textContent = t('mention.noResults')
               dom.appendChild(empty)
               return
             }
@@ -91,10 +94,11 @@ export function createMentionExtension() {
             items.forEach((item, idx) => {
               const row = document.createElement('div')
               row.style.cssText = `display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;cursor:pointer;${idx === 0 ? `background:${selBg}` : ''}`
+              const typeLabel = item.type === 'character' ? t('mention.types.character') : item.type === 'location' ? t('mention.types.location') : t('mention.types.organization')
               row.innerHTML = `
                 <span>${item.type === 'character' ? '👤' : item.type === 'location' ? '📍' : '🏛️'}</span>
                 <span style="flex:1;font-weight:500;color:${labelColor}">${escapeHtml(item.label)}</span>
-                <span style="font-size:11px;padding:0 6px;border-radius:3px;background:${item.type === 'character' ? '#3b82f6' : item.type === 'location' ? '#22c55e' : '#f59e0b'};color:#fff">${item.type === 'character' ? '人物' : item.type === 'location' ? '地点' : '组织'}</span>
+                <span style="font-size:11px;padding:0 6px;border-radius:3px;background:${item.type === 'character' ? '#3b82f6' : item.type === 'location' ? '#22c55e' : '#f59e0b'};color:#fff">${typeLabel}</span>
               `
               row.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation() })
               row.addEventListener('click', () => {

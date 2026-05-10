@@ -1,0 +1,10 @@
+{
+  "title": "Confirm Delete",
+  "message": "Are you sure you want to delete? This action cannot be undone.",
+  "confirmText": "Delete",
+  "cancelText": "Cancel",
+  "confirmInputLabel": "Please enter the following to confirm:",
+  "keepFiles": "Keep local files",
+  "keepFilesOn": "Remove from list only, keep folder",
+  "keepFilesOff": "Delete folder and data"
+}

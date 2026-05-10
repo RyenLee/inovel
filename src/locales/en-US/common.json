@@ -44,5 +44,6 @@
     "confirmDeleteMessage": "Are you sure you want to delete? This action cannot be undone.",
     "unsavedChanges": "Unsaved Changes",
     "unsavedChangesMessage": "You have unsaved changes. Are you sure you want to leave?"
-  }
+  },
+  "scrollHint": "← Swipe to see more →"
 }

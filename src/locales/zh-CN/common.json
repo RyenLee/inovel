@@ -44,5 +44,6 @@
     "confirmDeleteMessage": "确定要删除吗？此操作不可撤销。",
     "unsavedChanges": "有未保存的更改",
     "unsavedChangesMessage": "您有未保存的更改，确定要离开吗？"
-  }
+  },
+  "scrollHint": "← 滑动查看更多 →"
 }

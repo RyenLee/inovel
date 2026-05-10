@@ -1,0 +1,118 @@
+{
+  "title": "Configuration Manager",
+  "currentVersion": "Current Version",
+  "saveAll": "Save All Configurations",
+  "export": "Export Configuration",
+  "reset": "Reset Configuration",
+  "reload": "Reload",
+  "testClick": "Test Click",
+  "loading": "Loading...",
+  "arrayPlaceholder": "Separate multiple values with commas",
+  "categories": {
+    "app": { "label": "App Config", "description": "Basic application info" },
+    "api": { "label": "API Config", "description": "API related settings" },
+    "window": { "label": "Window Config", "description": "Window size settings" },
+    "editor": { "label": "Editor Config", "description": "Editor related settings" },
+    "features": { "label": "Feature Flags", "description": "Feature toggle settings" },
+    "performance": { "label": "Performance", "description": "Performance monitoring" },
+    "cache": { "label": "Cache Config", "description": "Cache related settings" },
+    "gzip": { "label": "Gzip Config", "description": "Compression settings" },
+    "pagination": { "label": "Pagination", "description": "Pagination settings" },
+    "requestMerging": { "label": "Request Merging", "description": "Request merging config" },
+    "security": { "label": "Security", "description": "Sensitive settings" },
+    "entryConfig": { "label": "Entry Config", "description": "Config page entry settings" }
+  },
+  "fields": {
+    "app": {
+      "name": "Application Name",
+      "version": "Application Version",
+      "environment": "Environment",
+      "description": "Application Description"
+    },
+    "api": {
+      "base_url": "API Base URL",
+      "timeout_ms": "API Timeout (ms)",
+      "max_retries": "Max Retries"
+    },
+    "window": {
+      "default_width": "Default Width",
+      "default_height": "Default Height",
+      "min_width": "Min Width",
+      "min_height": "Min Height",
+      "max_width": "Max Width",
+      "max_height": "Max Height",
+      "resizable": "Resizable"
+    },
+    "editor": {
+      "default_font_size": "Default Font Size",
+      "default_font": "Default Font",
+      "line_spacing": "Line Spacing",
+      "show_line_numbers": "Show Line Numbers",
+      "spell_check_enabled": "Spell Check"
+    },
+    "features": {
+      "auto_save_enabled": "Auto Save",
+      "sync_enabled": "Cloud Sync",
+      "writing_stats_enabled": "Writing Stats",
+      "inspiration_board_enabled": "Inspiration Board"
+    },
+    "performance": {
+      "monitoring_enabled": "Performance Monitoring",
+      "slow_request_threshold_ms": "Slow Request Threshold (ms)",
+      "log_payload_size": "Log Payload Size"
+    },
+    "cache": {
+      "enabled": "Enable Cache",
+      "max_entries": "Max Entries",
+      "ttl_seconds": "TTL (seconds)",
+      "cached_commands": "Cached Commands"
+    },
+    "gzip": {
+      "enabled": "Enable Gzip",
+      "level": "Compression Level (0-9)",
+      "min_size": "Min Compression Size (bytes)",
+      "compress_types": "Compress MIME Types"
+    },
+    "pagination": {
+      "default_page_size": "Default Page Size",
+      "max_page_size": "Max Page Size"
+    },
+    "requestMerging": {
+      "enabled": "Enable Request Merging",
+      "window_ms": "Merge Window (ms)",
+      "max_batch_size": "Max Batch Size"
+    },
+    "security": {
+      "api_key": "API Key",
+      "secret_token": "Secret Token"
+    },
+    "entryConfig": {
+      "entry_enabled": "Enable Config Page Entry",
+      "entry_display_name": "Entry Display Name",
+      "entry_icon": "Entry Icon",
+      "entry_tooltip": "Entry Tooltip",
+      "entry_locations": "Entry Locations (comma separated: menu_bar, toolbar, system_tray, keyboard)",
+      "entry_roles": "Allowed Roles (comma separated: admin, advanced, standard, guest)",
+      "entry_shortcut_key": "Shortcut Key",
+      "entry_shortcut_modifiers": "Shortcut Modifiers (comma separated: Ctrl, Shift, Alt, Meta)"
+    }
+  },
+  "messages": {
+    "loadFallback": "Config file not found or failed to read, using default config",
+    "loadSuccess": "Configuration loaded successfully",
+    "loadFailed": "Failed to load configuration",
+    "noConfig": "No configuration to save",
+    "saveSuccess": "All configurations saved successfully",
+    "saveFailed": "Failed to save configuration",
+    "exportSuccess": "Configuration exported successfully",
+    "exportFailed": "Export failed",
+    "resetConfirm": "Are you sure you want to reset all configurations? This action cannot be undone!",
+    "resetSuccess": "Configuration reset to default values",
+    "resetFailed": "Reset failed",
+    "reloadSuccess": "Configuration reloaded successfully",
+    "reloadFailed": "Reload failed",
+    "testSuccess": "Button click test successful",
+    "tomlFile": "TOML File",
+    "unknownError": "Unknown error"
+  }
+}

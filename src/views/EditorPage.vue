@@ -1,46 +1,118 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick, defineAsyncComponent } from "vue";
+import {
+  ref,
+  computed,
+  onMounted,
+  onUnmounted,
+  watch,
+  nextTick,
+  defineAsyncComponent,
+} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useProjectStore } from "../stores/project";
 import { useEditorStore } from "../stores/editor";
-import { useWorldbuildingStore, type Character, type Location, type Organization } from "../stores/worldbuilding";
+import {
+  useWorldbuildingStore,
+  type Character,
+  type Location,
+  type Organization,
+} from "../stores/worldbuilding";
 import { useEnumDictionary } from "../stores/enumDictionary";
-import { NButton, NIcon, NProgress, useMessage, NTooltip, NModal, NSelect, NInputNumber, NRadioGroup, NRadio, NTag, NSpace } from "naive-ui";
-import { ArrowLeft, Save, FileText, Sun, Moon, ChevronLeft, ChevronRight, Target, Settings, BarChart3, User, Globe, X, GitBranch, AlertTriangle, Download, Package, Maximize2, Minimize2, Sparkles, Keyboard, Timer, Lightbulb } from "lucide-vue-next";
+import {
+  NButton,
+  NIcon,
+  NProgress,
+  useMessage,
+  NTooltip,
+  NModal,
+  NSelect,
+  NInputNumber,
+  NRadioGroup,
+  NRadio,
+  NTag,
+  NSpace,
+} from "naive-ui";
+import {
+  ArrowLeft,
+  Save,
+  FileText,
+  Sun,
+  Moon,
+  ChevronLeft,
+  ChevronRight,
+  Target,
+  Settings,
+  BarChart3,
+  User,
+  Globe,
+  X,
+  GitBranch,
+  AlertTriangle,
+  Download,
+  Package,
+  Maximize2,
+  Minimize2,
+  Sparkles,
+  Keyboard,
+  Timer,
+  Lightbulb,
+} from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useTheme } from "../composables/useTheme";
+import { useLocale } from "../i18n/composables/useLocale";
 
 import TreeSidebar from "../components/TreeSidebar.vue";
 import OutlinePanel from "../components/OutlinePanel.vue";
 import MarkdownEditor from "../components/MarkdownEditor.vue";
 
-const WorldbuildingPanel = defineAsyncComponent(() => import("../components/WorldbuildingPanel.vue"));
-const RelationshipGraph = defineAsyncComponent(() => import("../components/RelationshipGraph.vue"));
-const Timeline = defineAsyncComponent(() => import("../components/Timeline.vue"));
-const HistoryDialog = defineAsyncComponent(() => import("../components/HistoryDialog.vue"));
-const SensitiveWordsManager = defineAsyncComponent(() => import("../components/SensitiveWordsManager.vue"));
-const ExportDialog = defineAsyncComponent(() => import("../components/ExportDialog.vue"));
-const BackupDialog = defineAsyncComponent(() => import("../components/BackupDialog.vue"));
-const ShortcutSettings = defineAsyncComponent(() => import("../components/ShortcutSettings.vue"));
-const PomodoroTimer = defineAsyncComponent(() => import("../components/PomodoroTimer.vue"));
-const InspirationBoard = defineAsyncComponent(() => import("../components/InspirationBoard.vue"));
+const WorldbuildingPanel = defineAsyncComponent(
+  () => import("../components/WorldbuildingPanel.vue")
+);
+const RelationshipGraph = defineAsyncComponent(
+  () => import("../components/RelationshipGraph.vue")
+);
+const Timeline = defineAsyncComponent(
+  () => import("../components/Timeline.vue")
+);
+const HistoryDialog = defineAsyncComponent(
+  () => import("../components/HistoryDialog.vue")
+);
+const SensitiveWordsManager = defineAsyncComponent(
+  () => import("../components/SensitiveWordsManager.vue")
+);
+const ExportDialog = defineAsyncComponent(
+  () => import("../components/ExportDialog.vue")
+);
+const BackupDialog = defineAsyncComponent(
+  () => import("../components/BackupDialog.vue")
+);
+const ShortcutSettings = defineAsyncComponent(
+  () => import("../components/ShortcutSettings.vue")
+);
+const PomodoroTimer = defineAsyncComponent(
+  () => import("../components/PomodoroTimer.vue")
+);
+const InspirationBoard = defineAsyncComponent(
+  () => import("../components/InspirationBoard.vue")
+);
 
 const { isDark, toggleDark } = useTheme();
+const { t } = useLocale();
 
 // Initialize enum dictionary
-const enumDictionary = useEnumDictionary()
-enumDictionary.loadDictionary()
+const enumDictionary = useEnumDictionary();
+enumDictionary.loadDictionary();
 
 // Types
 interface SimpleCharacter {
-  id: number
-  name: string
-  gender?: string
-  age?: number | null
-  appearance?: string
-  personality?: string
-  background?: string
+  id: number;
+  name: string;
+  gender?: string;
+  age?: number | null;
+  appearance?: string;
+  personality?: string;
+  background?: string;
 }
 
 interface Chapter {
@@ -77,10 +149,16 @@ const isSaving = ref(false);
 const showSidebar = ref(true);
 const showWorldbuilding = ref(false); // 右侧世界观面板
 const sidebarMode = ref<"tree" | "outline">("tree"); // 侧边栏模式切换
-const sidebarTab = ref<"chapters" | "worldbuilding" | "relationship" | "timeline" | "inspiration">("chapters"); // 侧边栏内容切换
+const sidebarTab = ref<
+  "chapters" | "worldbuilding" | "relationship" | "timeline" | "inspiration"
+>("chapters"); // 侧边栏内容切换
 const chapterTree = ref<VolumeWithChapters[]>([]);
 const editorRef = ref<InstanceType<typeof MarkdownEditor> | null>(null);
-const worldbuildingPanelRef = ref<{ viewCharacterDetail: (character: Character) => void; viewLocationDetail: (location: Location) => void; viewOrganizationDetail: (organization: Organization) => void } | null>(null);
+const worldbuildingPanelRef = ref<{
+  viewCharacterDetail: (character: Character) => void;
+  viewLocationDetail: (location: Location) => void;
+  viewOrganizationDetail: (organization: Organization) => void;
+} | null>(null);
 const pomodoroTimerRef = ref<InstanceType<typeof PomodoroTimer> | null>(null);
 
 // Reload trigger for TreeSidebar
@@ -98,7 +176,9 @@ const getAutoSaveIntervalMs = (): number => {
         return Math.round(settings.autoSaveInterval * 60 * 1000);
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return 60000; // 默认1分钟
 };
 
@@ -117,26 +197,32 @@ const generatedNames = ref<string[]>([]);
 // 保存打开名称生成器时的光标位置
 const savedSelection = ref<{ from: number; to: number } | null>(null);
 
-const nameCategoryOptions = [
-  { label: "中文姓名", value: "chinese_name" },
-  { label: "英文姓名", value: "western_name" },
-  { label: "中文地名", value: "chinese_place" },
-  { label: "英文地名", value: "western_place" },
-];
+const nameCategoryOptions = computed(() => [
+  { label: t("editor.nameGen.categories.chineseName"), value: "chinese_name" },
+  { label: t("editor.nameGen.categories.westernName"), value: "western_name" },
+  {
+    label: t("editor.nameGen.categories.chinesePlace"),
+    value: "chinese_place",
+  },
+  {
+    label: t("editor.nameGen.categories.westernPlace"),
+    value: "western_place",
+  },
+]);
 
 const genderOptions = computed(() => [
-  { label: "不限", value: "any" },
-  ...enumDictionary.genderOptions.value.map(opt => ({
+  { label: t("editor.nameGen.any"), value: "any" },
+  ...enumDictionary.genderOptions.value.map((opt) => ({
     label: opt.label,
     value: opt.value,
   })),
 ]);
 
-const showHistory = ref(false)
-const showSensitiveWords = ref(false)
-const showExport = ref(false)
-const showBackup = ref(false)
-const showShortcuts = ref(false)
+const showHistory = ref(false);
+const showSensitiveWords = ref(false);
+const showExport = ref(false);
+const showBackup = ref(false);
+const showShortcuts = ref(false);
 
 // Pomodoro Timer visibility state (default to hidden)
 const showPomodoro = ref(false);
@@ -171,12 +257,12 @@ const handleInsertFromInspiration = (content: string) => {
 const toggleZenMode = async () => {
   if (isPomodoroZenMode.value) {
     // Can't toggle while pomodoro zen mode is active
-    message.warning("番茄钟专注模式进行中，请等待结束后再切换");
+    message.warning(t("editor.zenMode.pomodoroActive"));
     return;
   }
   isZenMode.value = !isZenMode.value;
   if (isZenMode.value) {
-    message.info("禅模式已开启，按 Esc 或点击退出按钮退出");
+    message.info(t("editor.zenMode.activated"));
   }
 };
 
@@ -188,7 +274,7 @@ const toggleFullscreen = async () => {
     isFullscreen.value = !isFs;
   } catch (e) {
     console.error("Fullscreen toggle failed:", e);
-    message.warning("全屏切换失败");
+    message.warning(t("editor.fullscreenFailed"));
   }
 };
 
@@ -206,7 +292,7 @@ const setupFullscreenListener = async () => {
     });
   });
   // Listen to window move to reposition timer!
-  unlistenWindowMove.value = await appWindow.listen('tauri://move', () => {
+  unlistenWindowMove.value = await appWindow.listen("tauri://move", () => {
     nextTick(() => {
       pomodoroTimerRef.value?.reposition?.();
     });
@@ -217,86 +303,92 @@ const setupFullscreenListener = async () => {
 const exitZenMode = () => {
   if (isZenMode.value) {
     isZenMode.value = false;
-    message.info("已退出禅模式");
+    message.info(t("editor.zenMode.exited"));
   }
   // Note: pomodoro zen mode is controlled by the timer itself
 };
 
 const handleSelectCharacter = async (character: SimpleCharacter) => {
-  sidebarTab.value = 'worldbuilding'
-  showWorldbuilding.value = true
-  await nextTick()
-  worldbuildingPanelRef.value?.viewCharacterDetail(character as any)
-}
+  sidebarTab.value = "worldbuilding";
+  showWorldbuilding.value = true;
+  await nextTick();
+  worldbuildingPanelRef.value?.viewCharacterDetail(character as any);
+};
 
 const onSelectCharacterFromGraph = (character: SimpleCharacter) => {
-  handleSelectCharacter(character)
-}
+  handleSelectCharacter(character);
+};
 
 // Handle timeline chapter navigation
 const handleNavigateChapter = async (chapterId: number) => {
   // Find and open the chapter
   for (const volume of chapterTree.value) {
-    const chapter = volume.chapters.find(c => c.id === chapterId)
+    const chapter = volume.chapters.find((c) => c.id === chapterId);
     if (chapter) {
-      await handleSelectChapter(chapter.id, chapter)
-      message.success(`已跳转到：${chapter.title}`)
-      return
+      await handleSelectChapter(chapter.id, chapter);
+      message.success(
+        t("editor.navigate.chapterJumped", { title: chapter.title })
+      );
+      return;
     }
   }
-  message.warning('未找到对应章节')
-}
+  message.warning(t("editor.navigate.chapterNotFound"));
+};
 
 // Handle mention click from editor
 const handleMentionClick = async (id: string) => {
-  const m = id.match(/^(character|location|organization)-(\d+)$/)
-  if (!m) return
-  const [, type, idStr] = m
-  const numericId = parseInt(idStr, 10)
+  const m = id.match(/^(character|location|organization)-(\d+)$/);
+  if (!m) return;
+  const [, type, idStr] = m;
+  const numericId = parseInt(idStr, 10);
 
-  const worldbuildingStore = useWorldbuildingStore()
+  const worldbuildingStore = useWorldbuildingStore();
 
-  if (type === 'character') {
-    const char = worldbuildingStore.getCharacterById(numericId)
+  if (type === "character") {
+    const char = worldbuildingStore.getCharacterById(numericId);
     if (char) {
-      handleSelectCharacter(char)
+      handleSelectCharacter(char);
     } else {
-      message.warning('未找到该人物')
+      message.warning(t("editor.navigate.characterNotFound"));
     }
-  } else if (type === 'location') {
-    const location = worldbuildingStore.getLocationById(numericId)
+  } else if (type === "location") {
+    const location = worldbuildingStore.getLocationById(numericId);
     if (location) {
-      sidebarTab.value = 'worldbuilding'
-      showWorldbuilding.value = true
-      await nextTick()
-      worldbuildingPanelRef.value?.viewLocationDetail(location)
+      sidebarTab.value = "worldbuilding";
+      showWorldbuilding.value = true;
+      await nextTick();
+      worldbuildingPanelRef.value?.viewLocationDetail(location);
     } else {
-      message.warning('未找到该地点')
+      message.warning(t("editor.navigate.locationNotFound"));
     }
-  } else if (type === 'organization') {
-    const org = worldbuildingStore.getOrganizationById(numericId)
+  } else if (type === "organization") {
+    const org = worldbuildingStore.getOrganizationById(numericId);
     if (org) {
-      sidebarTab.value = 'worldbuilding'
-      showWorldbuilding.value = true
-      await nextTick()
-      worldbuildingPanelRef.value?.viewOrganizationDetail(org)
+      sidebarTab.value = "worldbuilding";
+      showWorldbuilding.value = true;
+      await nextTick();
+      worldbuildingPanelRef.value?.viewOrganizationDetail(org);
     } else {
-      message.warning('未找到该组织')
+      message.warning(t("editor.navigate.organizationNotFound"));
     }
   }
-}
+};
 
 const projectId = computed(() => route.params.projectId as string);
 
 const projectName = computed(() => {
-  const project = projectStore.recentProjects.find((p) => p.id === Number(projectId.value));
-  return project?.name || `项目 ${projectId.value}`;
+  const project = projectStore.recentProjects.find(
+    (p) => p.id === Number(projectId.value)
+  );
+  return project?.name || t("editor.project") + ` ${projectId.value}`;
 });
 
 // 计算本卷字数（优先使用 currentChapter 的实时字数）
 const volumeWordCount = computed(() => {
   if (!currentChapter.value) return 0;
-  const volume = chapterTree.value.find((v) => v.id === currentChapter.value!.volume_id);
+  const volume = chapterTree.value.find(
+    (v) => v.id === currentChapter.value!.volume_id
+  );
   if (!volume) return 0;
   // 使用 currentChapter 的实时字数 + 其他章节的缓存字数
   return volume.chapters.reduce((sum, ch) => {
@@ -311,24 +403,27 @@ const volumeWordCount = computed(() => {
 // 计算全书字数（优先使用 currentChapter 的实时字数）
 const totalWordCount = computed(() => {
   return chapterTree.value.reduce((sum, volume) => {
-    return sum + volume.chapters.reduce((vs, ch) => {
-      // 如果是当前章节，优先使用 currentChapter 的实时字数
-      if (currentChapter.value && ch.id === currentChapter.value.id) {
-        return vs + (currentChapter.value.word_count_cache ?? 0);
-      }
-      return vs + ch.word_count_cache;
-    }, 0);
+    return (
+      sum +
+      volume.chapters.reduce((vs, ch) => {
+        // 如果是当前章节，优先使用 currentChapter 的实时字数
+        if (currentChapter.value && ch.id === currentChapter.value.id) {
+          return vs + (currentChapter.value.word_count_cache ?? 0);
+        }
+        return vs + ch.word_count_cache;
+      }, 0)
+    );
   }, 0);
 });
 
 // 名称生成
 const handleGenerateNames = async () => {
   if (!currentChapter.value) {
-    message.warning("请先选择一个章节");
+    message.warning(t("editor.nameGen.selectChapterFirst"));
     return;
   }
   if (!nameCategory.value) {
-    message.warning("请选择生成类型");
+    message.warning(t("editor.nameGen.selectType"));
     return;
   }
   try {
@@ -341,7 +436,7 @@ const handleGenerateNames = async () => {
     generatedNames.value = names;
   } catch (error) {
     console.error("生成名称失败:", error);
-    message.error("生成失败: " + error);
+    message.error(t("editor.nameGen.generateFailed", { error: String(error) }));
   }
 };
 
@@ -368,19 +463,16 @@ const onNameGeneratorClose = (value: boolean) => {
 // 插入名称到编辑器
 const handleInsertName = (name: string) => {
   if (!editorRef.value?.editor) {
-    message.warning("编辑器未初始化");
+    message.warning(t("editor.nameGen.editorNotReady"));
     return;
   }
-  
+
   const editor = editorRef.value.editor;
-  
+
   // 使用 Tiptap 的 chain API 进行链式操作
-  editor.chain()
-    .focus()
-    .insertContent(name)
-    .run();
-  
-  message.success(`已插入: ${name}`);
+  editor.chain().focus().insertContent(name).run();
+
+  message.success(t("editor.nameGen.inserted", { name }));
 };
 
 // 加载章节树（用于字数统计）
@@ -398,9 +490,12 @@ const loadChapterTree = async () => {
 // 加载写作目标和今日数据
 const loadWritingGoal = async () => {
   try {
-    const goal = await invoke<{ daily_goal: number } | null>("get_writing_goal", {
-      projectId: Number(projectId.value),
-    });
+    const goal = await invoke<{ daily_goal: number } | null>(
+      "get_writing_goal",
+      {
+        projectId: Number(projectId.value),
+      }
+    );
     if (goal) {
       dailyGoal.value = goal.daily_goal;
     }
@@ -412,7 +507,10 @@ const loadWritingGoal = async () => {
 // 加载今日写作记录
 const loadTodayRecord = async () => {
   try {
-    const record = await invoke<{ total_words: number; duration: number } | null>("get_today_words", {
+    const record = await invoke<{
+      total_words: number;
+      duration: number;
+    } | null>("get_today_words", {
       projectId: Number(projectId.value),
     });
     if (record) {
@@ -455,11 +553,14 @@ const saveChapter = async () => {
     });
     // Auto-commit to git after save
     try {
-      const now = new Date().toLocaleString('zh-CN')
-      await invoke('create_snapshot', {
+      const now = new Date().toLocaleString("zh-CN");
+      await invoke("create_snapshot", {
         projectId: Number(projectId.value),
-        message: `自动保存 - ${currentChapter.value.title} @ ${now}`,
-      })
+        message: t("editor.snapshot.autoSaveMessage", {
+          title: currentChapter.value.title,
+          time: now,
+        }),
+      });
     } catch (_e) {
       // If git repo doesn't exist yet, ignore silently
     }
@@ -474,7 +575,9 @@ const saveChapter = async () => {
 
     // 同步更新章节树中的缓存（避免重新加载导致的闪烁）
     for (const volume of chapterTree.value) {
-      const chapter = volume.chapters.find(c => c.id === currentChapter.value!.id);
+      const chapter = volume.chapters.find(
+        (c) => c.id === currentChapter.value!.id
+      );
       if (chapter) {
         chapter.word_count_cache = finalWordCount;
         break;
@@ -489,7 +592,7 @@ const saveChapter = async () => {
     // 更新写作记录
     await upsertWritingRecord(finalWordCount);
 
-    message.success("保存成功");
+    message.success(t("editor.saveSuccess"));
 
     // 延迟重新加载章节树，确保 TreeSidebar 等组件也能同步
     setTimeout(async () => {
@@ -497,7 +600,7 @@ const saveChapter = async () => {
     }, 100);
   } catch (error) {
     console.error("保存失败:", error);
-    message.error("保存失败: " + error);
+    message.error(t("editor.saveError", { error: String(error) }));
   } finally {
     isSaving.value = false;
   }
@@ -508,25 +611,30 @@ const manualSnapshot = async () => {
   if (!currentChapter.value) return;
   await saveChapter();
   try {
-    const now = new Date().toLocaleString('zh-CN');
-    await invoke('create_snapshot', {
+    const now = new Date().toLocaleString("zh-CN");
+    await invoke("create_snapshot", {
       projectId: Number(projectId.value),
-      message: `手动快照 @ ${now}`,
+      message: t("editor.snapshot.manualSnapshotMessage", { time: now }),
     });
-    message.success('快照已创建');
+    message.success(t("editor.snapshot.created"));
   } catch (e) {
-    console.error('快照创建失败:', e);
+    console.error("快照创建失败:", e);
     // Try to init git first, then retry
     try {
-      await invoke('init_project_git', { projectId: Number(projectId.value), gitignore: null });
-      await invoke('create_snapshot', {
+      await invoke("init_project_git", {
         projectId: Number(projectId.value),
-        message: `手动快照 @ ${new Date().toLocaleString('zh-CN')}`,
+        gitignore: null,
       });
-      message.success('Git 已初始化，快照已创建');
+      await invoke("create_snapshot", {
+        projectId: Number(projectId.value),
+        message: t("editor.snapshot.manualSnapshotMessage", {
+          time: new Date().toLocaleString("zh-CN"),
+        }),
+      });
+      message.success(t("editor.snapshot.gitInitAndCreated"));
     } catch (e2) {
-      message.error('Git 初始化失败，快照创建失败。请在项目目录下手动执行 git init');
-      console.error('Git init 失败:', e2);
+      message.error(t("editor.snapshot.gitInitFailed"));
+      console.error("Git init 失败:", e2);
     }
   }
 };
@@ -535,7 +643,10 @@ const manualSnapshot = async () => {
 const upsertWritingRecord = async (currentChapterWords: number) => {
   try {
     // 计算今日新增字数 = 当前全书累计字数 - 当日初始字数
-    const newWords = Math.max(0, totalWordCount.value - todayInitialWords.value);
+    const newWords = Math.max(
+      0,
+      totalWordCount.value - todayInitialWords.value
+    );
     // 增加写作时长（每次保存增加30秒，约0.5分钟）
     writingDuration.value += 0.5;
 
@@ -578,13 +689,19 @@ const handleKeyDown = (event: KeyboardEvent) => {
   if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "T") {
     event.preventDefault();
     editorStore.toggleTypewriter();
-    message.info(editorStore.isTypewriter ? "打字机模式已开启" : "打字机模式已关闭");
+    message.info(
+      editorStore.isTypewriter
+        ? t("editor.mode.typewriterOn")
+        : t("editor.mode.typewriterOff")
+    );
   }
   // Ctrl+Shift+F 聚焦模式
   if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F") {
     event.preventDefault();
     editorStore.toggleFocus();
-    message.info(editorStore.isFocus ? "聚焦模式已开启" : "聚焦模式已关闭");
+    message.info(
+      editorStore.isFocus ? t("editor.mode.focusOn") : t("editor.mode.focusOff")
+    );
   }
   // Ctrl+Shift+Z 禅模式
   if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "Z") {
@@ -602,7 +719,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
       exitZenMode();
     } else if (!editorStore.isNormal) {
       editorStore.exitSpecialMode();
-      message.info("已退出特殊模式");
+      message.info(t("editor.mode.specialExited"));
     }
   }
 };
@@ -621,7 +738,7 @@ const handleSelectChapter = async (chapterId: number, chapter: Chapter) => {
 
   // 设置加载状态，编辑器会显示占位符
   currentChapter.value = chapter;
-  currentContent.value = ''; // 清空内容
+  currentContent.value = ""; // 清空内容
 
   // 加载新章节内容
   const content = await loadChapterContentByPath(chapter.id);
@@ -634,8 +751,8 @@ const handleSelectChapter = async (chapterId: number, chapter: Chapter) => {
 
   // 同步 currentChapter 的字数缓存（如果章节树中有最新数据）
   const updatedChapter = chapterTree.value
-    .flatMap(v => v.chapters)
-    .find(c => c.id === chapterId);
+    .flatMap((v) => v.chapters)
+    .find((c) => c.id === chapterId);
   if (updatedChapter) {
     currentChapter.value.word_count_cache = updatedChapter.word_count_cache;
   }
@@ -674,13 +791,13 @@ onMounted(async () => {
   await loadChapterTree();
   await loadWritingGoal();
   await loadTodayRecord();
-  
+
   // 预加载世界观数据，确保@引用功能在编辑器打开后即可正常使用
   if (projectId.value) {
     const worldbuildingStore = useWorldbuildingStore();
     await worldbuildingStore.loadAll(Number(projectId.value));
   }
-  
+
   startAutoSave();
   window.addEventListener("keydown", handleKeyDown);
   await setupFullscreenListener();
@@ -703,11 +820,15 @@ onUnmounted(async () => {
   }
   // Auto-commit on close
   try {
-    await invoke('create_snapshot', {
+    await invoke("create_snapshot", {
       projectId: Number(projectId.value),
-      message: `应用关闭 @ ${new Date().toLocaleString('zh-CN')}`,
-    })
-  } catch { /* ok */ }
+      message: t("editor.snapshot.appCloseMessage", {
+        time: new Date().toLocaleString("zh-CN"),
+      }),
+    });
+  } catch {
+    /* ok */
+  }
 });
 
 const goBack = () => {
@@ -740,57 +861,84 @@ const dailyProgress = computed(() => {
 const todayNewWords = computed(() => {
   return Math.max(0, todayWords.value - todayInitialWords.value);
 });
-
-
 </script>
 
 <template>
-  <div class="h-screen flex flex-col transition-colors duration-300" :class="[
-    isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900',
-    isZenMode ? 'bg-gray-900!' : ''
-  ]">
+  <div
+    class="h-screen flex flex-col transition-colors duration-300"
+    :class="[
+      isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900',
+      isZenMode ? 'bg-gray-900!' : '',
+    ]"
+  >
     <!-- Zen Mode Exit Button (floating) -->
-    <button v-if="isZenMode && !isPomodoroZenMode" @click="exitZenMode"
-      class="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg shadow-lg hover:bg-gray-700 transition-colors">
+    <button
+      v-if="isZenMode && !isPomodoroZenMode"
+      @click="exitZenMode"
+      class="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg shadow-lg hover:bg-gray-700 transition-colors"
+    >
       <X class="w-4 h-4" />
-      退出禅模式 (Esc)
+      {{ t("editor.zenMode.exitButton") }}
     </button>
 
     <!-- Pomodoro Zen Mode Indicator -->
-    <button v-if="isPomodoroZenMode" @click="isPomodoroZenMode = false"
-      class="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg shadow-lg hover:bg-purple-700 transition-colors">
+    <button
+      v-if="isPomodoroZenMode"
+      @click="isPomodoroZenMode = false"
+      class="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg shadow-lg hover:bg-purple-700 transition-colors"
+    >
       <X class="w-4 h-4" />
-      退出专注模式
+      {{ t("editor.zenMode.exitFocus") }}
     </button>
 
     <!-- Header (hidden in zen mode) -->
-    <header v-if="!isZenModeActive" class="border-b transition-colors duration-300 shrink-0"
-      :class="isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'">
+    <header
+      v-if="!isZenModeActive"
+      class="border-b transition-colors duration-300 shrink-0"
+      :class="
+        isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
+      "
+    >
       <div class="px-4 py-3 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <button @click="goBack" class="p-2 rounded-lg transition-colors duration-300" :class="isDark
-            ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-            ">
+          <button
+            @click="goBack"
+            class="p-2 rounded-lg transition-colors duration-300"
+            :class="
+              isDark
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+            "
+          >
             <ArrowLeft class="w-5 h-5" />
           </button>
           <FileText class="w-6 h-6 text-blue-600" />
-          <h1 class="text-lg font-bold">小说工坊</h1>
-          <span class="px-3 py-1 rounded-full text-sm font-medium"
-            :class="isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'">
+          <h1 class="text-lg font-bold">{{ t("welcome.title") }}</h1>
+          <span
+            class="px-3 py-1 rounded-full text-sm font-medium"
+            :class="
+              isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+            "
+          >
             {{ projectName }}
           </span>
         </div>
         <div class="flex items-center gap-2">
-          <n-button type="primary" size="small" @click="saveChapter" :loading="isSaving" :disabled="!currentChapter">
+          <n-button
+            type="primary"
+            size="small"
+            @click="saveChapter"
+            :loading="isSaving"
+            :disabled="!currentChapter"
+          >
             <template #icon>
               <NIcon>
                 <Save />
               </NIcon>
             </template>
-            保存
+            {{ t("editor.save") }}
           </n-button>
-<!--           <n-tooltip trigger="hover">
+          <!-- <n-tooltip trigger="hover">
             <template #trigger>
               <button @click="openNameGenerator" class="p-2 rounded-lg transition-colors duration-300"
                 :class="isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
@@ -801,248 +949,467 @@ const todayNewWords = computed(() => {
           </n-tooltip> -->
           <n-tooltip trigger="hover">
             <template #trigger>
-              <button @click="toggleZenMode" class="p-2 rounded-lg transition-colors duration-300"
-                :class="isZenMode ? 'bg-blue-600 text-white' : isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+              <button
+                @click="toggleZenMode"
+                class="p-2 rounded-lg transition-colors duration-300"
+                :class="
+                  isZenMode
+                    ? 'bg-blue-600 text-white'
+                    : isDark
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                "
+              >
                 <Sparkles class="w-5 h-5" />
               </button>
             </template>
-            禅模式 (Ctrl+Shift+Z)
+            {{ t("editor.zenMode.tooltip") }}
           </n-tooltip>
           <n-tooltip trigger="hover">
             <template #trigger>
-              <button @click="toggleFullscreen" class="p-2 rounded-lg transition-colors duration-300"
-                :class="isFullscreen ? 'bg-blue-600 text-white' : isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+              <button
+                @click="toggleFullscreen"
+                class="p-2 rounded-lg transition-colors duration-300"
+                :class="
+                  isFullscreen
+                    ? 'bg-blue-600 text-white'
+                    : isDark
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                "
+              >
                 <Minimize2 v-if="isFullscreen" class="w-5 h-5" />
                 <Maximize2 v-else class="w-5 h-5" />
               </button>
             </template>
-            全屏 (F11)
+            {{ t("editor.fullscreenTooltip") }}
           </n-tooltip>
           <n-tooltip trigger="hover">
             <template #trigger>
-              <button @click="goToProjectStats" class="p-2 rounded-lg transition-colors duration-300"
-                :class="isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+              <button
+                @click="goToProjectStats"
+                class="p-2 rounded-lg transition-colors duration-300"
+                :class="
+                  isDark
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                "
+              >
                 <BarChart3 class="w-5 h-5" />
               </button>
             </template>
-            项目统计
+            {{ t("editor.projectStats") }}
           </n-tooltip>
           <n-tooltip trigger="hover">
             <template #trigger>
-              <button @click="showShortcuts = true" class="p-2 rounded-lg transition-colors duration-300"
-                :class="isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+              <button
+                @click="showShortcuts = true"
+                class="p-2 rounded-lg transition-colors duration-300"
+                :class="
+                  isDark
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                "
+              >
                 <Keyboard class="w-5 h-5" />
               </button>
             </template>
-            快捷键设置
+            {{ t("editor.shortcutSettings") }}
           </n-tooltip>
           <n-tooltip trigger="hover">
             <template #trigger>
-              <button @click="showPomodoro = !showPomodoro" class="p-2 rounded-lg transition-colors duration-300"
-                :class="showPomodoro ? 'bg-red-500 text-white' : isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+              <button
+                @click="showPomodoro = !showPomodoro"
+                class="p-2 rounded-lg transition-colors duration-300"
+                :class="
+                  showPomodoro
+                    ? 'bg-red-500 text-white'
+                    : isDark
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                "
+              >
                 <Timer class="w-5 h-5" />
               </button>
             </template>
-            {{ showPomodoro ? '隐藏' : '显示' }}番茄钟
+            {{
+              showPomodoro
+                ? t("editor.pomodoroToggle.hide")
+                : t("editor.pomodoroToggle.show")
+            }}
           </n-tooltip>
           <n-tooltip trigger="hover">
             <template #trigger>
-              <button @click="showInspirationBoard = !showInspirationBoard"
+              <button
+                @click="showInspirationBoard = !showInspirationBoard"
                 class="p-2 rounded-lg transition-colors duration-300"
-                :class="showInspirationBoard ? 'bg-yellow-500 text-white' : isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+                :class="
+                  showInspirationBoard
+                    ? 'bg-yellow-500 text-white'
+                    : isDark
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                "
+              >
                 <Lightbulb class="w-5 h-5" />
               </button>
             </template>
-            {{ showInspirationBoard ? '隐藏' : '显示' }}灵感看板
+            {{
+              showInspirationBoard
+                ? t("editor.inspirationToggle.hide")
+                : t("editor.inspirationToggle.show")
+            }}
           </n-tooltip>
-          <button @click="() => toggleDark()" class="p-2 rounded-lg transition-colors duration-300" :class="isDark
-            ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400'
-            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-            ">
+          <button
+            @click="() => toggleDark()"
+            class="p-2 rounded-lg transition-colors duration-300"
+            :class="
+              isDark
+                ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+            "
+          >
             <Sun v-if="isDark" class="w-5 h-5" />
             <Moon v-else class="w-5 h-5" />
           </button>
           <n-tooltip trigger="hover">
             <template #trigger>
-              <button @click="goToProjectSettings" class="p-2 rounded-lg transition-colors duration-300"
-                :class="isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+              <button
+                @click="goToProjectSettings"
+                class="p-2 rounded-lg transition-colors duration-300"
+                :class="
+                  isDark
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                "
+              >
                 <Settings class="w-5 h-5" />
               </button>
             </template>
-            项目设置
+            {{ t("editor.projectSettings") }}
           </n-tooltip>
         </div>
       </div>
     </header>
 
-    <div class="flex-1 flex overflow-hidden" :class="isZenModeActive ? 'p-0!' : ''">
+    <div
+      class="flex-1 flex overflow-hidden"
+      :class="isZenModeActive ? 'p-0!' : ''"
+    >
       <!-- Sidebar Toggle Button -->
-      <button v-if="!showSidebar && !isZenModeActive" @click="toggleSidebar"
-        class="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-r-lg shadow-md">
+      <button
+        v-if="!showSidebar && !isZenModeActive"
+        @click="toggleSidebar"
+        class="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-r-lg shadow-md"
+      >
         <ChevronRight class="w-4 h-4" />
       </button>
 
       <!-- Tree Sidebar (hidden in zen mode) -->
-      <div v-if="showSidebar && !isZenModeActive" class="w-64 shrink-0 relative">
-        <button @click="toggleSidebar"
-          class="absolute -right-3 top-1/2 -translate-y-1/2 z-10 p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md">
+      <div
+        v-if="showSidebar && !isZenModeActive"
+        class="w-64 shrink-0 relative"
+      >
+        <button
+          @click="toggleSidebar"
+          class="absolute -right-3 top-1/2 -translate-y-1/2 z-10 p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md"
+        >
           <ChevronLeft class="w-3 h-3" />
         </button>
         <!-- Sidebar Header with Mode Toggle -->
-        <div class="flex items-center border-b border-gray-200 dark:border-gray-700">
-          <button class="flex-1 px-3 py-2 text-xs font-medium transition-colors" :class="sidebarMode === 'tree'
-            ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-            @click="sidebarMode = 'tree'">
-            章节树
+        <div
+          class="flex items-center border-b border-gray-200 dark:border-gray-700"
+        >
+          <button
+            class="flex-1 px-3 py-2 text-xs font-medium transition-colors"
+            :class="
+              sidebarMode === 'tree'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            "
+            @click="sidebarMode = 'tree'"
+          >
+            {{ t("editor.sidebarTabs.chapterTree") }}
           </button>
-          <button class="flex-1 px-3 py-2 text-xs font-medium transition-colors" :class="sidebarMode === 'outline'
-            ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-            @click="sidebarMode = 'outline'">
-            大纲
+          <button
+            class="flex-1 px-3 py-2 text-xs font-medium transition-colors"
+            :class="
+              sidebarMode === 'outline'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            "
+            @click="sidebarMode = 'outline'"
+          >
+            {{ t("editor.sidebarTabs.outline") }}
           </button>
         </div>
         <!-- Tree Sidebar -->
-        <TreeSidebar v-if="sidebarMode === 'tree'" :project-id="projectId" @select-chapter="handleSelectChapter" />
+        <TreeSidebar
+          v-if="sidebarMode === 'tree'"
+          :project-id="projectId"
+          @select-chapter="handleSelectChapter"
+        />
         <!-- Outline Panel -->
-        <OutlinePanel v-else :project-id="projectId" :selected-chapter-id="currentChapter?.id"
-          @select-chapter="handleSelectChapter" @update="loadChapterTree" />
+        <OutlinePanel
+          v-else
+          :project-id="projectId"
+          :selected-chapter-id="currentChapter?.id"
+          @select-chapter="handleSelectChapter"
+          @update="loadChapterTree"
+        />
       </div>
 
       <!-- Editor Area -->
-      <main class="flex-1 overflow-hidden flex justify-center" :class="isZenModeActive ? 'bg-gray-900' : 'p-4'">
+      <main
+        class="flex-1 overflow-hidden flex justify-center"
+        :class="isZenModeActive ? 'bg-gray-900' : 'p-4'"
+      >
         <!-- Zen Mode: Centered editor container with 50% width -->
-        <div v-if="isZenModeActive" class="w-1/2 mx-auto h-full flex flex-col px-8 py-6">
-          <div v-if="!currentChapter" class="h-full flex flex-col items-center justify-center text-gray-500">
+        <div
+          v-if="isZenModeActive"
+          class="w-1/2 mx-auto h-full flex flex-col px-8 py-6"
+        >
+          <div
+            v-if="!currentChapter"
+            class="h-full flex flex-col items-center justify-center text-gray-500"
+          >
             <FileText class="w-16 h-16 mb-4 opacity-50" />
-            <p class="text-lg">请从左侧选择或创建章节</p>
+            <p class="text-lg">{{ t("editor.emptyState.selectChapter") }}</p>
           </div>
           <div v-else class="h-full flex flex-col">
             <!-- Minimal title bar in zen mode -->
-            <div class="flex items-center gap-2 mb-3 pb-3 border-b border-gray-700">
+            <div
+              class="flex items-center gap-2 mb-3 pb-3 border-b border-gray-700"
+            >
               <FileText class="w-4 h-4 text-blue-500" />
-              <h2 class="text-base font-medium text-gray-300">{{ currentChapter.title }}</h2>
-              <span class="text-xs text-gray-500 ml-auto">{{ currentChapter.word_count_cache || 0 }} 字</span>
+              <h2 class="text-base font-medium text-gray-300">
+                {{ currentChapter.title }}
+              </h2>
+              <span class="text-xs text-gray-500 ml-auto"
+                >{{ currentChapter.word_count_cache || 0 }}
+                {{ t("editor.words") }}</span
+              >
             </div>
             <!-- Markdown Editor -->
-            <MarkdownEditor ref="editorRef" v-model="currentContent" :chapter-id="currentChapter.id"
-              :project-id="Number(projectId)" :volume-word-count="volumeWordCount" :total-word-count="totalWordCount"
-              :is-dark="isDark" :editor-mode="editorStore.mode" @update:model-value="handleContentUpdate"
-              @mention-click="handleMentionClick" @show-history="showHistory = true" @create-snapshot="manualSnapshot"
-              @word-count-updated="handleWordCountUpdated" @open-name-generator="openNameGenerator" />
+            <MarkdownEditor
+              ref="editorRef"
+              v-model="currentContent"
+              :chapter-id="currentChapter.id"
+              :project-id="Number(projectId)"
+              :volume-word-count="volumeWordCount"
+              :total-word-count="totalWordCount"
+              :is-dark="isDark"
+              :editor-mode="editorStore.mode"
+              @update:model-value="handleContentUpdate"
+              @mention-click="handleMentionClick"
+              @show-history="showHistory = true"
+              @create-snapshot="manualSnapshot"
+              @word-count-updated="handleWordCountUpdated"
+              @open-name-generator="openNameGenerator"
+            />
           </div>
         </div>
         <!-- Normal mode editor -->
         <div v-else class="h-full w-full max-w-full flex flex-col">
-          <div v-if="!currentChapter" class="h-full flex flex-col items-center justify-center text-gray-500">
+          <div
+            v-if="!currentChapter"
+            class="h-full flex flex-col items-center justify-center text-gray-500"
+          >
             <FileText class="w-16 h-16 mb-4 opacity-50" />
-            <p class="text-lg">请从左侧选择或创建章节</p>
+            <p class="text-lg">{{ t("editor.emptyState.selectChapter") }}</p>
           </div>
           <div v-else class="h-full flex flex-col">
             <!-- Chapter Title Bar -->
-            <div class="flex items-center gap-2 mb-3 pb-3 border-b"
-              :class="isDark ? 'border-gray-700' : 'border-gray-200'">
+            <div
+              class="flex items-center gap-2 mb-3 pb-3 border-b"
+              :class="isDark ? 'border-gray-700' : 'border-gray-200'"
+            >
               <FileText class="w-5 h-5 text-blue-600" />
               <h2 class="text-lg font-semibold">{{ currentChapter.title }}</h2>
             </div>
             <!-- Markdown Editor -->
-            <MarkdownEditor ref="editorRef" v-model="currentContent" :chapter-id="currentChapter.id"
-              :project-id="Number(projectId)" :volume-word-count="volumeWordCount" :total-word-count="totalWordCount"
-              :is-dark="isDark" :editor-mode="editorStore.mode" @update:model-value="handleContentUpdate"
-              @mention-click="handleMentionClick" @show-history="showHistory = true" @create-snapshot="manualSnapshot"
-              @word-count-updated="handleWordCountUpdated" @open-name-generator="openNameGenerator" />
+            <MarkdownEditor
+              ref="editorRef"
+              v-model="currentContent"
+              :chapter-id="currentChapter.id"
+              :project-id="Number(projectId)"
+              :volume-word-count="volumeWordCount"
+              :total-word-count="totalWordCount"
+              :is-dark="isDark"
+              :editor-mode="editorStore.mode"
+              @update:model-value="handleContentUpdate"
+              @mention-click="handleMentionClick"
+              @show-history="showHistory = true"
+              @create-snapshot="manualSnapshot"
+              @word-count-updated="handleWordCountUpdated"
+              @open-name-generator="openNameGenerator"
+            />
           </div>
         </div>
       </main>
 
       <!-- Worldbuilding Panel (Right Sidebar, hidden in zen mode) -->
-      <div v-if="showWorldbuilding && !isZenModeActive"
-        class="w-[480px] shrink-0 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden flex flex-col">
+      <div
+        v-if="showWorldbuilding && !isZenModeActive"
+        class="w-[480px] shrink-0 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden flex flex-col"
+      >
         <!-- Panel Header with Tabs -->
-        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div
+          class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700"
+        >
           <div class="flex items-center gap-2">
             <Globe class="w-5 h-5 text-blue-600" />
-            <h3 class="font-semibold text-gray-900 dark:text-white">世界观设定</h3>
+            <h3 class="font-semibold text-gray-900 dark:text-white">
+              {{ t("editor.worldbuildingPanel.title") }}
+            </h3>
           </div>
-          <button @click="showWorldbuilding = false"
-            class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          <button
+            @click="showWorldbuilding = false"
+            class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
             <X class="w-5 h-5 text-gray-500" />
           </button>
         </div>
         <!-- Tabs -->
         <div class="flex border-b border-gray-200 dark:border-gray-700">
-          <button class="flex-1 px-4 py-2 text-sm font-medium transition-colors" :class="sidebarTab === 'worldbuilding'
-            ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-            @click="sidebarTab = 'worldbuilding'">
-            设定
+          <button
+            class="flex-1 px-4 py-2 text-sm font-medium transition-colors"
+            :class="
+              sidebarTab === 'worldbuilding'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            "
+            @click="sidebarTab = 'worldbuilding'"
+          >
+            {{ t("editor.worldbuildingPanel.settings") }}
           </button>
-          <button class="flex-1 px-4 py-2 text-sm font-medium transition-colors" :class="sidebarTab === 'relationship'
-            ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-            @click="sidebarTab = 'relationship'">
-            关系图谱
+          <button
+            class="flex-1 px-4 py-2 text-sm font-medium transition-colors"
+            :class="
+              sidebarTab === 'relationship'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            "
+            @click="sidebarTab = 'relationship'"
+          >
+            {{ t("editor.worldbuildingPanel.relationship") }}
           </button>
-          <button class="flex-1 px-4 py-2 text-sm font-medium transition-colors" :class="sidebarTab === 'timeline'
-            ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-            @click="sidebarTab = 'timeline'">
-            时间轴
+          <button
+            class="flex-1 px-4 py-2 text-sm font-medium transition-colors"
+            :class="
+              sidebarTab === 'timeline'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            "
+            @click="sidebarTab = 'timeline'"
+          >
+            {{ t("editor.worldbuildingPanel.timeline") }}
           </button>
         </div>
         <!-- Panel Content -->
         <div class="flex-1 overflow-hidden">
-          <WorldbuildingPanel ref="worldbuildingPanelRef" v-if="sidebarTab === 'worldbuilding'" />
-          <RelationshipGraph v-else-if="sidebarTab === 'relationship'" :project-id="Number(projectId)"
-            @select-character="onSelectCharacterFromGraph" />
-          <Timeline v-else-if="sidebarTab === 'timeline'" :project-id="Number(projectId)"
-            @navigate-chapter="handleNavigateChapter" />
+          <WorldbuildingPanel
+            ref="worldbuildingPanelRef"
+            v-if="sidebarTab === 'worldbuilding'"
+          />
+          <RelationshipGraph
+            v-else-if="sidebarTab === 'relationship'"
+            :project-id="Number(projectId)"
+            @select-character="onSelectCharacterFromGraph"
+          />
+          <Timeline
+            v-else-if="sidebarTab === 'timeline'"
+            :project-id="Number(projectId)"
+            @navigate-chapter="handleNavigateChapter"
+          />
         </div>
       </div>
 
       <!-- Worldbuilding Toggle Button (hidden in zen mode) -->
-      <button v-if="!showWorldbuilding && !isZenModeActive" @click="showWorldbuilding = true"
+      <button
+        v-if="!showWorldbuilding && !isZenModeActive"
+        @click="showWorldbuilding = true"
         class="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-l-lg shadow-md transition-transform hover:translate-x-0"
-        :style="{ top: 'calc(50% + 36px)' }">
+        :style="{ top: 'calc(50% + 36px)' }"
+      >
         <Globe class="w-4 h-4 text-blue-600" />
       </button>
     </div>
 
     <!-- Status Bar with Writing Progress (hidden in zen mode) -->
-    <footer v-if="!isZenModeActive" class="border-t transition-colors duration-300 shrink-0 px-4 py-2"
-      :class="isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'">
+    <footer
+      v-if="!isZenModeActive"
+      class="border-t transition-colors duration-300 shrink-0 px-4 py-2"
+      :class="
+        isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
+      "
+    >
       <div class="flex items-center gap-6">
         <!-- Daily Goal Progress -->
         <n-tooltip trigger="hover">
           <template #trigger>
             <div class="daily-goal-container">
               <Target class="w-4 h-4 text-blue-500 shrink-0" />
-              <span class="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                今日: {{ todayWords }} / {{ dailyGoal }} 字
+              <span
+                class="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap"
+              >
+                {{
+                  t("editor.statusBar.todayProgress", {
+                    today: todayWords,
+                    goal: dailyGoal,
+                  })
+                }}
               </span>
-              <n-progress type="line" :percentage="dailyProgress" :height="8" :border-radius="4" :fill-border-radius="4"
-                :color="dailyProgress >= 100 ? '#52c41a' : '#3b82f6'" :rail-color="isDark ? '#374151' : '#e5e7eb'"
-                class="daily-goal-progress" :show-indicator="false" />
-              <span class="text-sm font-medium whitespace-nowrap"
-                :class="dailyProgress >= 100 ? 'text-green-500' : 'text-blue-500'">
+              <n-progress
+                type="line"
+                :percentage="dailyProgress"
+                :height="8"
+                :border-radius="4"
+                :fill-border-radius="4"
+                :color="dailyProgress >= 100 ? '#52c41a' : '#3b82f6'"
+                :rail-color="isDark ? '#374151' : '#e5e7eb'"
+                class="daily-goal-progress"
+                :show-indicator="false"
+              />
+              <span
+                class="text-sm font-medium whitespace-nowrap"
+                :class="
+                  dailyProgress >= 100 ? 'text-green-500' : 'text-blue-500'
+                "
+              >
                 {{ dailyProgress }}%
               </span>
             </div>
           </template>
-          <div>每日目标进度: {{ todayWords }} / {{ dailyGoal }} 字</div>
+          <div>
+            {{
+              t("editor.statusBar.dailyGoalTooltip", {
+                today: todayWords,
+                goal: dailyGoal,
+              })
+            }}
+          </div>
         </n-tooltip>
 
         <!-- Total Word Count -->
-        <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+        <div
+          class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"
+        >
           <FileText class="w-4 h-4" />
-          <span>全书: {{ totalWordCount }} 字</span>
+          <span>{{
+            t("editor.statusBar.totalWords", { total: totalWordCount })
+          }}</span>
         </div>
 
         <!-- Export Button -->
         <n-tooltip trigger="hover">
           <template #trigger>
-            <n-button size="tiny" quaternary @click="showExport = true" class="text-gray-500! hover:text-blue-500!">
+            <n-button
+              size="tiny"
+              quaternary
+              @click="showExport = true"
+              class="text-gray-500! hover:text-blue-500!"
+            >
               <template #icon>
                 <n-icon>
                   <Download />
@@ -1050,13 +1417,16 @@ const todayNewWords = computed(() => {
               </template>
             </n-button>
           </template>
-          导出文档
+          {{ t("editor.exportDoc") }}
         </n-tooltip>
-
-        <!-- Backup Button -->
         <n-tooltip trigger="hover">
           <template #trigger>
-            <n-button size="tiny" quaternary @click="showBackup = true" class="text-gray-500! hover:text-green-500!">
+            <n-button
+              size="tiny"
+              quaternary
+              @click="showBackup = true"
+              class="text-gray-500! hover:text-green-500!"
+            >
               <template #icon>
                 <n-icon>
                   <Package />
@@ -1064,14 +1434,16 @@ const todayNewWords = computed(() => {
               </template>
             </n-button>
           </template>
-          备份项目
+          {{ t("editor.backupProject") }}
         </n-tooltip>
-
-        <!-- Sensitive Words Manager Button -->
         <n-tooltip trigger="hover">
           <template #trigger>
-            <n-button size="tiny" quaternary @click="showSensitiveWords = true"
-              class="text-gray-500! hover:text-red-500!">
+            <n-button
+              size="tiny"
+              quaternary
+              @click="showSensitiveWords = true"
+              class="text-gray-500! hover:text-red-500!"
+            >
               <template #icon>
                 <n-icon>
                   <AlertTriangle />
@@ -1079,25 +1451,51 @@ const todayNewWords = computed(() => {
               </template>
             </n-button>
           </template>
-          敏感词管理
+          {{ t("editor.sensitiveWords") }}
         </n-tooltip>
       </div>
     </footer>
 
     <!-- 名称生成模态框 -->
-    <n-modal v-model:show="showNameGenerator" preset="card" title="名称生成器" style="width: 480px" :mask-closable="true"
-      @update:show="onNameGeneratorClose">
+    <n-modal
+      v-model:show="showNameGenerator"
+      preset="card"
+      :title="t('editor.nameGen.title')"
+      style="width: 480px"
+      :mask-closable="true"
+      @update:show="onNameGeneratorClose"
+    >
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium mb-2" :class="isDark ? 'text-gray-300' : 'text-gray-700'">类型</label>
-          <n-select v-model:value="nameCategory" :options="nameCategoryOptions" placeholder="选择生成类型" />
+          <label
+            class="block text-sm font-medium mb-2"
+            :class="isDark ? 'text-gray-300' : 'text-gray-700'"
+            >{{ t("editor.nameGen.type") }}</label
+          >
+          <n-select
+            v-model:value="nameCategory"
+            :options="nameCategoryOptions"
+            :placeholder="t('editor.nameGen.selectTypePlaceholder')"
+          />
         </div>
 
-        <div v-if="nameCategory === 'chinese_name' || nameCategory === 'western_name'">
-          <label class="block text-sm font-medium mb-2" :class="isDark ? 'text-gray-300' : 'text-gray-700'">性别</label>
+        <div
+          v-if="
+            nameCategory === 'chinese_name' || nameCategory === 'western_name'
+          "
+        >
+          <label
+            class="block text-sm font-medium mb-2"
+            :class="isDark ? 'text-gray-300' : 'text-gray-700'"
+            >{{ t("editor.nameGen.gender") }}</label
+          >
           <n-radio-group v-model:value="nameGender" name="gender">
             <n-space>
-              <n-radio v-for="opt in genderOptions" :key="opt.value" :value="opt.value">
+              <n-radio
+                v-for="opt in genderOptions"
+                :key="opt.value"
+                :value="opt.value"
+              >
                 {{ opt.label }}
               </n-radio>
             </n-space>
@@ -1105,33 +1503,50 @@ const todayNewWords = computed(() => {
         </div>
 
         <div>
-          <label class="block text-sm font-medium mb-2" :class="isDark ? 'text-gray-300' : 'text-gray-700'">数量</label>
+          <label
+            class="block text-sm font-medium mb-2"
+            :class="isDark ? 'text-gray-300' : 'text-gray-700'"
+            >{{ t("editor.nameGen.count") }}</label
+          >
           <n-input-number v-model:value="nameCount" :min="1" :max="100" />
         </div>
 
         <n-button type="primary" block @click="handleGenerateNames">
-          生成
+          {{ t("editor.nameGen.generate") }}
         </n-button>
-
-        <div v-if="generatedNames.length > 0">
-          <label class="block text-sm font-medium mb-2"
-            :class="isDark ? 'text-gray-300' : 'text-gray-700'">生成结果（点击插入）</label>
-          <div class="flex flex-wrap gap-2">
-            <n-tag v-for="(name, index) in generatedNames" :key="index" :bordered="false" checkable
-              @click="handleInsertName(name)" class="cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900">
-              {{ name }}
-            </n-tag>
-          </div>
+        <label
+          class="block text-sm font-medium mb-2"
+          :class="isDark ? 'text-gray-300' : 'text-gray-700'"
+          >{{ t("editor.nameGen.result") }}</label
+        >
+        <div class="flex flex-wrap gap-2">
+          <n-tag
+            v-for="(name, index) in generatedNames"
+            :key="index"
+            :bordered="false"
+            checkable
+            @click="handleInsertName(name)"
+            class="cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900"
+          >
+            {{ name }}
+          </n-tag>
         </div>
       </div>
     </n-modal>
 
     <!-- Version History Dialog -->
-    <HistoryDialog v-model:show="showHistory" :project-id="Number(projectId)" :current-content="currentContent"
-      @restore="(content: string) => { if (content) currentContent = content }" />
+    <HistoryDialog
+      v-model:show="showHistory"
+      :project-id="Number(projectId)"
+      :current-content="currentContent"
+      @restore="(content: string) => { if (content) currentContent = content }"
+    />
 
     <!-- Sensitive Words Manager -->
-    <SensitiveWordsManager v-model:show="showSensitiveWords" :project-id="Number(projectId)" />
+    <SensitiveWordsManager
+      v-model:show="showSensitiveWords"
+      :project-id="Number(projectId)"
+    />
 
     <!-- Export Dialog -->
     <ExportDialog v-model:show="showExport" :project-id="Number(projectId)" />
@@ -1141,17 +1556,34 @@ const todayNewWords = computed(() => {
     <ShortcutSettings v-model:show="showShortcuts" />
 
     <!-- Pomodoro Timer (floating) -->
-    <PomodoroTimer ref="pomodoroTimerRef" v-if="projectId && !isLoading" :project-id="Number(projectId)" :is-dark="isDark"
-      :visible="showPomodoro" @zen-mode="handlePomodoroZenMode" />
+    <PomodoroTimer
+      ref="pomodoroTimerRef"
+      v-if="projectId && !isLoading"
+      :project-id="Number(projectId)"
+      :is-dark="isDark"
+      :visible="showPomodoro"
+      @zen-mode="handlePomodoroZenMode"
+    />
 
     <!-- Inspiration Board Modal -->
-    <n-modal v-model:show="showInspirationBoard" preset="card" title="灵感看板" :style="{ width: '90vw', height: '80vh' }"
-      :max-height="600" :mask-closable="true">
+    <n-modal
+      v-model:show="showInspirationBoard"
+      preset="card"
+      :title="t('editor.inspiration.title')"
+      :style="{ width: '90vw', height: '80vh' }"
+      :max-height="600"
+      :mask-closable="true"
+    >
       <template #header-extra>
-        <n-tag type="warning" size="small">双击卡片编辑，右键插入到编辑器</n-tag>
+        <n-tag type="warning" size="small">{{
+          t("editor.inspirationToggle.hint")
+        }}</n-tag>
       </template>
-      <InspirationBoard :project-id="Number(projectId)" :is-dark="isDark"
-        @insert-content="handleInsertFromInspiration" />
+      <InspirationBoard
+        :project-id="Number(projectId)"
+        :is-dark="isDark"
+        @insert-content="handleInsertFromInspiration"
+      />
     </n-modal>
   </div>
 </template>

@@ -26,6 +26,7 @@ import { useFolderDialog } from "../composables/useFolderDialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useProjectStore } from "../stores/project";
+import { useLocale } from "../i18n/composables/useLocale";
 import { defineAsyncComponent } from "vue";
 const ShortcutSettings = defineAsyncComponent(() => import("../components/ShortcutSettings.vue"));
 import type { EncryptProjectParams, DecryptProjectParams, ChangePasswordParams, EncryptionProgress } from "../types/encryption";
@@ -35,6 +36,7 @@ const router = useRouter();
 const message = useMessage();
 const projectStore = useProjectStore();
 const { selectFile } = useFolderDialog();
+const { t } = useLocale();
 
 const projectId = computed(() => Number(route.params.projectId));
 const isLoading = ref(false);
@@ -65,7 +67,7 @@ const isEncrypted = ref(false);
 
 // Get project info
 const projectName = computed(() => {
-    return projectStore.currentProject?.name || "项目";
+    return projectStore.currentProject?.name || t('projectSettings.project');
 });
 
 onMounted(async () => {
@@ -126,7 +128,7 @@ const loadSettings = async () => {
 // Change cover image
 const changeCover = async () => {
     const { path, error } = await selectFile({
-        title: "选择封面图片",
+        title: t('projectSettings.cover.selectTitle'),
         filters: [{
             name: "Images",
             extensions: ["jpg", "jpeg", "png"],
@@ -147,14 +149,14 @@ const changeCover = async () => {
       });
 
       coverUrl.value = convertFileSrc(newCoverPath);
-      message.success("封面已更新");
+      message.success(t('projectSettings.cover.updated'));
 
       if (projectStore.currentProject) {
         projectStore.currentProject.cover_path = newCoverPath;
       }
     } catch (error) {
       console.error("Failed to change cover:", error);
-      message.error(`更换封面失败: ${error}`);
+      message.error(t('projectSettings.cover.changeFailed', { error }));
     } finally {
       isChangingCover.value = false;
     }
@@ -162,7 +164,7 @@ const changeCover = async () => {
 
 const saveProjectInfo = async () => {
     if (!projectData.value.name.trim()) {
-        message.warning("请输入书名");
+        message.warning(t('projectSettings.projectInfo.nameRequired'));
         return;
     }
 
@@ -175,12 +177,12 @@ const saveProjectInfo = async () => {
         });
 
         if (project) {
-            message.success("项目信息已保存");
+            message.success(t('projectSettings.projectInfo.saved'));
         } else {
-            message.error(projectStore.error || "保存失败");
+            message.error(projectStore.error || t('projectSettings.writingGoal.saveFailed'));
         }
     } catch (error) {
-        message.error(`保存失败: ${error}`);
+        message.error(t('projectSettings.projectInfo.saveFailed', { error }));
     } finally {
         isSaving.value = false;
     }
@@ -193,10 +195,10 @@ const saveDailyGoal = async () => {
             projectId: projectId.value,
             dailyGoal: dailyGoal.value,
         });
-        message.success("每日目标已保存");
+        message.success(t('projectSettings.writingGoal.saved'));
     } catch (error) {
         console.error("Failed to save daily goal:", error);
-        message.error("保存失败");
+        message.error(t('projectSettings.writingGoal.saveFailed'));
     } finally {
         isSaving.value = false;
     }
@@ -209,11 +211,11 @@ const goBack = () => {
 // 加密相关方法
 const handleEncrypt = async () => {
     if (encryptPassword.value !== encryptConfirmPassword.value) {
-        message.error("两次输入的密码不一致");
+        message.error(t('projectSettings.encryption.enable.passwordMismatch'));
         return;
     }
     if (encryptPassword.value.length < 8) {
-        message.error("密码长度至少 8 位");
+        message.error(t('projectSettings.encryption.enable.passwordTooShort'));
         return;
     }
     
@@ -228,9 +230,9 @@ const handleEncrypt = async () => {
         isEncrypted.value = true;
         encryptPassword.value = "";
         encryptConfirmPassword.value = "";
-        message.success("项目已加密");
+        message.success(t('projectSettings.encryption.enable.success'));
     } catch (e) {
-        message.error(`加密失败: ${e}`);
+        message.error(t('projectSettings.encryption.enable.failed', { error: e }));
     } finally {
         isProcessing.value = false;
     }
@@ -238,11 +240,11 @@ const handleEncrypt = async () => {
 
 const handleChangePassword = async () => {
     if (newPassword.value !== confirmNewPassword.value) {
-        message.error("两次输入的新密码不一致");
+        message.error(t('projectSettings.encryption.change.passwordMismatch'));
         return;
     }
     if (newPassword.value.length < 8) {
-        message.error("新密码长度至少 8 位");
+        message.error(t('projectSettings.encryption.change.passwordTooShort'));
         return;
     }
     
@@ -258,9 +260,9 @@ const handleChangePassword = async () => {
         oldPassword.value = "";
         newPassword.value = "";
         confirmNewPassword.value = "";
-        message.success("密码已修改");
+        message.success(t('projectSettings.encryption.change.success'));
     } catch (e) {
-        message.error(`修改密码失败: ${e}`);
+        message.error(t('projectSettings.encryption.change.failed', { error: e }));
     } finally {
         isProcessing.value = false;
     }
@@ -275,9 +277,9 @@ const handleDecrypt = async () => {
         });
         isEncrypted.value = false;
         decryptPassword.value = "";
-        message.success("项目已解密，加密已关闭");
+        message.success(t('projectSettings.encryption.disable.success'));
     } catch (e) {
-        message.error(`关闭加密失败: ${e}`);
+        message.error(t('projectSettings.encryption.disable.failed', { error: e }));
     } finally {
         isProcessing.value = false;
     }
@@ -296,7 +298,7 @@ const handleDecrypt = async () => {
                     </template>
                 </n-button>
                 <Target class="w-6 h-6 text-blue-600" />
-                <h1 class="text-xl font-bold text-gray-900 dark:text-white">项目设置</h1>
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ t('projectSettings.title') }}</h1>
                 <span class="text-sm text-gray-500 dark:text-gray-400">{{ projectName }}</span>
             </div>
         </header>
@@ -304,20 +306,20 @@ const handleDecrypt = async () => {
         <main class="max-w-3xl mx-auto px-4 py-6">
             <!-- Tabs -->
             <n-tabs v-model:value="activeTab" type="line" class="mb-6">
-                <n-tab-pane name="basic" tab="基本设置">
+                <n-tab-pane name="basic" :tab="t('projectSettings.tabs.basic')">
                     <div v-if="isLoading" class="flex justify-center py-12">
                         <n-spin size="large" />
                     </div>
                     <n-grid v-else :cols="1" :x-gap="16" :y-gap="16">
                         <!-- Cover Image -->
                         <n-gi>
-                            <n-card title="封面图片" hoverable>
+                            <n-card :title="t('projectSettings.cover.title')" hoverable>
                                 <div class="flex items-center gap-6">
                                     <div class="w-32 h-44 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center">
                                         <img 
                                             v-if="coverUrl" 
                                             :src="coverUrl" 
-                                            alt="项目封面"
+                                            :alt="t('projectSettings.cover.alt')"
                                             class="w-full h-full object-cover"
                                         />
                                         <n-icon size="48" class="text-gray-400" v-else>
@@ -330,10 +332,10 @@ const handleDecrypt = async () => {
                                             @click="changeCover" 
                                             :loading="isChangingCover"
                                         >
-                                            更换封面
+                                            {{ t('projectSettings.cover.changeButton') }}
                                         </n-button>
                                         <span class="text-sm text-gray-500 dark:text-gray-400">
-                                            支持 JPG、PNG 格式
+                                            {{ t('projectSettings.cover.formatHint') }}
                                         </span>
                                     </div>
                                 </div>
@@ -342,36 +344,36 @@ const handleDecrypt = async () => {
 
                         <!-- Project Info -->
                         <n-gi>
-                            <n-card title="项目信息" hoverable>
+                            <n-card :title="t('projectSettings.projectInfo.title')" hoverable>
                                 <n-form label-placement="top">
-                                    <n-form-item label="项目ID">
+                                    <n-form-item :label="t('projectSettings.projectInfo.projectId')">
                                         <n-input 
                                             :value="projectStore.currentProject?.project_id || ''" 
                                             readonly 
-                                            placeholder="项目ID" 
+                                            :placeholder="t('projectSettings.projectInfo.projectIdPlaceholder')" 
                                         >
                                             <template #suffix>
-                                                <span class="text-xs text-gray-400">不可修改</span>
+                                                <span class="text-xs text-gray-400">{{ t('projectSettings.projectInfo.projectIdReadonly') }}</span>
                                             </template>
                                         </n-input>
                                     </n-form-item>
-                                    <n-form-item label="书名">
-                                        <n-input v-model:value="projectData.name" placeholder="请输入书名" maxlength="100" show-count />
+                                    <n-form-item :label="t('projectSettings.projectInfo.name')">
+                                        <n-input v-model:value="projectData.name" :placeholder="t('projectSettings.projectInfo.namePlaceholder')" maxlength="100" show-count />
                                     </n-form-item>
-                                    <n-form-item label="笔名">
-                                        <n-input v-model:value="projectData.author" placeholder="请输入作者笔名" maxlength="50" />
+                                    <n-form-item :label="t('projectSettings.projectInfo.author')">
+                                        <n-input v-model:value="projectData.author" :placeholder="t('projectSettings.projectInfo.authorPlaceholder')" maxlength="50" />
                                     </n-form-item>
-                                    <n-form-item label="简介">
-                                        <n-input v-model:value="projectData.description" type="textarea" placeholder="请输入小说简介" :rows="3" maxlength="500" show-count />
+                                    <n-form-item :label="t('projectSettings.projectInfo.description')">
+                                        <n-input v-model:value="projectData.description" type="textarea" :placeholder="t('projectSettings.projectInfo.descriptionPlaceholder')" :rows="3" maxlength="500" show-count />
                                     </n-form-item>
-                                    <n-form-item label="存储路径">
+                                    <n-form-item :label="t('projectSettings.projectInfo.path')">
                                         <n-input v-model:value="projectData.path" readonly />
                                     </n-form-item>
                                 </n-form>
                                 <template #footer>
                                     <n-space justify="end">
                                         <n-button type="primary" @click="saveProjectInfo" :loading="isSaving">
-                                            保存项目信息
+                                            {{ t('projectSettings.projectInfo.saveButton') }}
                                         </n-button>
                                     </n-space>
                                 </template>
@@ -380,9 +382,9 @@ const handleDecrypt = async () => {
 
                         <!-- Writing Goals -->
                         <n-gi>
-                            <n-card title="写作目标" hoverable>
+                            <n-card :title="t('projectSettings.writingGoal.title')" hoverable>
                                 <n-form label-placement="top">
-                                    <n-form-item label="每日字数目标">
+                                    <n-form-item :label="t('projectSettings.writingGoal.dailyGoal')">
                                         <div class="flex items-center gap-4">
                                             <n-input-number
                                                 v-model:value="dailyGoal"
@@ -391,11 +393,11 @@ const handleDecrypt = async () => {
                                                 :step="100"
                                                 class="w-48"
                                             />
-                                            <span class="text-gray-500 dark:text-gray-400">字/天</span>
+                                            <span class="text-gray-500 dark:text-gray-400">{{ t('projectSettings.writingGoal.unit') }}</span>
                                         </div>
                                         <template #feedback>
                                             <span class="text-sm text-gray-500 dark:text-gray-400">
-                                                设置此项目的每日写作目标，将覆盖全局设置
+                                                {{ t('projectSettings.writingGoal.feedback') }}
                                             </span>
                                         </template>
                                     </n-form-item>
@@ -406,7 +408,7 @@ const handleDecrypt = async () => {
                                             <template #icon>
                                                 <NIcon><Save /></NIcon>
                                             </template>
-                                            保存目标
+                                            {{ t('projectSettings.writingGoal.saveButton') }}
                                         </n-button>
                                     </n-space>
                                 </template>
@@ -415,20 +417,20 @@ const handleDecrypt = async () => {
                     </n-grid>
                 </n-tab-pane>
 
-                <n-tab-pane name="security" tab="安全性">
+                <n-tab-pane name="security" :tab="t('projectSettings.tabs.security')">
                     <div v-if="isLoading" class="flex justify-center py-12">
                         <n-spin size="large" />
                     </div>
                     <n-grid v-else :cols="1" :x-gap="16" :y-gap="16">
                         <!-- 加密状态显示 -->
                         <n-gi>
-                            <n-card title="加密状态" hoverable>
+                            <n-card :title="t('projectSettings.encryption.status.title')" hoverable>
                                 <div class="flex items-center gap-4">
                                     <n-tag :type="isEncrypted ? 'success' : 'default'">
-                                        {{ isEncrypted ? '已加密' : '未加密' }}
+                                        {{ isEncrypted ? t('projectSettings.encryption.status.encrypted') : t('projectSettings.encryption.status.notEncrypted') }}
                                     </n-tag>
                                     <span class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ isEncrypted ? '项目文件已加密存储' : '项目文件未加密' }}
+                                        {{ isEncrypted ? t('projectSettings.encryption.status.encryptedDesc') : t('projectSettings.encryption.status.notEncryptedDesc') }}
                                     </span>
                                 </div>
                             </n-card>
@@ -436,21 +438,21 @@ const handleDecrypt = async () => {
 
                         <!-- 设置密码/启用加密 -->
                         <n-gi v-if="!isEncrypted">
-                            <n-card title="启用加密" hoverable>
+                            <n-card :title="t('projectSettings.encryption.enable.title')" hoverable>
                                 <n-form label-placement="top">
-                                    <n-form-item label="设置密码">
+                                    <n-form-item :label="t('projectSettings.encryption.enable.password')">
                                         <n-input 
                                             v-model:value="encryptPassword" 
                                             type="password" 
-                                            placeholder="请输入密码（至少8位）"
+                                            :placeholder="t('projectSettings.encryption.enable.passwordPlaceholder')"
                                             show-password-on="mousedown"
                                         />
                                     </n-form-item>
-                                    <n-form-item label="确认密码">
+                                    <n-form-item :label="t('projectSettings.encryption.enable.confirmPassword')">
                                         <n-input 
                                             v-model:value="encryptConfirmPassword" 
                                             type="password" 
-                                            placeholder="请再次输入密码"
+                                            :placeholder="t('projectSettings.encryption.enable.confirmPasswordPlaceholder')"
                                             show-password-on="mousedown"
                                         />
                                     </n-form-item>
@@ -461,7 +463,7 @@ const handleDecrypt = async () => {
                                             :loading="isProcessing"
                                             :disabled="!encryptPassword || !encryptConfirmPassword"
                                         >
-                                            启用加密
+                                            {{ t('projectSettings.encryption.enable.button') }}
                                         </n-button>
                                     </n-form-item>
                                 </n-form>
@@ -473,36 +475,36 @@ const handleDecrypt = async () => {
                                     :processing="isProcessing"
                                 />
                                 <div v-if="encryptProgress" class="text-sm text-gray-500 mt-2">
-                                    正在加密: {{ encryptProgress.current }} / {{ encryptProgress.total }} ({{ encryptProgress.currentFile }})
+                                    {{ t('projectSettings.encryption.enable.progress', { current: encryptProgress.current, total: encryptProgress.total, file: encryptProgress.currentFile }) }}
                                 </div>
                             </n-card>
                         </n-gi>
 
                         <!-- 修改密码 -->
                         <n-gi v-if="isEncrypted">
-                            <n-card title="修改密码" hoverable>
+                            <n-card :title="t('projectSettings.encryption.change.title')" hoverable>
                                 <n-form label-placement="top">
-                                    <n-form-item label="原密码">
+                                    <n-form-item :label="t('projectSettings.encryption.change.oldPassword')">
                                         <n-input 
                                             v-model:value="oldPassword" 
                                             type="password" 
-                                            placeholder="请输入原密码"
+                                            :placeholder="t('projectSettings.encryption.change.oldPasswordPlaceholder')"
                                             show-password-on="mousedown"
                                         />
                                     </n-form-item>
-                                    <n-form-item label="新密码">
+                                    <n-form-item :label="t('projectSettings.encryption.change.newPassword')">
                                         <n-input 
                                             v-model:value="newPassword" 
                                             type="password" 
-                                            placeholder="请输入新密码（至少8位）"
+                                            :placeholder="t('projectSettings.encryption.change.newPasswordPlaceholder')"
                                             show-password-on="mousedown"
                                         />
                                     </n-form-item>
-                                    <n-form-item label="确认新密码">
+                                    <n-form-item :label="t('projectSettings.encryption.change.confirmNewPassword')">
                                         <n-input 
                                             v-model:value="confirmNewPassword" 
                                             type="password" 
-                                            placeholder="请再次输入新密码"
+                                            :placeholder="t('projectSettings.encryption.change.confirmNewPasswordPlaceholder')"
                                             show-password-on="mousedown"
                                         />
                                     </n-form-item>
@@ -513,7 +515,7 @@ const handleDecrypt = async () => {
                                             :loading="isProcessing"
                                             :disabled="!oldPassword || !newPassword || !confirmNewPassword"
                                         >
-                                            修改密码
+                                            {{ t('projectSettings.encryption.change.button') }}
                                         </n-button>
                                     </n-form-item>
                                 </n-form>
@@ -522,16 +524,16 @@ const handleDecrypt = async () => {
 
                         <!-- 关闭加密 -->
                         <n-gi v-if="isEncrypted">
-                            <n-card title="关闭加密" hoverable>
+                            <n-card :title="t('projectSettings.encryption.disable.title')" hoverable>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                    关闭加密将解密所有项目文件。需要输入密码确认。
+                                    {{ t('projectSettings.encryption.disable.description') }}
                                 </p>
                                 <n-form label-placement="top">
-                                    <n-form-item label="密码">
+                                    <n-form-item :label="t('projectSettings.encryption.disable.password')">
                                         <n-input 
                                             v-model:value="decryptPassword" 
                                             type="password" 
-                                            placeholder="请输入密码"
+                                            :placeholder="t('projectSettings.encryption.disable.passwordPlaceholder')"
                                             show-password-on="mousedown"
                                         />
                                     </n-form-item>
@@ -542,7 +544,7 @@ const handleDecrypt = async () => {
                                             :loading="isProcessing"
                                             :disabled="!decryptPassword"
                                         >
-                                            关闭加密
+                                            {{ t('projectSettings.encryption.disable.button') }}
                                         </n-button>
                                     </n-form-item>
                                 </n-form>

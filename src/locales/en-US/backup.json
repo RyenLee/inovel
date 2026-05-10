@@ -1,0 +1,44 @@
+{
+  "title": "Project Management",
+  "tabs": {
+    "create": "Create Backup",
+    "history": "Backup History",
+    "logs": "Operation Logs"
+  },
+  "backupInfo": {
+    "fullDesc": "Full Backup: Packages the entire project directory (always excludes .git, optionally excludes exports).",
+    "incrDesc": "Incremental Backup: Only packages files changed since the last backup, smaller and faster."
+  },
+  "fullBackup": "Full Backup",
+  "incrementalBackup": "Incremental Backup",
+  "excludeExports": "Exclude exports directory",
+  "description": "Backup Description (optional)",
+  "descriptionPlaceholder": "e.g. Completed Chapter 3 draft",
+  "stats": {
+    "totalBackups": "Total Backups",
+    "totalSize": "Total Size",
+    "incrementalCount": "Incremental"
+  },
+  "backingUp": "Backing up...",
+  "createFullBackup": "Create Full Backup",
+  "createIncrementalBackup": "Create Incremental Backup",
+  "openFolder": "Open Folder",
+  "noBackups": "No backup records",
+  "noLogs": "No operation logs",
+  "full": "Full",
+  "incremental": "Incremental",
+  "restore": "Restore",
+  "showLess": "Collapse (show latest {limit})",
+  "showAll": "Show All ({total} total)",
+  "messages": {
+    "loadFailed": "Failed to load backup data",
+    "backupSuccess": "Backup created successfully: {path}",
+    "restoreConfirm": "Are you sure you want to restore this backup?\n{description}\nBackup time: {time}\n\nThe current project will be overwritten. Please ensure important data is backed up.",
+    "restoreSuccess": "Restore successful, please refresh the page to see the latest content",
+    "restoreFailed": "Restore failed: {error}",
+    "deleteConfirm": "Are you sure you want to delete this backup record?\nFiles will not be physically deleted, only the record will be removed.",
+    "deleteSuccess": "Backup record deleted",
+    "deleteFailed": "Delete failed: {error}",
+    "openFolderFailed": "Unable to open folder"
+  }
+}

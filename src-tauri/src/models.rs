@@ -646,6 +646,7 @@ pub struct FocusStats {
 pub struct InspirationItem {
     pub id: i64,
     pub project_id: i64,
+    pub column_key: String,
     pub column_name: String,
     pub content: String,
     pub sort_order: i32,
@@ -657,7 +658,7 @@ pub struct InspirationItem {
 #[derive(Debug, Deserialize)]
 pub struct CreateInspirationItemParams {
     pub project_id: i64,
-    pub column_name: String,
+    pub column_key: String,
     pub content: String,
 }
 

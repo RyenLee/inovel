@@ -55,6 +55,7 @@ import { useTheme } from "../composables/useTheme";
 import { invoke } from "@tauri-apps/api/core";
 import DeleteConfirmModal from "../components/DeleteConfirmModal.vue";
 import { configService } from "../services/configService";
+import { useLocale } from "../i18n/composables/useLocale";
 
 const router = useRouter();
 const { isDark, toggleDark } = useTheme();
@@ -62,6 +63,7 @@ const message = useMessage();
 const dialog = useDialog();
 const { selectFolder } = useFolderDialog();
 const projectStore = useProjectStore();
+const { t } = useLocale();
 
 // 配置管理入口是否启用
 const isConfigEntryEnabled = ref(true);
@@ -111,7 +113,7 @@ onMounted(async () => {
     await projectStore.fetchRecentProjects();
   } catch (error) {
     console.error("加载项目列表失败:", error);
-    message.error("加载项目列表失败，请检查配置");
+    message.error(t('welcome.dialog.loadFailed'));
   }
 
   try {
@@ -208,18 +210,18 @@ const executeMigration = async () => {
 const handleRollback = async () => {
   const dialog = useDialog();
   dialog.warning({
-    title: "确认回滚迁移",
-    content: "确定要将所有项目回滚到迁移前的状态吗？此操作会撤销之前的迁移。",
-    positiveText: "确认回滚",
-    negativeText: "取消",
+    title: t('welcome.dialog.rollbackTitle'),
+    content: t('welcome.dialog.rollbackContent'),
+    positiveText: t('welcome.dialog.rollbackConfirm'),
+    negativeText: t('common.action.cancel'),
     onPositiveClick: async () => {
       const result = await projectStore.rollbackMigration();
       if (result && result.success > 0) {
-        message.success(`成功回滚 ${result.success} 个项目`);
+        message.success(t('welcome.dialog.rollbackSuccess', { count: result.success }));
         await projectStore.fetchRecentProjects();
         await checkMigrationStatus();
       } else if (result) {
-        message.error(`回滚失败，请查看备份文件：${result.backup_path}`);
+        message.error(t('welcome.dialog.rollbackFailed', { path: result.backup_path }));
       }
     },
   });
@@ -239,7 +241,7 @@ const goToConfig = () => {
 
 const openFolderDialog = async () => {
   const { path, error } = await selectFolder({
-    title: "选择项目存储位置",
+    title: t('welcome.dialog.selectStoragePath'),
   });
   if (error) {
     message.error(error);
@@ -275,7 +277,7 @@ const openEditModal = (project: ProjectMeta, event: Event) => {
 const handleEditProject = async () => {
   if (!editingProject.value) return;
   if (!formData.value.name.trim()) {
-    message.warning("请输入书名");
+    message.warning(t('welcome.dialog.enterBookName'));
     return;
   }
 
@@ -288,13 +290,13 @@ const handleEditProject = async () => {
     });
 
     if (project) {
-      message.success("项目修改成功！");
+      message.success(t("welcome.createProject.editSuccess"));
       closeModal();
     } else {
-      message.error(projectStore.error || "修改项目失败");
+      message.error(projectStore.error || t("welcome.createProject.editError"));
     }
   } catch (error) {
-    message.error(`修改失败: ${error}`);
+    message.error(`${t("welcome.createProject.editError")}: ${error}`);
   } finally {
     isCreating.value = false;
   }
@@ -302,11 +304,11 @@ const handleEditProject = async () => {
 
 const handleCreateProject = async () => {
   if (!formData.value.name.trim()) {
-    message.warning("请输入书名");
+    message.warning(t("welcome.createProject.placeholder.name"));
     return;
   }
   if (!formData.value.path.trim()) {
-    message.warning("请选择存储路径");
+    message.warning(t("welcome.createProject.placeholder.path"));
     return;
   }
 
@@ -320,15 +322,15 @@ const handleCreateProject = async () => {
     });
 
     if (project) {
-      message.success("项目创建成功！");
+      message.success(t("welcome.createProject.success"));
       showModal.value = false;
       resetForm();
       router.push(`/editor/${project.id}`);
     } else {
-      message.error(projectStore.error || "创建项目失败");
+      message.error(projectStore.error || t("welcome.createProject.error"));
     }
   } catch (error) {
-    message.error(`创建失败: ${error}`);
+    message.error(`${t("welcome.createProject.error")}: ${error}`);
   } finally {
     isCreating.value = false;
   }
@@ -337,14 +339,17 @@ const handleCreateProject = async () => {
 const handleOpenProject = async (project: ProjectMeta) => {
   if (!project.is_valid) {
     dialog.warning({
-      title: "项目路径失效",
-      content: `项目 "${project.name}" 的文件夹已被移动或删除。\n路径：${project.path}`,
-      positiveText: "从列表中移除",
-      negativeText: "取消",
+      title: t("welcome.dialog.invalidPath"),
+      content: t("welcome.dialog.invalidPathMessage", {
+        name: project.name,
+        path: project.path,
+      }),
+      positiveText: t("welcome.dialog.removeFromList"),
+      negativeText: t("common.action.cancel"),
       onPositiveClick: async () => {
         const success = await projectStore.removeProjectFromList(project.id);
         if (success) {
-          message.success("已从列表中移除");
+          message.success(t("welcome.dialog.removed"));
         }
       },
     });
@@ -384,12 +389,12 @@ const handleConfirmDeleteProject = async (keepFiles: boolean) => {
 
   if (success) {
     if (keepFiles) {
-      message.success("已从列表移除");
+      message.success(t("welcome.dialog.removed"));
     } else {
-      message.success("项目已删除");
+      message.success(t("welcome.dialog.deleteSuccess"));
     }
   } else {
-    message.error("删除失败");
+    message.error(t("common.status.error"));
   }
 
   showDeleteProjectModal.value = false;
@@ -423,7 +428,7 @@ const closeModal = () => {
         <div class="flex items-center gap-3">
           <Book class="w-8 h-8 text-blue-600" />
           <h1 class="text-xl font-bold text-gray-900 dark:text-white">
-            小说工坊
+            {{ t("welcome.title") }}
           </h1>
         </div>
         <div class="flex items-center gap-2">
@@ -431,14 +436,19 @@ const closeModal = () => {
             quaternary
             circle
             @click="showShortcuts = true"
-            title="快捷键"
+            :title="t('welcome.shortcuts')"
           >
             <template #icon>
               <NIcon><Keyboard /></NIcon>
             </template>
           </n-button>
 
-          <n-button quaternary circle @click="goToStats" title="写作统计">
+          <n-button
+            quaternary
+            circle
+            @click="goToStats"
+            :title="t('welcome.stats')"
+          >
             <template #icon>
               <NIcon><BarChart3 /></NIcon>
             </template>
@@ -455,7 +465,12 @@ const closeModal = () => {
             <Sun v-if="isDark" class="w-5 h-5" />
             <Moon v-else class="w-5 h-5" />
           </button>
-          <n-button quaternary circle @click="goToSettings" title="应用设置">
+          <n-button
+            quaternary
+            circle
+            @click="goToSettings"
+            :title="t('welcome.settings')"
+          >
             <template #icon>
               <NIcon><Settings /></NIcon>
             </template>
@@ -465,7 +480,7 @@ const closeModal = () => {
             quaternary
             circle
             @click="goToConfig"
-            title="配置管理"
+            :title="t('welcome.config')"
           >
             <template #icon>
               <NIcon><Wrench /></NIcon>
@@ -478,7 +493,7 @@ const closeModal = () => {
                 <Plus />
               </NIcon>
             </template>
-            新建项目
+            {{ t("welcome.newProject") }}
           </n-button>
         </div>
       </div>
@@ -503,7 +518,9 @@ const closeModal = () => {
                 <TrendingUp class="w-5 h-5 text-green-600" />
               </div>
               <div class="overflow-hidden">
-                <p class="text-xs text-gray-500 dark:text-gray-400">本月字数</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ t("welcome.monthlyWords") }}
+                </p>
                 <p
                   class="text-xl font-bold text-gray-900 dark:text-white truncate whitespace-nowrap"
                 >
@@ -524,7 +541,9 @@ const closeModal = () => {
                 <BarChart3 class="w-5 h-5 text-purple-600" />
               </div>
               <div class="overflow-hidden">
-                <p class="text-xs text-gray-500 dark:text-gray-400">日均字数</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ t("welcome.dailyAverage") }}
+                </p>
                 <p
                   class="text-xl font-bold text-gray-900 dark:text-white truncate whitespace-nowrap"
                 >
@@ -545,11 +564,13 @@ const closeModal = () => {
                 <Calendar class="w-5 h-5 text-orange-600" />
               </div>
               <div class="overflow-hidden">
-                <p class="text-xs text-gray-500 dark:text-gray-400">写作天数</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ t("welcome.writingDays") }}
+                </p>
                 <p
                   class="text-xl font-bold text-gray-900 dark:text-white truncate whitespace-nowrap"
                 >
-                  {{ totalDays }} 天
+                  {{ totalDays }} {{ t("welcome.days") }}
                 </p>
               </div>
             </div>
@@ -567,21 +588,18 @@ const closeModal = () => {
         <template #header>
           <div class="flex items-center gap-2">
             <Database class="w-5 h-5" />
-            <span
-              >发现
-              {{ pendingMigrationCount }} 个项目需要迁移到新的项目ID系统</span
-            >
+            <span>{{
+              t("welcome.migrate.info", { count: pendingMigrationCount })
+            }}</span>
           </div>
         </template>
         <div class="flex items-center gap-3 mt-1">
-          <span class="text-sm">
-            旧项目文件夹将使用项目ID重命名，数据不会丢失。建议在开始迁移前先预览。
-          </span>
+          <span class="text-sm">{{ t("welcome.migrate.description") }}</span>
           <n-button size="small" @click="openMigrationPreview">
             <template #icon>
               <NIcon><Eye /></NIcon>
             </template>
-            查看详情
+            {{ t("welcome.migrate.preview") }}
           </n-button>
           <n-button
             size="small"
@@ -592,13 +610,13 @@ const closeModal = () => {
             <template #icon>
               <NIcon><Play /></NIcon>
             </template>
-            开始迁移
+            {{ t("welcome.migrate.start") }}
           </n-button>
           <n-button size="small" quaternary @click="handleRollback">
             <template #icon>
               <NIcon><RotateCcw /></NIcon>
             </template>
-            回滚
+            {{ t("welcome.migrate.rollback") }}
           </n-button>
         </div>
       </n-alert>
@@ -620,26 +638,36 @@ const closeModal = () => {
               class="w-5 h-5 text-green-500"
             />
             <XCircle v-else class="w-5 h-5 text-orange-500" />
-            <span
-              >迁移{{
-                projectStore.migrationResult.failed === 0 ? "完成" : "部分完成"
-              }}</span
-            >
+            <span>{{
+              t(
+                `welcome.migrate.${
+                  projectStore.migrationResult.failed === 0
+                    ? "completed"
+                    : "partialCompleted"
+                }`
+              )
+            }}</span>
           </div>
         </template>
         <div class="text-sm space-y-1 mt-1">
           <p>
-            总计: {{ projectStore.migrationResult.total }} | 成功:
+            {{ t("welcome.migrate.total") }}:
+            {{ projectStore.migrationResult.total }} |
+            {{ t("welcome.migrate.success") }}:
             <span class="text-green-600 font-medium">{{
               projectStore.migrationResult.success
             }}</span>
-            | 失败:
+            | {{ t("welcome.migrate.failed") }}:
             <span class="text-orange-600 font-medium">{{
               projectStore.migrationResult.failed
             }}</span>
           </p>
           <p class="text-gray-500">
-            备份文件: {{ projectStore.migrationResult.backup_path }}
+            {{
+              t("welcome.migrate.backupPath", {
+                path: projectStore.migrationResult.backup_path,
+              })
+            }}
           </p>
         </div>
       </n-alert>
@@ -647,7 +675,7 @@ const closeModal = () => {
       <!-- Recent Projects Section -->
       <section>
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          最近项目
+          {{ t("welcome.recentProjects") }}
         </h2>
 
         <div v-if="projectStore.isLoading" class="flex justify-center py-12">
@@ -656,7 +684,7 @@ const closeModal = () => {
 
         <n-empty
           v-else-if="projectStore.recentProjects.length === 0"
-          description="暂无项目，点击上方按钮创建新项目"
+          :description="t('welcome.noProjects')"
           class="empty-no-project"
         >
           <template #icon>
@@ -693,7 +721,7 @@ const closeModal = () => {
                   <template #trigger>
                     <AlertTriangle class="w-5 h-5 text-orange-500" />
                   </template>
-                  项目路径已失效
+                  {{ t("welcome.dialog.invalidPath") }}
                 </n-tooltip>
               </div>
 
@@ -747,7 +775,7 @@ const closeModal = () => {
                   v-if="project.author"
                   class="text-sm text-gray-500 dark:text-gray-400"
                 >
-                  笔名: {{ project.author }}
+                  {{ t('welcome.author') }}: {{ project.author }}
                 </p>
                 <p
                   v-if="project.description"
@@ -757,10 +785,8 @@ const closeModal = () => {
                 </p>
                 <div class="flex items-center justify-between mt-2">
                   <p class="text-xs text-gray-400 dark:text-gray-500">
-                    创建于:
-                    {{
-                      new Date(project.created_at).toLocaleDateString("zh-CN")
-                    }}
+                    {{ t("welcome.createdAt") }}:
+                    {{ new Date(project.created_at).toLocaleDateString() }}
                   </p>
                   <n-button
                     type="primary"
@@ -772,7 +798,7 @@ const closeModal = () => {
                         <Edit3 />
                       </NIcon>
                     </template>
-                    打开
+                    {{ t("welcome.open") }}
                   </n-button>
                 </div>
               </div>
@@ -786,52 +812,63 @@ const closeModal = () => {
     <n-modal
       v-model:show="showModal"
       preset="card"
-      :title="isEditing ? '编辑项目' : '新建项目'"
+      :title="
+        isEditing
+          ? t('welcome.createProject.editTitle')
+          : t('welcome.createProject.title')
+      "
       style="width: 520px"
       :mask-closable="false"
     >
       <n-form :model="formData" label-placement="top">
         <n-form-item
-          label="书名"
+          :label="t('welcome.createProject.name')"
           path="name"
           :rule="{
             required: true,
-            message: '请输入书名',
+            message: t('welcome.createProject.placeholder.name'),
             trigger: ['input', 'blur'],
           }"
         >
           <n-input
             v-model:value="formData.name"
-            placeholder="请输入书名（必填）"
+            :placeholder="t('welcome.createProject.placeholder.name')"
             maxlength="100"
             show-count
           />
         </n-form-item>
 
-        <n-form-item label="笔名" path="author">
+        <n-form-item :label="t('welcome.createProject.author')" path="author">
           <n-input
             v-model:value="formData.author"
-            placeholder="请输入作者笔名"
+            :placeholder="t('welcome.createProject.placeholder.author')"
             maxlength="50"
           />
         </n-form-item>
 
-        <n-form-item label="简介" path="description">
+        <n-form-item
+          :label="t('welcome.createProject.description')"
+          path="description"
+        >
           <n-input
             v-model:value="formData.description"
             type="textarea"
-            placeholder="请输入小说简介"
+            :placeholder="t('welcome.createProject.placeholder.description')"
             :rows="3"
             maxlength="500"
             show-count
           />
         </n-form-item>
 
-        <n-form-item v-if="!isEditing" label="存储路径" path="path">
+        <n-form-item
+          v-if="!isEditing"
+          :label="t('welcome.createProject.path')"
+          path="path"
+        >
           <div class="flex gap-2 w-full">
             <n-input
               v-model:value="formData.path"
-              placeholder="请选择项目存储路径（必填）"
+              :placeholder="t('welcome.createProject.placeholder.path')"
               readonly
               class="flex-1"
             />
@@ -841,25 +878,31 @@ const closeModal = () => {
                   <FolderOpen />
                 </NIcon>
               </template>
-              选择
+              {{ t("welcome.createProject.selectPath") }}
             </n-button>
           </div>
         </n-form-item>
 
-        <n-form-item v-else label="存储路径">
+        <n-form-item v-else :label="t('welcome.createProject.path')">
           <n-input v-model:value="formData.path" readonly />
         </n-form-item>
       </n-form>
 
       <template #footer>
         <n-space justify="end">
-          <n-button @click="closeModal" :disabled="isCreating">取消</n-button>
+          <n-button @click="closeModal" :disabled="isCreating">{{
+            t("common.action.cancel")
+          }}</n-button>
           <n-button
             type="primary"
             @click="isEditing ? handleEditProject() : handleCreateProject()"
             :loading="isCreating"
           >
-            {{ isEditing ? "保存修改" : "创建项目" }}
+            {{
+              isEditing
+                ? t("common.action.save")
+                : t("welcome.createProject.title")
+            }}
           </n-button>
         </n-space>
       </template>
@@ -869,7 +912,7 @@ const closeModal = () => {
     <n-modal
       v-model:show="showMigrationModal"
       preset="card"
-      title="数据迁移预览"
+      :title="t('welcome.migrate.previewTitle')"
       style="width: 640px"
       :mask-closable="false"
     >
@@ -878,7 +921,7 @@ const closeModal = () => {
         class="flex flex-col items-center py-8 gap-4"
       >
         <n-spin size="large" />
-        <p class="text-gray-500">正在执行迁移...</p>
+        <p class="text-gray-500">{{ t('welcome.migrate.migrating') }}</p>
         <n-progress
           type="line"
           :percentage="migrationProgress"
@@ -889,9 +932,7 @@ const closeModal = () => {
 
       <div v-else class="space-y-4">
         <n-alert type="info" :bordered="false">
-          以下
-          {{ dryRunResult?.total || 0 }}
-          个项目将被迁移。文件夹将从旧书名重命名为项目ID。
+          {{ t('welcome.migrate.previewDescription', { count: dryRunResult?.total || 0 }) }}
         </n-alert>
 
         <div class="max-h-64 overflow-y-auto space-y-2">
@@ -904,7 +945,7 @@ const closeModal = () => {
               <span class="font-medium text-gray-900 dark:text-white">{{
                 detail.old_name
               }}</span>
-              <n-tag size="small" type="info">待迁移</n-tag>
+              <n-tag size="small" type="info">{{ t('welcome.migrate.pendingTag') }}</n-tag>
             </div>
             <div class="mt-1 text-sm text-gray-500">
               <p class="font-mono text-xs">
@@ -921,7 +962,7 @@ const closeModal = () => {
           <n-button
             @click="showMigrationModal = false"
             :disabled="projectStore.isMigrating"
-            >取消</n-button
+            >{{ t('welcome.migrate.cancel') }}</n-button
           >
           <n-button
             type="primary"
@@ -931,7 +972,7 @@ const closeModal = () => {
             <template #icon>
               <NIcon><Play /></NIcon>
             </template>
-            确认迁移
+            {{ t('welcome.migrate.confirm') }}
           </n-button>
         </n-space>
       </template>
@@ -941,7 +982,7 @@ const closeModal = () => {
     <n-modal
       v-model:show="showShortcuts"
       preset="card"
-      title="快捷键说明"
+      :title="t('welcome.shortcuts.title')"
       style="width: 480px"
       :mask-closable="true"
     >
@@ -950,13 +991,13 @@ const closeModal = () => {
           class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
         >
           <p class="text-sm text-blue-800 dark:text-blue-300">
-            在编辑器页面中使用以下快捷键：
+            {{ t('welcome.shortcuts.description') }}
           </p>
         </div>
 
         <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-gray-700 dark:text-gray-300">保存</span>
+            <span class="text-gray-700 dark:text-gray-300">{{ t('welcome.shortcuts.save') }}</span>
             <kbd
               class="px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600"
               >Ctrl + S</kbd
@@ -965,9 +1006,9 @@ const closeModal = () => {
 
           <div class="flex items-center justify-between">
             <div>
-              <span class="text-gray-700 dark:text-gray-300">打字机模式</span>
+              <span class="text-gray-700 dark:text-gray-300">{{ t('welcome.shortcuts.typewriterMode') }}</span>
               <p class="text-xs text-gray-500 dark:text-gray-400">
-                光标行居中，其他行淡化
+                {{ t('welcome.shortcuts.typewriterDesc') }}
               </p>
             </div>
             <kbd
@@ -978,9 +1019,9 @@ const closeModal = () => {
 
           <div class="flex items-center justify-between">
             <div>
-              <span class="text-gray-700 dark:text-gray-300">聚焦模式</span>
+              <span class="text-gray-700 dark:text-gray-300">{{ t('welcome.shortcuts.focusMode') }}</span>
               <p class="text-xs text-gray-500 dark:text-gray-400">
-                当前段落高亮，其他内容淡化
+                {{ t('welcome.shortcuts.focusDesc') }}
               </p>
             </div>
             <kbd
@@ -990,7 +1031,7 @@ const closeModal = () => {
           </div>
 
           <div class="flex items-center justify-between">
-            <span class="text-gray-700 dark:text-gray-300">退出特殊模式</span>
+            <span class="text-gray-700 dark:text-gray-300">{{ t('welcome.shortcuts.exitSpecialMode') }}</span>
             <kbd
               class="px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600"
               >Esc</kbd
@@ -1003,9 +1044,8 @@ const closeModal = () => {
     <!-- 删除项目确认弹窗 -->
     <DeleteConfirmModal
       v-model:show="showDeleteProjectModal"
-      title="确认删除项目"
-      :message="`确定要删除项目 &quot;${projectToDelete?.name}&quot; 吗？`"
-      confirm-text="删除"
+      :title="t('welcome.dialog.deleteConfirm')"
+      :message="t('welcome.dialog.deleteMessage', { name: projectToDelete?.name })"
       :show-keep-files="true"
       :default-keep-files="true"
       @confirm="handleConfirmDeleteProject"

@@ -1,0 +1,47 @@
+{
+  "toolbar": {
+    "bold": "Bold (Ctrl+B)",
+    "italic": "Italic (Ctrl+I)",
+    "heading1": "Heading 1",
+    "heading2": "Heading 2",
+    "heading3": "Heading 3",
+    "bulletList": "Bullet List",
+    "orderedList": "Ordered List",
+    "blockquote": "Blockquote",
+    "horizontalRule": "Horizontal Rule",
+    "history": "Version History",
+    "snapshot": "Create Snapshot",
+    "template": "Open Template Library",
+    "nameGenerator": "Name Generator",
+    "importText": "Import Text File (.txt)"
+  },
+  "lineHeight": {
+    "title": "Line Height",
+    "compact": "Compact",
+    "loose": "Loose",
+    "current": "Current line height: {height}px"
+  },
+  "statusBar": {
+    "chapterWordCount": "Chapter words: ",
+    "volumeWordCount": "Volume words: ",
+    "totalWordCount": "Total words: "
+  },
+  "splitDialog": {
+    "title": "Paragraph Split",
+    "threshold": "Split threshold: ",
+    "characters": "chars",
+    "refreshPreview": "Refresh Preview",
+    "original": "Original ({length} chars): ",
+    "splitResult": "After split ({count} segments): ",
+    "segment": "Seg{index}",
+    "noParagraphs": "No paragraphs exceed the threshold",
+    "confirmSplit": "Confirm Split"
+  },
+  "imageDialog": {
+    "title": "Select Image"
+  },
+  "messages": {
+    "editorNotInitialized": "Editor instance not initialized",
+    "applyTemplateFailed": "Failed to apply template:"
+  }
+}

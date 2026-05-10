@@ -1,0 +1,16 @@
+{
+  "types": {
+    "character": "Character",
+    "location": "Location",
+    "organization": "Organization"
+  },
+  "labels": {
+    "gender": "Gender",
+    "age": "Age",
+    "personality": "Personality",
+    "type": "Type",
+    "leader": "Leader"
+  },
+  "clickToView": "Click to view details",
+  "noResults": "No results"
+}

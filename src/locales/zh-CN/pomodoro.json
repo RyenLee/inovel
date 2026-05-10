@@ -1,0 +1,39 @@
+{
+  "sessionTypes": {
+    "work": "专注",
+    "short_break": "短休",
+    "long_break": "长休"
+  },
+  "status": {
+    "running": "运行中",
+    "paused": "已暂停",
+    "idle": "空闲"
+  },
+  "taskPlaceholder": "输入任务名称...",
+  "focusModeDisabled": "专注模式下禁用",
+  "reset": "重置",
+  "skip": "跳过",
+  "soundOn": "开启声音",
+  "soundOff": "关闭声音",
+  "focusModeOn": "开启专注模式",
+  "focusModeOff": "关闭专注模式",
+  "settings": "设置",
+  "settingsTitle": "番茄钟设置",
+  "workDuration": "工作时长",
+  "shortBreak": "短休息",
+  "longBreak": "长休息",
+  "longBreakInterval": "长休息间隔",
+  "minutes": "分钟",
+  "perPomodoros": "每 {n} 个番茄",
+  "autoStartBreaks": "自动开始休息",
+  "autoStartWork": "自动开始工作",
+  "completed": "完成",
+  "confirm": "确定",
+  "completionMessages": {
+    "work": "🎉 恭喜完成一个番茄钟！已连续专注 {streak} 次",
+    "break": "☕ 休息结束，准备开始下一个番茄钟！"
+  },
+  "messages": {
+    "pauseFirst": "请先暂停或完成当前专注会话"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "title": "快捷键设置",
+  "recording": "正在录制快捷键...",
+  "pressKeys": "请按下组合键",
+  "waitingInput": "等待输入...",
+  "cancel": "取消",
+  "save": "保存",
+  "edit": "编辑",
+  "resetDefault": "恢复默认",
+  "resetAll": "恢复所有默认",
+  "import": "导入",
+  "export": "导出",
+  "close": "关闭",
+  "messages": {
+    "shortcutUpdated": "快捷键已更新",
+    "pressNewShortcut": "请按下新的快捷键组合...",
+    "resetDefaultConfirm": "确定要将「{name}」的快捷键恢复为默认吗？",
+    "resetDefaultDone": "已恢复默认快捷键",
+    "resetAllConfirm": "确定要将所有快捷键恢复为默认值？",
+    "resetAllDone": "已恢复所有默认快捷键",
+    "exportSuccess": "快捷键配置已导出",
+    "importSuccess": "快捷键配置已导入",
+    "importFailed": "导入失败：文件格式不正确"
+  }
+}

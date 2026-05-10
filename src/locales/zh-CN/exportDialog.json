@@ -1,0 +1,20 @@
+{
+  "title": "导出文档",
+  "selectFormat": "选择导出格式",
+  "exporting": "导出中...",
+  "startExport": "开始导出",
+  "exportComplete": "导出完成，文件保存在：",
+  "openFolder": "打开文件夹",
+  "formats": {
+    "txt": "纯文本 (.txt)",
+    "markdown": "Markdown (.md)",
+    "epub": "EPUB 电子书 (.epub)",
+    "pdf": "PDF 文档 (.pdf)"
+  },
+  "messages": {
+    "selectAtLeastOne": "请至少选择一种导出格式",
+    "exportFailed": "导出 {format} 失败",
+    "exportSuccess": "导出完成，成功 {success}/{total} 个文件",
+    "cannotOpenFolder": "无法打开文件夹"
+  }
+}

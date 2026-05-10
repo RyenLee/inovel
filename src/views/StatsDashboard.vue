@@ -13,6 +13,7 @@ import {
 } from "naive-ui";
 import { ArrowLeft, TrendingUp, Clock, Target, Calendar, BarChart3, Timer, Coffee, Brain } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
+import { useLocale } from "../i18n/composables/useLocale";
 
 interface WritingRecord {
     date: string;
@@ -42,6 +43,7 @@ interface FocusStats {
 }
 
 const router = useRouter();
+const { t } = useLocale();
 const isLoading = ref(true);
 const writingRecords = ref<WritingRecord[]>([]);
 const focusSessions = ref<FocusSession[]>([]);
@@ -315,15 +317,14 @@ const completedPomodoros = computed(() => {
 
 // 格式化专注时长显示
 const formatFocusTime = (minutes: number): string => {
-    // 确保输入非负
     const mins = Math.max(Math.round(minutes), 0);
     
     if (mins < 60) {
-        return `${mins}分钟`;
+        return `${mins}${t('stats.minutes')}`;
     }
     const hours = Math.floor(mins / 60);
     const remainingMins = mins % 60;
-    return remainingMins > 0 ? `${hours}小时${remainingMins}分钟` : `${hours}小时`;
+    return remainingMins > 0 ? `${hours}${t('stats.hours')}${remainingMins}${t('stats.minutes')}` : `${hours}${t('stats.hours')}`;
 };
 
 // 最近专注记录，已排序并添加数据校验
@@ -384,9 +385,9 @@ const focusHeatmapData = computed(() => {
 
 const getSessionTypeLabel = (type: string) => {
     const nameMap: Record<string, string> = {
-        work: '专注',
-        short_break: '短休息',
-        long_break: '长休息',
+        work: t('stats.sessionTypes.work'),
+        short_break: t('stats.sessionTypes.shortBreak'),
+        long_break: t('stats.sessionTypes.longBreak'),
     };
     return nameMap[type] ?? type;
 };
@@ -413,7 +414,7 @@ const getSessionTypeColor = (type: string) => {
                     </template>
                 </n-button>
                 <BarChart3 class="w-6 h-6 text-blue-600" />
-                <h1 class="text-xl font-bold text-gray-900 dark:text-white">写作统计</h1>
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ t('stats.title') }}</h1>
             </div>
         </header>
 
@@ -431,7 +432,7 @@ const getSessionTypeColor = (type: string) => {
                                 <TrendingUp class="w-6 h-6 text-blue-600" />
                             </div>
                             <div class="overflow-hidden">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">本月字数</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('stats.monthlyWords') }}</p>
                                 <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ totalWordsThisMonth.toLocaleString() }}</p>
                             </div>
                         </div>
@@ -446,7 +447,7 @@ const getSessionTypeColor = (type: string) => {
                                 <Target class="w-6 h-6 text-green-600" />
                             </div>
                             <div class="overflow-hidden">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">日均字数</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('stats.avgDailyWords') }}</p>
                                 <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ averageWordsPerDay.toLocaleString() }}</p>
                             </div>
                         </div>
@@ -461,7 +462,7 @@ const getSessionTypeColor = (type: string) => {
                                 <Clock class="w-6 h-6 text-purple-600" />
                             </div>
                             <div class="overflow-hidden">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">写作时长</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('stats.writingDuration') }}</p>
                                 <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ formatFocusTime(totalDuration) }}</p>
                             </div>
                         </div>
@@ -476,8 +477,8 @@ const getSessionTypeColor = (type: string) => {
                                 <Calendar class="w-6 h-6 text-orange-600" />
                             </div>
                             <div class="overflow-hidden">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">写作天数</p>
-                                <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ totalDays }} 天</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('stats.writingDays') }}</p>
+                                <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ totalDays }} {{ t('stats.days') }}</p>
                             </div>
                         </div>
                     </n-card>
@@ -491,7 +492,7 @@ const getSessionTypeColor = (type: string) => {
                                 <Timer class="w-6 h-6 text-red-600" />
                             </div>
                             <div class="overflow-hidden">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">专注时长</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('stats.focusDuration') }}</p>
                                 <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ formatFocusTime(totalFocusMinutes) }}</p>
                             </div>
                         </div>
@@ -506,7 +507,7 @@ const getSessionTypeColor = (type: string) => {
                                 <Brain class="w-6 h-6 text-pink-600" />
                             </div>
                             <div class="overflow-hidden">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">完成番茄</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('stats.completedPomodoros') }}</p>
                                 <p class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ completedPomodoros }}</p>
                             </div>
                         </div>
@@ -515,9 +516,9 @@ const getSessionTypeColor = (type: string) => {
 
                 <!-- Line Chart -->
                 <n-gi span="0:24 640:24 1024:24">
-                    <n-card title="近30天码字趋势" hoverable>
+                    <n-card :title="t('stats.trend30Days')" hoverable>
                         <div v-if="lineChartData.length < 2" class="h-48 flex items-center justify-center text-gray-400">
-                            暂无数据
+                            {{ t('stats.noData') }}
                         </div>
                         <svg v-else :viewBox="`0 0 ${lineChartPath.width} ${lineChartPath.height}`" class="w-full h-48">
                             <line
@@ -584,16 +585,16 @@ const getSessionTypeColor = (type: string) => {
 
                 <!-- Calendar Heatmap -->
                 <n-gi span="0:24 640:24 1024:24">
-                    <n-card title="写作热力图" hoverable>
+                    <n-card :title="t('stats.writingHeatmap')" hoverable>
                         <div class="overflow-x-auto">
                             <div class="flex gap-1 mb-2">
-                                <div class="text-xs text-gray-400 w-12">周一</div>
-                                <div class="text-xs text-gray-400 w-12">周二</div>
-                                <div class="text-xs text-gray-400 w-12">周三</div>
-                                <div class="text-xs text-gray-400 w-12">周四</div>
-                                <div class="text-xs text-gray-400 w-12">周五</div>
-                                <div class="text-xs text-gray-400 w-12">周六</div>
-                                <div class="text-xs text-gray-400 w-12">周日</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.mon') }}</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.tue') }}</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.wed') }}</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.thu') }}</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.fri') }}</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.sat') }}</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.sun') }}</div>
                             </div>
                             <div class="grid grid-rows-12 grid-flow-col gap-1">
                                 <div
@@ -607,11 +608,11 @@ const getSessionTypeColor = (type: string) => {
                                         'bg-green-500 dark:bg-green-600': day.level === 3,
                                         'bg-green-600 dark:bg-green-500': day.level === 4,
                                     }"
-                                    :title="`${day.date}: ${day.value} 字`"
+                                    :title="`${day.date}: ${day.value} ${t('stats.words')}`"
                                 />
                             </div>
                             <div class="flex items-center gap-2 mt-4 text-xs text-gray-500">
-                                <span>少</span>
+                                <span>{{ t('stats.heatmap.less') }}</span>
                                 <div class="flex gap-1">
                                     <div class="w-3 h-3 rounded-sm bg-gray-100 dark:bg-gray-700" />
                                     <div class="w-3 h-3 rounded-sm bg-green-200 dark:bg-green-900" />
@@ -619,7 +620,7 @@ const getSessionTypeColor = (type: string) => {
                                     <div class="w-3 h-3 rounded-sm bg-green-500 dark:bg-green-600" />
                                     <div class="w-3 h-3 rounded-sm bg-green-600 dark:bg-green-500" />
                                 </div>
-                                <span>多</span>
+                                <span>{{ t('stats.heatmap.more') }}</span>
                             </div>
                         </div>
                     </n-card>
@@ -627,9 +628,9 @@ const getSessionTypeColor = (type: string) => {
 
                 <!-- Recent Records -->
                 <n-gi span="0:24 640:24 1024:24">
-                    <n-card title="最近记录" hoverable>
+                    <n-card :title="t('stats.recentRecords')" hoverable>
                         <div v-if="writingRecords.length === 0" class="py-8 text-center text-gray-400">
-                            暂无写作记录，开始写作后会自动记录
+                            {{ t('stats.noWritingRecords') }}
                         </div>
                         <div v-else>
                             <div
@@ -641,10 +642,10 @@ const getSessionTypeColor = (type: string) => {
                                     {{ formatDate(record.date) }}
                                 </span>
                                 <span class="font-medium text-gray-900 dark:text-white">
-                                    {{ record.total_words.toLocaleString() }} 字
+                                    {{ record.total_words.toLocaleString() }} {{ t('stats.words') }}
                                 </span>
                                 <span class="text-sm text-gray-400">
-                                    {{ record.duration }} 分钟
+                                    {{ record.duration }} {{ t('stats.minutes') }}
                                 </span>
                             </div>
                         </div>
@@ -653,19 +654,19 @@ const getSessionTypeColor = (type: string) => {
 
                 <!-- Focus Session Heatmap -->
                 <n-gi span="0:24 640:24 1024:24">
-                    <n-card title="专注热力图" hoverable>
+                    <n-card :title="t('stats.focusHeatmap')" hoverable>
                         <div v-if="focusSessions.length === 0" class="py-8 text-center text-gray-400">
-                            暂无专注记录，使用番茄钟开始计时
+                            {{ t('stats.noFocusRecords') }}
                         </div>
                         <div v-else class="overflow-x-auto">
                             <div class="flex gap-1 mb-2">
-                                <div class="text-xs text-gray-400 w-12">周一</div>
-                                <div class="text-xs text-gray-400 w-12">周二</div>
-                                <div class="text-xs text-gray-400 w-12">周三</div>
-                                <div class="text-xs text-gray-400 w-12">周四</div>
-                                <div class="text-xs text-gray-400 w-12">周五</div>
-                                <div class="text-xs text-gray-400 w-12">周六</div>
-                                <div class="text-xs text-gray-400 w-12">周日</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.mon') }}</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.tue') }}</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.wed') }}</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.thu') }}</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.fri') }}</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.sat') }}</div>
+                                <div class="text-xs text-gray-400 w-12">{{ t('stats.weekdays.sun') }}</div>
                             </div>
                             <div class="grid grid-rows-12 grid-flow-col gap-1">
                                 <div
@@ -679,11 +680,11 @@ const getSessionTypeColor = (type: string) => {
                                         'bg-red-500 dark:bg-red-600': day.level === 3,
                                         'bg-red-600 dark:bg-red-500': day.level === 4,
                                     }"
-                                    :title="`${day.date}: ${day.value} 分钟`"
+                                    :title="`${day.date}: ${day.value} ${t('stats.minutes')}`"
                                 />
                             </div>
                             <div class="flex items-center gap-2 mt-4 text-xs text-gray-500">
-                                <span>少</span>
+                                <span>{{ t('stats.heatmap.less') }}</span>
                                 <div class="flex gap-1">
                                     <div class="w-3 h-3 rounded-sm bg-gray-100 dark:bg-gray-700" />
                                     <div class="w-3 h-3 rounded-sm bg-red-200 dark:bg-red-900" />
@@ -691,7 +692,7 @@ const getSessionTypeColor = (type: string) => {
                                     <div class="w-3 h-3 rounded-sm bg-red-500 dark:bg-red-600" />
                                     <div class="w-3 h-3 rounded-sm bg-red-600 dark:bg-red-500" />
                                 </div>
-                                <span>多</span>
+                                <span>{{ t('stats.heatmap.more') }}</span>
                             </div>
                         </div>
                     </n-card>
@@ -699,9 +700,9 @@ const getSessionTypeColor = (type: string) => {
 
                 <!-- Recent Focus Sessions -->
                 <n-gi span="0:24 640:24 1024:24">
-                    <n-card title="最近专注记录" hoverable>
+                    <n-card :title="t('stats.recentFocusRecords')" hoverable>
                         <div v-if="recentFocusSessions.length === 0" class="py-8 text-center text-gray-400">
-                            暂无专注记录，使用番茄钟开始计时
+                            {{ t('stats.noFocusRecords') }}
                         </div>
                         <div v-else>
                             <div
@@ -719,7 +720,7 @@ const getSessionTypeColor = (type: string) => {
                                     {{ getSessionTypeLabel(session.session_type) }}
                                 </span>
                                 <span class="font-medium text-gray-900 dark:text-white">
-                                    {{ session.duration_minutes }} 分钟
+                                    {{ session.duration_minutes }} {{ t('stats.minutes') }}
                                 </span>
                                 <span v-if="session.completed" class="text-xs text-green-500">✓</span>
                             </div>

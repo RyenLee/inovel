@@ -1,0 +1,31 @@
+{
+  "columns": {
+    "inspiration": "Inspiration",
+    "dialogue": "Dialogue",
+    "scene": "Scene"
+  },
+  "deleteColumn": "Delete Column",
+  "addItem": "Add Item",
+  "doubleClickToEdit": "Double-click to edit...",
+  "editPlaceholder": "Enter inspiration content...",
+  "save": "Save",
+  "insertToEditor": "Insert to Editor",
+  "edit": "Edit",
+  "delete": "Delete",
+  "confirmDelete": "Confirm Delete",
+  "deleteItemConfirm": "Are you sure you want to delete this inspiration item?",
+  "cancel": "Cancel",
+  "deleted": "Deleted",
+  "insertedToEditor": "Inserted to editor",
+  "enterColumnName": "Please enter a column name",
+  "columnExists": "This column already exists",
+  "columnAdded": "New column added",
+  "defaultColumnCannotDelete": "Default columns cannot be deleted",
+  "deleteColumnConfirm": "Are you sure you want to delete the \"{name}\" column? All content in this column will also be deleted.",
+  "columnDeleted": "Column deleted",
+  "messages": {
+    "createFailed": "Failed to create item",
+    "updateFailed": "Failed to update item",
+    "deleteFailed": "Failed to delete item"
+  }
+}

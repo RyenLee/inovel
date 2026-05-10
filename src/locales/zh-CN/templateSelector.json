@@ -1,0 +1,31 @@
+{
+  "title": "选择写作模板",
+  "categories": {
+    "all": "全部",
+    "chapter": "章节",
+    "illustrated": "图文",
+    "dialogue": "对话",
+    "structured": "结构化"
+  },
+  "insertMode": {
+    "replace": "替换内容",
+    "insert": "插入内容",
+    "replaceTooltip": "清空当前内容，使用模板",
+    "insertTooltip": "在当前光标位置插入模板",
+    "modeLabel": "模式：{mode}"
+  },
+  "badges": {
+    "builtin": "内置",
+    "custom": "自定义"
+  },
+  "loading": "加载模板中...",
+  "noTemplates": "暂无模板，请稍后重试",
+  "reload": "重新加载",
+  "cancel": "取消",
+  "useReplace": "使用模板替换",
+  "useInsert": "插入模板内容",
+  "messages": {
+    "loadFailed": "加载模板失败",
+    "loadFailedRetry": "加载模板失败，请重试"
+  }
+}

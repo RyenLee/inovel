@@ -17,6 +17,9 @@ import {
 } from "naive-ui";
 import { Package, FolderOpen, Trash2, Upload, Clock, BarChart3 } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
+import { useLocale } from "../i18n/composables/useLocale";
+
+const { t } = useLocale();
 
 const props = defineProps<{
   show: boolean;
@@ -105,7 +108,7 @@ async function loadData() {
     logs.value = l.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     stats.value = s;
   } catch (e) {
-    console.error("加载备份数据失败:", e);
+    console.error(t('backup.messages.loadFailed') + ":", e);
   } finally {
     isLoading.value = false;
   }
@@ -137,7 +140,7 @@ async function doBackup() {
         description: backupDescription.value || null,
       });
     }
-    message.success(`备份创建成功：${path}`);
+    message.success(t('backup.messages.backupSuccess', { path }));
     await loadData();
     activeTab.value = "history";
   } catch (error) {
@@ -148,7 +151,7 @@ async function doBackup() {
 }
 
 async function restoreBackup(backup: BackupRecord) {
-  if (!confirm(`确定要恢复此备份吗？\n${backup.description}\n备份时间：${formatDate(backup.created_at)}\n\n当前项目将被覆盖，请确保已做好重要数据备份。`)) {
+  if (!confirm(t('backup.messages.restoreConfirm', { description: backup.description, time: formatDate(backup.created_at) }))) {
     return;
   }
 
@@ -157,15 +160,15 @@ async function restoreBackup(backup: BackupRecord) {
       projectId: props.projectId,
       backupId: backup.id,
     });
-    message.success("恢复成功，请刷新页面查看最新内容");
+    message.success(t('backup.messages.restoreSuccess'));
     await loadData();
   } catch (error) {
-    message.error(`恢复失败: ${error}`);
+    message.error(t('backup.messages.restoreFailed', { error }));
   }
 }
 
 async function deleteBackup(backup: BackupRecord) {
-  if (!confirm(`确定要删除此备份记录吗？\n文件不会被物理删除，仅删除记录。`)) {
+  if (!confirm(t('backup.messages.deleteConfirm'))) {
     return;
   }
   try {
@@ -173,10 +176,10 @@ async function deleteBackup(backup: BackupRecord) {
       projectId: props.projectId,
       backupId: backup.id,
     });
-    message.success("备份记录已删除");
+    message.success(t('backup.messages.deleteSuccess'));
     await loadData();
   } catch (error) {
-    message.error(`删除失败: ${error}`);
+    message.error(t('backup.messages.deleteFailed', { error }));
   }
 }
 
@@ -184,7 +187,7 @@ async function openBackupFolder() {
   try {
     await invoke("open_folder_in_explorer", { projectId: props.projectId });
   } catch {
-    message.error("无法打开文件夹");
+    message.error(t('backup.messages.openFolderFailed'));
   }
 }
 
@@ -196,19 +199,19 @@ onMounted(loadData);
     :show="show"
     @update:show="(v: boolean) => emit('update:show', v)"
     preset="card"
-    title="项目管理"
+    :title="t('backup.title')"
     :style="{ width: '720px', maxWidth: '95vw' }"
     :mask-closable="false"
   >
     <n-tabs v-model:value="activeTab" type="line" animated>
       <!-- 创建备份 -->
-      <n-tab-pane name="create" tab="创建备份">
+      <n-tab-pane name="create" :tab="t('backup.tabs.create')">
         <div class="space-y-5">
           <!-- 备份说明 -->
           <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm text-blue-700 dark:text-blue-300">
             <p class="mb-1">
-              <strong>全量备份</strong>：打包整个项目目录（始终排除 .git，可选排除 exports）。<br />
-              <strong>增量备份</strong>：仅打包自上次备份以来变更的文件，体积更小，速度更快。
+              <strong>{{ t('backup.fullBackup') }}</strong>{{ t('backup.backupInfo.fullDesc') }}<br />
+              <strong>{{ t('backup.incrementalBackup') }}</strong>{{ t('backup.backupInfo.incrDesc') }}
             </p>
           </div>
 
@@ -219,31 +222,31 @@ onMounted(loadData);
               @click="isFullBackup = true"
               class="flex-1"
             >
-              全量备份
+              {{ t('backup.fullBackup') }}
             </n-button>
             <n-button
               :type="!isFullBackup ? 'primary' : 'default'"
               @click="isFullBackup = false"
               class="flex-1"
             >
-              增量备份
+              {{ t('backup.incrementalBackup') }}
             </n-button>
           </div>
 
           <!-- 选项 -->
           <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-700 dark:text-gray-300">排除 exports 目录</span>
+            <span class="text-sm text-gray-700 dark:text-gray-300">{{ t('backup.excludeExports') }}</span>
             <n-switch v-model:value="excludeExports" />
           </div>
 
           <!-- 描述 -->
           <div>
             <label class="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">
-              备份描述（可选）
+              {{ t('backup.description') }}
             </label>
             <n-input
               v-model:value="backupDescription"
-              placeholder="例如：完成第三章初稿"
+              :placeholder="t('backup.descriptionPlaceholder')"
               clearable
             />
           </div>
@@ -252,15 +255,15 @@ onMounted(loadData);
           <div v-if="stats && stats.total > 0" class="grid grid-cols-3 gap-3">
             <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
               <div class="text-xl font-bold text-blue-600">{{ stats.total }}</div>
-              <div class="text-xs text-gray-500">总备份数</div>
+              <div class="text-xs text-gray-500">{{ t('backup.stats.totalBackups') }}</div>
             </div>
             <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
               <div class="text-xl font-bold text-green-600">{{ formatSize(stats.total_size) }}</div>
-              <div class="text-xs text-gray-500">总占用空间</div>
+              <div class="text-xs text-gray-500">{{ t('backup.stats.totalSize') }}</div>
             </div>
             <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
               <div class="text-xl font-bold text-orange-600">{{ stats.incr_count }}</div>
-              <div class="text-xs text-gray-500">增量备份</div>
+              <div class="text-xs text-gray-500">{{ t('backup.stats.incrementalCount') }}</div>
             </div>
           </div>
 
@@ -276,23 +279,23 @@ onMounted(loadData);
               <template #icon>
                 <n-icon><Package /></n-icon>
               </template>
-              {{ isBackingUp ? "备份中..." : isFullBackup ? "创建全量备份" : "创建增量备份" }}
+              {{ isBackingUp ? t('backup.backingUp') : isFullBackup ? t('backup.createFullBackup') : t('backup.createIncrementalBackup') }}
             </n-button>
             <n-button @click="openBackupFolder">
               <template #icon>
                 <n-icon><FolderOpen /></n-icon>
               </template>
-              打开目录
+              {{ t('backup.openFolder') }}
             </n-button>
           </div>
         </div>
       </n-tab-pane>
 
       <!-- 备份历史 -->
-      <n-tab-pane name="history" tab="备份历史">
+      <n-tab-pane name="history" :tab="t('backup.tabs.history')">
         <n-spin :show="isLoading">
           <div v-if="backups.length === 0" class="py-8">
-            <n-empty description="暂无备份记录" />
+            <n-empty :description="t('backup.noBackups')" />
           </div>
           <div v-else class="space-y-2">
             <div
@@ -308,10 +311,10 @@ onMounted(loadData);
                       size="small"
                       round
                     >
-                      {{ b.backup_type === 'full' ? "全量" : "增量" }}
+                      {{ b.backup_type === 'full' ? t('backup.full') : t('backup.incremental') }}
                     </n-tag>
                     <span class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-                      {{ b.description || (b.backup_type === 'full' ? "全量备份" : "增量备份") }}
+                      {{ b.description || (b.backup_type === 'full' ? t('backup.fullBackup') : t('backup.incrementalBackup')) }}
                     </span>
                   </div>
                   <div class="flex items-center gap-3 text-xs text-gray-500">
@@ -334,7 +337,7 @@ onMounted(loadData);
                     @click="restoreBackup(b)"
                   >
                     <template #icon><n-icon><Upload /></n-icon></template>
-                    恢复
+                    {{ t('backup.restore') }}
                   </n-button>
                   <n-button
                     size="tiny"
@@ -352,10 +355,10 @@ onMounted(loadData);
       </n-tab-pane>
 
       <!-- 操作日志 -->
-      <n-tab-pane name="logs" tab="操作日志">
+      <n-tab-pane name="logs" :tab="t('backup.tabs.logs')">
         <n-spin :show="isLoading">
           <div v-if="logs.length === 0" class="py-8">
-            <n-empty description="暂无操作日志" />
+            <n-empty :description="t('backup.noLogs')" />
           </div>
           <div v-else>
             <div class="space-y-1 max-h-64 overflow-y-auto">
@@ -394,7 +397,7 @@ onMounted(loadData);
                 text
                 @click="showAllLogs = !showAllLogs"
               >
-                {{ showAllLogs ? `收起（仅显示最新${LOG_DISPLAY_LIMIT}条）` : `查看全部（共${logs.length}条）` }}
+                {{ showAllLogs ? t('backup.showLess', { limit: LOG_DISPLAY_LIMIT }) : t('backup.showAll', { total: logs.length }) }}
               </n-button>
             </div>
           </div>

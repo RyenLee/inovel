@@ -11,6 +11,9 @@ import {
 } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
 import { AlertTriangle } from 'lucide-vue-next';
+import { useLocale } from '../i18n/composables/useLocale';
+
+const { t } = useLocale();
 
 const props = withDefaults(
   defineProps<{
@@ -29,10 +32,10 @@ const props = withDefaults(
     confirmInputPlaceholder?: string;
   }>(),
   {
-    title: '确认删除',
-    message: '确定要删除吗？此操作不可撤销。',
-    confirmText: '删除',
-    cancelText: '取消',
+    title: '',
+    message: '',
+    confirmText: '',
+    cancelText: '',
     danger: true,
     showKeepFiles: false,
     defaultKeepFiles: true,
@@ -41,6 +44,12 @@ const props = withDefaults(
     confirmInputPlaceholder: '',
   }
 );
+
+// 使用 computed 提供翻译后的默认值
+const titleText = computed(() => props.title || t('deleteConfirm.title'));
+const messageText = computed(() => props.message || t('deleteConfirm.message'));
+const confirmButtonText = computed(() => props.confirmText || t('deleteConfirm.confirmText'));
+const cancelButtonText = computed(() => props.cancelText || t('deleteConfirm.cancelText'));
 
 const emit = defineEmits<{
   (e: 'update:show', value: boolean): void;
@@ -97,7 +106,7 @@ const handleClose = () => {
     @update:show="(val) => emit('update:show', val)"
   >
     <n-card
-      :title="title"
+      :title="titleText"
       style="width: 420px; max-width: 90vw"
       :bordered="false"
       size="large"
@@ -116,13 +125,13 @@ const handleClose = () => {
           <n-icon size="20" class="warning-icon" :color="danger ? '#ef4444' : '#f59e0b'">
             <AlertTriangle />
           </n-icon>
-          <n-text depth="2" style="flex: 1">{{ message }}</n-text>
+          <n-text depth="2" style="flex: 1">{{ messageText }}</n-text>
         </div>
 
         <!-- 确认输入框 -->
         <div v-if="requireConfirmInput" class="confirm-input-section">
           <n-text depth="1" style="font-size: 13px; margin-bottom: 8px; display: block">
-            请输入以下内容以确认：
+            {{ t('deleteConfirm.confirmInputLabel') }}
             <n-text v-if="confirmInputPattern" type="warning"> {{ confirmInputPattern }} </n-text>
           </n-text>
           <n-input
@@ -137,9 +146,9 @@ const handleClose = () => {
         <div v-if="showKeepFiles" class="keep-files-section">
           <div class="keep-files-row">
             <div class="keep-files-info">
-              <n-text strong>保留本地文件</n-text>
+              <n-text strong>{{ t('deleteConfirm.keepFiles') }}</n-text>
               <n-text depth="3" style="font-size: 12px; display: block; margin-top: 2px">
-                {{ keepFiles ? '仅从列表移除，文件夹保留' : '同时删除文件夹和数据' }}
+                {{ keepFiles ? t('deleteConfirm.keepFilesOn') : t('deleteConfirm.keepFilesOff') }}
               </n-text>
             </div>
             <n-switch v-model:value="keepFiles" />
@@ -150,7 +159,7 @@ const handleClose = () => {
       <template #footer>
         <n-space justify="end">
           <n-button @click="handleCancel" :disabled="false">
-            {{ cancelText }}
+            {{ cancelButtonText }}
           </n-button>
           <n-button
             type="error"
@@ -158,7 +167,7 @@ const handleClose = () => {
             :disabled="!canConfirm"
             :loading="false"
           >
-            {{ confirmText }}
+            {{ confirmButtonText }}
           </n-button>
         </n-space>
       </template>

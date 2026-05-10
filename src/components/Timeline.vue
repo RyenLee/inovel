@@ -4,6 +4,9 @@ import { NButton, NIcon, NModal, NInput, NDatePicker, NSelect, NPopconfirm, useM
 import { Plus, Trash2, Edit3, Calendar, BookOpen, GripVertical } from 'lucide-vue-next'
 import { invoke } from '@tauri-apps/api/core'
 import Sortable from 'sortablejs'
+import { useLocale } from '../i18n/composables/useLocale'
+
+const { t } = useLocale()
 
 // Types
 interface Event {
@@ -63,7 +66,7 @@ const loadData = async () => {
     chapters.value = flattenChapters(chapterTree)
   } catch (error) {
     console.error('Failed to load data:', error)
-    message.error('加载数据失败')
+    message.error(t('timeline.messages.loadFailed'))
   } finally {
     isLoading.value = false
   }
@@ -87,7 +90,7 @@ function flattenChapters(tree: any[]): Chapter[] {
 
 // Chapter options for select
 const chapterOptions = computed(() => [
-  { label: '无关联章节', value: null },
+  { label: t('timeline.noChapter'), value: null },
   ...chapters.value.map(c => ({
     label: c.title,
     value: c.id
@@ -126,7 +129,7 @@ const openEditModal = (event: Event) => {
 // Save event
 const saveEvent = async () => {
   if (!currentEvent.value.title?.trim()) {
-    message.warning('请输入事件标题')
+    message.warning(t('timeline.messages.titleRequired'))
     return
   }
 
@@ -150,7 +153,7 @@ const saveEvent = async () => {
       if (index !== -1) {
         events.value[index] = updated
       }
-      message.success('事件已更新')
+      message.success(t('timeline.messages.eventUpdated'))
     } else {
       // Create new
       const created = await invoke<Event>('create_event', {
@@ -163,12 +166,12 @@ const saveEvent = async () => {
         }
       })
       events.value.push(created)
-      message.success('事件已创建')
+      message.success(t('timeline.messages.eventCreated'))
     }
     showModal.value = false
   } catch (error) {
     console.error('Failed to save event:', error)
-    message.error('保存失败')
+    message.error(t('timeline.messages.saveFailed'))
   }
 }
 
@@ -177,10 +180,10 @@ const deleteEvent = async (eventId: number) => {
   try {
     await invoke('delete_event', { eventId })
     events.value = events.value.filter(e => e.id !== eventId)
-    message.success('事件已删除')
+    message.success(t('timeline.messages.eventDeleted'))
   } catch (error) {
     console.error('Failed to delete event:', error)
-    message.error('删除失败')
+    message.error(t('timeline.messages.deleteFailed'))
   }
 }
 
@@ -241,14 +244,14 @@ function initSortable() {
     <div class="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
       <div class="flex items-center gap-2">
         <Calendar class="w-5 h-5 text-purple-600" />
-        <h3 class="font-semibold text-gray-900 dark:text-white">故事时间轴</h3>
-        <span class="text-sm text-gray-500 dark:text-gray-400">({{ events.length }}个事件)</span>
+        <h3 class="font-semibold text-gray-900 dark:text-white">{{ t('timeline.title') }}</h3>
+        <span class="text-sm text-gray-500 dark:text-gray-400">({{ t('timeline.eventCount', { count: events.length }) }})</span>
       </div>
       <NButton type="primary" size="small" @click="openAddModal">
         <template #icon>
           <NIcon><Plus /></NIcon>
         </template>
-        添加事件
+        {{ t('timeline.addEvent') }}
       </NButton>
     </div>
 
@@ -259,7 +262,7 @@ function initSortable() {
       </div>
 
       <div v-else-if="events.length === 0" class="flex items-center justify-center h-full">
-        <NEmpty description="暂无事件，点击添加按钮创建第一个事件" />
+        <NEmpty :description="t('timeline.emptyDescription')" />
       </div>
 
       <div v-else ref="timelineRef" class="relative">
@@ -310,7 +313,7 @@ function initSortable() {
                           </template>
                         </NButton>
                       </template>
-                      确定删除这个事件吗？
+                      {{ t('timeline.deleteConfirm') }}
                     </NPopconfirm>
                   </div>
                 </div>
@@ -346,45 +349,45 @@ function initSortable() {
     <NModal
       v-model:show="showModal"
       preset="card"
-      :title="isEditing ? '编辑事件' : '添加事件'"
+      :title="isEditing ? t('timeline.editEvent') : t('timeline.addEventTitle')"
       style="width: 500px"
     >
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium mb-2">事件标题 <span class="text-red-500">*</span></label>
+          <label class="block text-sm font-medium mb-2">{{ t('timeline.eventTitle') }} <span class="text-red-500">{{ t('timeline.eventTitleRequired') }}</span></label>
           <NInput
             v-model:value="currentEvent.title"
-            placeholder="输入事件标题"
+            :placeholder="t('timeline.eventTitlePlaceholder')"
           />
         </div>
 
         <div>
-          <label class="block text-sm font-medium mb-2">故事时间</label>
+          <label class="block text-sm font-medium mb-2">{{ t('timeline.storyTime') }}</label>
           <NDatePicker
             v-model:value="currentEvent.story_time"
             type="date"
             clearable
             class="w-full"
-            placeholder="选择故事发生的时间"
+            :placeholder="t('timeline.storyTimePlaceholder')"
           />
         </div>
 
         <div>
-          <label class="block text-sm font-medium mb-2">事件描述</label>
+          <label class="block text-sm font-medium mb-2">{{ t('timeline.eventDescription') }}</label>
           <NInput
             v-model:value="currentEvent.description"
             type="textarea"
             :rows="3"
-            placeholder="描述这个事件的内容..."
+            :placeholder="t('timeline.eventDescriptionPlaceholder')"
           />
         </div>
 
         <div>
-          <label class="block text-sm font-medium mb-2">关联章节</label>
+          <label class="block text-sm font-medium mb-2">{{ t('timeline.relatedChapter') }}</label>
           <NSelect
             v-model:value="currentEvent.chapter_id"
             :options="(chapterOptions as any)"
-            placeholder="选择关联的章节（可选）"
+            :placeholder="t('timeline.relatedChapterPlaceholder')"
             clearable
             filterable
           />
@@ -393,8 +396,8 @@ function initSortable() {
 
       <template #footer>
         <div class="flex justify-end gap-2">
-          <NButton @click="showModal = false">取消</NButton>
-          <NButton type="primary" @click="saveEvent">保存</NButton>
+          <NButton @click="showModal = false">{{ t('common.action.cancel') }}</NButton>
+          <NButton type="primary" @click="saveEvent">{{ t('common.action.save') }}</NButton>
         </div>
       </template>
     </NModal>

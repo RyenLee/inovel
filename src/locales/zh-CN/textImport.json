@@ -1,0 +1,27 @@
+{
+  "title": "导入文本文件",
+  "subtitle": "选择 .txt 文件导入到编辑器中",
+  "reading": "正在读取文件...",
+  "reselect": "重新选择文件",
+  "cancel": "取消",
+  "readSuccess": "文件读取成功",
+  "fileName": "文件名",
+  "fileSize": "文件大小",
+  "encoding": "编码格式",
+  "charCount": "字符数",
+  "largeFileHint": "文件较大，将分 {chunkCount} 块渐进式导入以避免编辑器卡顿",
+  "importMode": "导入方式",
+  "insertAtCursor": "插入到光标位置",
+  "replaceAll": "替换全部内容",
+  "insertTooltip": "在当前光标处插入文本内容",
+  "replaceTooltip": "清空当前编辑器内容，使用导入文本",
+  "contentPreview": "内容预览",
+  "previewHint": "显示前 2,000 字符",
+  "importProgress": "导入进度",
+  "importing": "导入中...",
+  "confirmImport": "确认导入",
+  "messages": {
+    "importSuccess": "成功导入 {size} 文本内容",
+    "importError": "导入过程中发生错误"
+  }
+}

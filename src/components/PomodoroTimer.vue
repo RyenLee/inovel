@@ -4,6 +4,7 @@ import { NButton, NTooltip, NModal, NSlider, NSwitch, useMessage, NIcon, useDial
 import { Play, Pause, RotateCcw, Settings, X, Volume2, VolumeX, Maximize2, Minimize2, Timer, Coffee, CoffeeIcon } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useLocale } from "../i18n/composables/useLocale";
 import {
   type SessionType,
   type PomodoroSettings,
@@ -14,6 +15,8 @@ import {
   formatTime,
   formatMinutes,
 } from "../types/pomodoro";
+
+const { t } = useLocale();
 
 const props = defineProps<{
   projectId: number;
@@ -460,9 +463,9 @@ const handleSessionComplete = async () => {
   // Show completion message
   completionSessionType.value = completedType;
   if (completedType === "work") {
-    completionMessage.value = `🎉 恭喜完成一个番茄钟！已连续专注 ${state.value.currentStreak} 次`;
+    completionMessage.value = t('pomodoro.completionMessages.work', { streak: state.value.currentStreak })
   } else {
-    completionMessage.value = "☕ 休息结束，准备开始下一个番茄钟！";
+    completionMessage.value = t('pomodoro.completionMessages.break');
   }
   showCompletionModal.value = true;
   
@@ -525,7 +528,7 @@ const skipSession = () => {
 const toggleZenMode = () => {
   if (isFocusModeActive.value) {
     // If already in active focus mode, don't allow toggling off
-    message.info("请先暂停或完成当前专注会话");
+    message.info(t('pomodoro.messages.pauseFirst'));
     return;
   }
   // Toggle the setting
@@ -613,7 +616,7 @@ loadSettings();
           @click="!isFocusModeActive && switchToSession(type)"
           :disabled="isFocusModeActive"
         >
-          {{ type === 'work' ? '专注' : type === 'short_break' ? '短休' : '长休' }}
+          {{ type === 'work' ? t('pomodoro.sessionTypes.work') : type === 'short_break' ? t('pomodoro.sessionTypes.short_break') : t('pomodoro.sessionTypes.long_break') }}
         </button>
       </div>
 
@@ -628,7 +631,7 @@ loadSettings();
           }"
         ></div>
         <span class="text-xs text-gray-500 dark:text-gray-400">
-          {{ state.status === 'running' ? '运行中' : state.status === 'paused' ? '已暂停' : '空闲' }}
+          {{ state.status === 'running' ? t('pomodoro.status.running') : state.status === 'paused' ? t('pomodoro.status.paused') : t('pomodoro.status.idle') }}
         </span>
       </div>
 
@@ -637,7 +640,7 @@ loadSettings();
         v-if="state.currentSessionType === 'work'"
         v-model="taskName"
         type="text"
-        placeholder="输入任务名称..."
+        :placeholder="t('pomodoro.taskPlaceholder')"
         class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
         :disabled="state.status === 'running'"
         @mousedown.stop
@@ -698,7 +701,7 @@ loadSettings();
               <RotateCcw class="w-5 h-5" />
             </button>
           </template>
-          {{ isFocusModeActive ? '专注模式下禁用' : '重置' }}
+          {{ isFocusModeActive ? t('pomodoro.focusModeDisabled') : t('pomodoro.reset') }}
         </n-tooltip>
 
         <button
@@ -727,7 +730,7 @@ loadSettings();
               </svg>
             </button>
           </template>
-          {{ isFocusModeActive ? '专注模式下禁用' : '跳过' }}
+          {{ isFocusModeActive ? t('pomodoro.focusModeDisabled') : t('pomodoro.skip') }}
         </n-tooltip>
       </div>
 
@@ -761,7 +764,7 @@ loadSettings();
                 <VolumeX v-else class="w-4 h-4" />
               </button>
             </template>
-            {{ isFocusModeActive ? '专注模式下禁用' : (settings.soundEnabled ? '关闭' : '开启') + '声音' }}
+            {{ isFocusModeActive ? t('pomodoro.focusModeDisabled') : (settings.soundEnabled ? t('pomodoro.soundOff') : t('pomodoro.soundOn')) }}
           </n-tooltip>
           
           <n-tooltip trigger="hover">
@@ -778,7 +781,7 @@ loadSettings();
                 <Minimize2 v-else class="w-4 h-4" />
               </button>
             </template>
-            {{ isFocusModeActive ? '专注模式下禁用' : (settings.zenModeEnabled ? '关闭' : '开启') + '专注模式' }}
+            {{ isFocusModeActive ? t('pomodoro.focusModeDisabled') : (settings.zenModeEnabled ? t('pomodoro.focusModeOff') : t('pomodoro.focusModeOn')) }}
           </n-tooltip>
           
           <n-tooltip trigger="hover">
@@ -796,7 +799,7 @@ loadSettings();
                 <Settings class="w-4 h-4" />
               </button>
             </template>
-            {{ isFocusModeActive ? '专注模式下禁用' : '设置' }}
+            {{ isFocusModeActive ? t('pomodoro.focusModeDisabled') : t('pomodoro.settings') }}
           </n-tooltip>
         </div>
       </div>
@@ -805,13 +808,13 @@ loadSettings();
   </Teleport>
 
   <!-- Settings Modal -->
-  <n-modal v-model:show="showSettings" preset="card" title="番茄钟设置" style="width: 400px">
+  <n-modal v-model:show="showSettings" preset="card" :title="t('pomodoro.settingsTitle')" style="width: 400px">
     <div class="space-y-6">
       <!-- Work Duration -->
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">工作时长</label>
-          <span class="text-sm text-blue-600">{{ settings.workDuration }} 分钟</span>
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('pomodoro.workDuration') }}</label>
+          <span class="text-sm text-blue-600">{{ settings.workDuration }} {{ t('pomodoro.minutes') }}</span>
         </div>
         <n-slider
           v-model:value="settings.workDuration"
@@ -825,8 +828,8 @@ loadSettings();
       <!-- Short Break Duration -->
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">短休息</label>
-          <span class="text-sm text-green-600">{{ settings.shortBreakDuration }} 分钟</span>
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('pomodoro.shortBreak') }}</label>
+          <span class="text-sm text-green-600">{{ settings.shortBreakDuration }} {{ t('pomodoro.minutes') }}</span>
         </div>
         <n-slider
           v-model:value="settings.shortBreakDuration"
@@ -839,8 +842,8 @@ loadSettings();
       <!-- Long Break Duration -->
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">长休息</label>
-          <span class="text-sm text-blue-600">{{ settings.longBreakDuration }} 分钟</span>
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('pomodoro.longBreak') }}</label>
+          <span class="text-sm text-blue-600">{{ settings.longBreakDuration }} {{ t('pomodoro.minutes') }}</span>
         </div>
         <n-slider
           v-model:value="settings.longBreakDuration"
@@ -853,8 +856,8 @@ loadSettings();
       <!-- Long Break Interval -->
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">长休息间隔</label>
-          <span class="text-sm text-purple-600">每 {{ settings.longBreakInterval }} 个番茄</span>
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('pomodoro.longBreakInterval') }}</label>
+          <span class="text-sm text-purple-600">{{ t('pomodoro.perPomodoros', { n: settings.longBreakInterval }) }}</span>
         </div>
         <n-slider
           v-model:value="settings.longBreakInterval"
@@ -867,11 +870,11 @@ loadSettings();
       <!-- Auto Start Options -->
       <div class="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-700">
         <div class="flex items-center justify-between">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">自动开始休息</label>
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('pomodoro.autoStartBreaks') }}</label>
           <n-switch v-model:value="settings.autoStartBreaks" />
         </div>
         <div class="flex items-center justify-between">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">自动开始工作</label>
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('pomodoro.autoStartWork') }}</label>
           <n-switch v-model:value="settings.autoStartWork" />
         </div>
       </div>
@@ -879,11 +882,11 @@ loadSettings();
   </n-modal>
 
   <!-- Completion Modal -->
-  <n-modal v-model:show="showCompletionModal" preset="card" :title="getSessionTypeName(completionSessionType) + '完成'" style="width: 320px">
+  <n-modal v-model:show="showCompletionModal" preset="card" :title="getSessionTypeName(completionSessionType) + t('pomodoro.completed')" style="width: 320px">
     <div class="text-center py-4">
       <p class="text-lg text-gray-700 dark:text-gray-300">{{ completionMessage }}</p>
       <n-button type="primary" class="mt-4" @click="showCompletionModal = false">
-        确定
+        {{ t('pomodoro.confirm') }}
       </n-button>
     </div>
   </n-modal>

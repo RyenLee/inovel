@@ -6,6 +6,9 @@ import type { NodeViewProps } from '@tiptap/vue-3'
 import { useWorldbuildingStore } from '../stores/worldbuilding'
 import { useEnumDictionary } from '../stores/enumDictionary'
 import { parseMentionId } from './MentionExtension'
+import { useLocale } from '../i18n/composables/useLocale'
+
+const { t } = useLocale()
 
 const props = defineProps<NodeViewProps>()
 
@@ -26,9 +29,9 @@ const mentionData = computed(() => {
 
 const typeTagLabel = computed(() => {
   switch (parsed.value.type) {
-    case 'character': return '人物'
-    case 'location': return '地点'
-    case 'organization': return '组织'
+    case 'character': return t('mention.types.character')
+    case 'location': return t('mention.types.location')
+    case 'organization': return t('mention.types.organization')
     default: return ''
   }
 })
@@ -89,15 +92,15 @@ function handleClick() {
         <template v-if="parsed.type === 'character' && mentionData">
           <div class="mention-card-body">
             <div v-if="(mentionData as any).gender" class="mention-row">
-              <span class="mention-label">性别</span>
+              <span class="mention-label">{{ t('mention.labels.gender') }}</span>
               <span class="mention-value">{{ enumDictionary.getGenderName((mentionData as any).gender) }}</span>
             </div>
             <div v-if="(mentionData as any).age" class="mention-row">
-              <span class="mention-label">年龄</span>
+              <span class="mention-label">{{ t('mention.labels.age') }}</span>
               <span class="mention-value">{{ (mentionData as any).age }}</span>
             </div>
             <div v-if="(mentionData as any).personality" class="mention-row">
-              <span class="mention-label">性格</span>
+              <span class="mention-label">{{ t('mention.labels.personality') }}</span>
               <span class="mention-value">{{ (mentionData as any).personality }}</span>
             </div>
             <div v-if="(mentionData as any).appearance" class="mention-desc">
@@ -109,7 +112,7 @@ function handleClick() {
         <template v-else-if="parsed.type === 'location' && mentionData">
           <div class="mention-card-body">
             <div v-if="(mentionData as any).location_type" class="mention-row">
-              <span class="mention-label">类型</span>
+              <span class="mention-label">{{ t('mention.labels.type') }}</span>
               <span class="mention-value">{{ enumDictionary.getLocationTypeName((mentionData as any).location_type) }}</span>
             </div>
             <div v-if="(mentionData as any).description" class="mention-desc">
@@ -121,11 +124,11 @@ function handleClick() {
         <template v-else-if="parsed.type === 'organization' && mentionData">
           <div class="mention-card-body">
             <div v-if="(mentionData as any).org_type" class="mention-row">
-              <span class="mention-label">类型</span>
+              <span class="mention-label">{{ t('mention.labels.type') }}</span>
               <span class="mention-value">{{ enumDictionary.getOrganizationTypeName((mentionData as any).org_type) }}</span>
             </div>
             <div v-if="(mentionData as any).leader" class="mention-row">
-              <span class="mention-label">首领</span>
+              <span class="mention-label">{{ t('mention.labels.leader') }}</span>
               <span class="mention-value">{{ (mentionData as any).leader }}</span>
             </div>
             <div v-if="(mentionData as any).description" class="mention-desc">
@@ -134,7 +137,7 @@ function handleClick() {
           </div>
         </template>
 
-        <div class="mention-card-footer" @click.stop="handleClick">点击查看详情</div>
+        <div class="mention-card-footer" @click.stop="handleClick">{{ t('mention.clickToView') }}</div>
       </div>
     </NPopover>
   </NodeViewWrapper>

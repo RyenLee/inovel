@@ -15,6 +15,9 @@ import {
 } from "naive-ui";
 import { Plus, Trash2, Upload, AlertTriangle } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
+import { useLocale } from "../i18n/composables/useLocale";
+
+const { t } = useLocale();
 
 const props = defineProps<{
   show: boolean;
@@ -41,7 +44,7 @@ const loadWords = async () => {
     });
   } catch (error) {
     console.error("加载敏感词失败:", error);
-    message.error("加载敏感词失败");
+    message.error(t('sensitiveWords.messages.loadFailed'));
   } finally {
     isLoading.value = false;
   }
@@ -62,12 +65,12 @@ const addWord = async () => {
       projectId: props.projectId,
       word,
     });
-    message.success(`已添加: ${word}`);
+    message.success(t('sensitiveWords.messages.added', { word }));
     newWord.value = "";
     await loadWords();
   } catch (error) {
     console.error("添加敏感词失败:", error);
-    message.error("添加失败，可能已存在");
+    message.error(t('sensitiveWords.messages.addFailed'));
   }
 };
 
@@ -80,7 +83,7 @@ const removeWord = async (word: string) => {
     await loadWords();
   } catch (error) {
     console.error("删除敏感词失败:", error);
-    message.error("删除失败");
+    message.error(t('sensitiveWords.messages.deleteFailed'));
   }
 };
 
@@ -90,7 +93,7 @@ const handleDrop = async (e: DragEvent) => {
   const file = e.dataTransfer?.files?.[0];
   if (!file) return;
   if (!file.name.endsWith(".txt") && file.type !== "text/plain") {
-    message.warning("仅支持 .txt 文件");
+    message.warning(t('sensitiveWords.messages.onlyTxt'));
     return;
   }
   try {
@@ -104,11 +107,11 @@ const handleDrop = async (e: DragEvent) => {
       projectId: props.projectId,
       filePath: "", // 不传文件路径，改用内容导入
     });
-    message.success(`已导入 ${file.name}`);
+    message.success(t('sensitiveWords.messages.imported', { name: file.name }))
     await loadWords();
   } catch (error) {
     console.error("导入敏感词失败:", error);
-    message.error("导入失败");
+    message.error(t('sensitiveWords.messages.importFailed'));
   }
 };
 
@@ -137,11 +140,11 @@ const handleImportClick = async () => {
           count++;
         } catch { /* ignore duplicates */ }
       }
-      message.success(`导入完成，新增 ${count} 个敏感词`);
+      message.success(t('sensitiveWords.messages.importComplete', { count }))
       await loadWords();
     } catch (error) {
       console.error("导入失败:", error);
-      message.error("导入失败");
+      message.error(t('sensitiveWords.messages.importFailed'));
     }
   };
   input.click();
@@ -168,7 +171,7 @@ const handleKeydown = (e: KeyboardEvent) => {
     :show="show"
     @update:show="(v: boolean) => emit('update:show', v)"
     preset="card"
-    title="敏感词管理"
+    :title="t('sensitiveWords.title')"
     :style="{ width: '520px', maxWidth: '90vw' }"
     :mask-closable="true"
   >
@@ -177,7 +180,7 @@ const handleKeydown = (e: KeyboardEvent) => {
       <div class="flex items-center gap-2">
         <n-input
           v-model:value="newWord"
-          placeholder="输入敏感词后按回车添加"
+          :placeholder="t('sensitiveWords.addPlaceholder')"
           @keydown="handleKeydown"
           clearable
         />
@@ -185,7 +188,7 @@ const handleKeydown = (e: KeyboardEvent) => {
           <template #icon>
             <n-icon><Plus /></n-icon>
           </template>
-          添加
+          {{ t('sensitiveWords.add') }}
         </n-button>
       </div>
 
@@ -206,9 +209,9 @@ const handleKeydown = (e: KeyboardEvent) => {
           <Upload />
         </n-icon>
         <p class="text-sm text-gray-500 dark:text-gray-400">
-          点击选择 .txt 文件导入，或拖放文件到此处
+          {{ t('sensitiveWords.importHint') }}
         </p>
-        <p class="text-xs text-gray-400 mt-1">每行一个敏感词</p>
+        <p class="text-xs text-gray-400 mt-1">{{ t('sensitiveWords.importSubHint') }}</p>
       </div>
 
       <n-divider />
@@ -216,7 +219,7 @@ const handleKeydown = (e: KeyboardEvent) => {
       <!-- 词表 -->
       <div class="max-h-64 overflow-y-auto">
         <n-spin v-if="isLoading" />
-        <n-empty v-else-if="words.length === 0" description="暂无敏感词" />
+        <n-empty v-else-if="words.length === 0" :description="t('sensitiveWords.noWords')" />
         <div v-else class="flex flex-wrap gap-2">
           <n-tag
             v-for="w in words"

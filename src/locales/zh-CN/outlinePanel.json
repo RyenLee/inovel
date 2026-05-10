@@ -1,0 +1,10 @@
+{
+  "title": "大纲视图",
+  "noChapters": "暂无章节",
+  "chapterCount": "{count}章",
+  "deleteVolume": "删除卷",
+  "deleteVolumeConfirm": "确定删除\"{name}\"及其所有章节？",
+  "wordCount": "{count}字",
+  "summaryPlaceholder": "输入章节摘要...",
+  "clickToAddSummary": "点击添加摘要..."
+}

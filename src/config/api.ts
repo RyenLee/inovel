@@ -308,6 +308,16 @@ async function callTauriCommand<T>(command: string, args: Record<string, unknown
             line_spacing: parseFloat(devConfig.items['editor_line_spacing']?.value || '1.5'),
             show_line_numbers: devConfig.items['editor_show_line_numbers']?.value === 'true',
             spell_check_enabled: devConfig.items['editor_spell_check']?.value === 'true'
+          },
+          entry_config: {
+            enabled: true,
+            display_name: 'iNovel Entry',
+            icon: 'settings',
+            tooltip: 'Configure entry settings',
+            locations: ['menu_bar', 'toolbar'],
+            allowed_roles: ['admin', 'advanced'],
+            shortcut_key: 'C',
+            shortcut_modifiers: ['Ctrl', 'Shift']
           }
         }
         console.log('[Dev Mode] TOML config built from localStorage:', fallbackConfig)

@@ -1,0 +1,31 @@
+{
+  "title": "Select Writing Template",
+  "categories": {
+    "all": "All",
+    "chapter": "Chapter",
+    "illustrated": "Illustrated",
+    "dialogue": "Dialogue",
+    "structured": "Structured"
+  },
+  "insertMode": {
+    "replace": "Replace Content",
+    "insert": "Insert Content",
+    "replaceTooltip": "Clear current content and use template",
+    "insertTooltip": "Insert template at current cursor position",
+    "modeLabel": "Mode: {mode}"
+  },
+  "badges": {
+    "builtin": "Built-in",
+    "custom": "Custom"
+  },
+  "loading": "Loading templates...",
+  "noTemplates": "No templates available, please try again later",
+  "reload": "Reload",
+  "cancel": "Cancel",
+  "useReplace": "Use Template (Replace)",
+  "useInsert": "Insert Template Content",
+  "messages": {
+    "loadFailed": "Failed to load templates",
+    "loadFailedRetry": "Failed to load templates, please try again"
+  }
+}

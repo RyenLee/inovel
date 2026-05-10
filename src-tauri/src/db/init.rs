@@ -440,13 +440,14 @@ fn create_focus_sessions_table(conn: &Connection) -> SqliteResult<()> {
 /// 创建灵感条目表
 ///
 /// 存储灵感看板的条目信息，支持多列管理灵感。
-/// 支持向后兼容：检查并添加缺失的 `column_name` 列。
+/// 支持向后兼容：检查并添加缺失的 `column_key` 列。
 fn create_inspiration_items_table(conn: &Connection) -> SqliteResult<()> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS inspiration_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             project_id INTEGER NOT NULL,
-            column_name TEXT NOT NULL DEFAULT '灵感',
+            column_key TEXT NOT NULL DEFAULT 'inspiration',
+            column_name TEXT NOT NULL DEFAULT '',
             content TEXT NOT NULL DEFAULT '',
             sort_order INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
@@ -455,6 +456,34 @@ fn create_inspiration_items_table(conn: &Connection) -> SqliteResult<()> {
         )",
         [],
     )?;
+
+    // 向后兼容：检查是否存在 column_key 列，不存在则添加
+    let has_column_key: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('inspiration_items') WHERE name='column_key'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if !has_column_key {
+        let _ = conn.execute(
+            "ALTER TABLE inspiration_items ADD COLUMN column_key TEXT NOT NULL DEFAULT 'inspiration'",
+            [],
+        );
+
+        // 迁移旧数据：根据 column_name 映射到 column_key
+        let _ = conn.execute(
+            "UPDATE inspiration_items SET column_key = CASE \
+             WHEN column_name = '灵感' OR column_name = 'Inspiration' THEN 'inspiration' \
+             WHEN column_name = '对白' OR column_name = 'Dialogue' THEN 'dialogue' \
+             WHEN column_name = '场景' OR column_name = 'Scene' THEN 'scene' \
+             ELSE 'custom-' || id \
+             END \
+             WHERE column_key = 'inspiration' AND column_name != '灵感' AND column_name != 'Inspiration'",
+            [],
+        );
+    }
 
     // 向后兼容：检查是否存在 column_name 列，不存在则添加
     let has_column_name: bool = conn
@@ -467,7 +496,7 @@ fn create_inspiration_items_table(conn: &Connection) -> SqliteResult<()> {
 
     if !has_column_name {
         let _ = conn.execute(
-            "ALTER TABLE inspiration_items ADD COLUMN column_name TEXT NOT NULL DEFAULT '灵感'",
+            "ALTER TABLE inspiration_items ADD COLUMN column_name TEXT NOT NULL DEFAULT ''",
             [],
         );
     }

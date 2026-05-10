@@ -6,6 +6,8 @@ import path from "path";
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
+process.env.NODE_OPTIONS = '--no-deprecation';
+
 export default defineConfig(async () => ({
   plugins: [vue(), vueJsx()],
 

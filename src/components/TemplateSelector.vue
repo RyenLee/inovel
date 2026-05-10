@@ -21,32 +21,35 @@ import {
 import { FileText, X } from "lucide-vue-next";
 import { useTemplateStore } from "../stores/template";
 import type { WritingTemplate } from "../types/template";
+import { useLocale } from "../i18n/composables/useLocale";
+
+const { t } = useLocale();
 
 const props = withDefaults(
   defineProps<{
     show: boolean;
     projectId?: number;
-    insertMode?: 'replace' | 'insert'; // 来自父组件的模式设置
+    insertMode?: "replace" | "insert"; // 来自父组件的模式设置
   }>(),
   {
     projectId: 0,
-    insertMode: 'replace',
+    insertMode: "replace",
   }
 );
 
 const emit = defineEmits<{
   (e: "update:show", value: boolean): void;
-  (e: "select", payload: { content: string; mode: 'replace' | 'insert' }): void;
+  (e: "select", payload: { content: string; mode: "replace" | "insert" }): void;
 }>();
 
 // 本地模式状态（用于预览）
-const localInsertMode = ref<'replace' | 'insert'>('replace');
+const localInsertMode = ref<"replace" | "insert">("replace");
 
 const message = useMessage();
 const templateStore = useTemplateStore();
 
 const selectedTemplateId = ref<string | null>(null);
-const activeCategory = ref<string>("全部");
+const activeCategory = ref<string>(t("templateSelector.categories.all"));
 
 // 加载模板（带重试机制）
 const loadTemplates = async () => {
@@ -57,8 +60,8 @@ const loadTemplates = async () => {
       await templateStore.loadBuiltinTemplates();
     }
   } catch (error) {
-    console.error("加载模板失败:", error);
-    message.error("加载模板失败，请重试");
+    console.error(t("templateSelector.messages.loadFailed") + ":", error);
+    message.error(t("templateSelector.messages.loadFailedRetry"));
     // 可以添加重试逻辑
     setTimeout(() => {
       if (allTemplates.value.length === 0) {
@@ -119,7 +122,9 @@ const filteredTemplates = computed(() => {
 // 选中的模板
 const selectedTemplate = computed(() => {
   if (!selectedTemplateId.value) return null;
-  return allTemplates.value.find((t) => t.id === selectedTemplateId.value) || null;
+  return (
+    allTemplates.value.find((t) => t.id === selectedTemplateId.value) || null
+  );
 });
 
 // 选择模板
@@ -133,7 +138,7 @@ function confirmSelect() {
     // 同时传递内容和当前选择的模式
     emit("select", {
       content: selectedTemplate.value.content,
-      mode: localInsertMode.value
+      mode: localInsertMode.value,
     });
     emit("update:show", false);
   }
@@ -193,9 +198,20 @@ function markdownToHtml(md: string): string {
 </script>
 
 <template>
-  <n-modal :show="show" :mask-closable="false" :close-on-esc="true" @update:show="(val) => emit('update:show', val)">
-    <n-card title="选择写作模板" style="width: 1000px; max-width: 92vw; max-height: 88vh" :bordered="false" size="large"
-      role="dialog" aria-modal="true">
+  <n-modal
+    :show="show"
+    :mask-closable="false"
+    :close-on-esc="true"
+    @update:show="(val) => emit('update:show', val)"
+  >
+    <n-card
+      :title="t('templateSelector.title')"
+      style="width: 1000px; max-width: 92vw; max-height: 88vh"
+      :bordered="false"
+      size="large"
+      role="dialog"
+      aria-modal="true"
+    >
       <template #header-extra>
         <n-button text @click="handleClose">
           <template #icon>
@@ -208,30 +224,49 @@ function markdownToHtml(md: string): string {
         <!-- 分类筛选和模式选择 -->
         <div class="flex items-center justify-between mb-4">
           <n-tabs v-model:value="activeCategory" type="line" style="flex: 1">
-            <n-tab-pane name="全部" tab="全部" />
-            <n-tab-pane name="章节" tab="章节" />
-            <n-tab-pane name="图文" tab="图文" />
-            <n-tab-pane name="对话" tab="对话" />
-            <n-tab-pane name="结构化" tab="结构化" />
+            <n-tab-pane
+              name="全部"
+              :tab="t('templateSelector.categories.all')"
+            />
+            <n-tab-pane
+              name="章节"
+              :tab="t('templateSelector.categories.chapter')"
+            />
+            <n-tab-pane
+              name="图文"
+              :tab="t('templateSelector.categories.illustrated')"
+            />
+            <n-tab-pane
+              name="对话"
+              :tab="t('templateSelector.categories.dialogue')"
+            />
+            <n-tab-pane
+              name="结构化"
+              :tab="t('templateSelector.categories.structured')"
+            />
           </n-tabs>
 
           <!-- 插入模式选择 -->
           <div class="flex items-center gap-2 ml-4">
-            <n-radio-group v-model:value="localInsertMode" name="insertMode" size="small">
+            <n-radio-group
+              v-model:value="localInsertMode"
+              name="insertMode"
+              size="small"
+            >
               <n-radio-button value="replace">
                 <n-tooltip trigger="hover">
                   <template #trigger>
-                    <span>替换内容</span>
+                    <span>{{ t("templateSelector.insertMode.replace") }}</span>
                   </template>
-                  清空当前内容，使用模板
+                  {{ t("templateSelector.insertMode.replaceTooltip") }}
                 </n-tooltip>
               </n-radio-button>
               <n-radio-button value="insert">
                 <n-tooltip trigger="hover">
                   <template #trigger>
-                    <span>插入内容</span>
+                    <span>{{ t("templateSelector.insertMode.insert") }}</span>
                   </template>
-                  在当前光标位置插入模板
+                  {{ t("templateSelector.insertMode.insertTooltip") }}
                 </n-tooltip>
               </n-radio-button>
             </n-radio-group>
@@ -241,12 +276,25 @@ function markdownToHtml(md: string): string {
         <!-- 模板网格 -->
         <div class="template-grid-scroll">
           <div class="template-grid-inner">
-            <n-grid v-if="filteredTemplates.length > 0" cols="2 m:2 l:3" :x-gap="12" :y-gap="12">
-              <n-grid-item v-for="template in filteredTemplates" :key="template.id">
-                <n-card :class="{
-                  'template-card': true,
-                  'template-card-selected': selectedTemplateId === template.id,
-                }" size="small" @click="selectTemplate(template)">
+            <n-grid
+              v-if="filteredTemplates.length > 0"
+              cols="2 m:2 l:3"
+              :x-gap="12"
+              :y-gap="12"
+            >
+              <n-grid-item
+                v-for="template in filteredTemplates"
+                :key="template.id"
+              >
+                <n-card
+                  :class="{
+                    'template-card': true,
+                    'template-card-selected':
+                      selectedTemplateId === template.id,
+                  }"
+                  size="small"
+                  @click="selectTemplate(template)"
+                >
                   <template #header>
                     <div class="flex items-center gap-2">
                       <span class="template-card-icon">
@@ -260,7 +308,10 @@ function markdownToHtml(md: string): string {
 
                   <template #default>
                     <div class="template-preview">
-                      <div class="preview-content" v-html="markdownToHtml(template.content)"></div>
+                      <div
+                        class="preview-content"
+                        v-html="markdownToHtml(template.content)"
+                      ></div>
                     </div>
 
                     <n-text depth="3" class="template-desc">
@@ -268,24 +319,46 @@ function markdownToHtml(md: string): string {
                     </n-text>
 
                     <div class="template-meta">
-                      <span class="template-badge" :class="template.is_builtin ? 'badge-builtin' : 'badge-custom'">
-                        {{ template.is_builtin ? '内置' : '自定义' }}
+                      <span
+                        class="template-badge"
+                        :class="
+                          template.is_builtin ? 'badge-builtin' : 'badge-custom'
+                        "
+                      >
+                        {{
+                          template.is_builtin
+                            ? t("templateSelector.badges.builtin")
+                            : t("templateSelector.badges.custom")
+                        }}
                       </span>
-                      <span class="template-category">{{ template.category }}</span>
+                      <span class="template-category">{{
+                        template.category
+                      }}</span>
                     </div>
                   </template>
                 </n-card>
               </n-grid-item>
             </n-grid>
 
-            <div v-else-if="templateStore.isLoading" class="flex flex-col items-center justify-center py-20">
+            <div
+              v-else-if="templateStore.isLoading"
+              class="flex flex-col items-center justify-center py-20"
+            >
               <n-spin size="large" />
-              <n-text depth="3" style="margin-top: 12px">加载模板中...</n-text>
+              <n-text depth="3" style="margin-top: 12px">{{
+                t("templateSelector.loading")
+              }}</n-text>
             </div>
 
-            <n-empty v-else description="暂无模板，请稍后重试" style="padding: 40px 0">
+            <n-empty
+              v-else
+              :description="t('templateSelector.noTemplates')"
+              style="padding: 40px 0"
+            >
               <template #extra>
-                <n-button size="small" @click="loadTemplates">重新加载</n-button>
+                <n-button size="small" @click="loadTemplates">{{
+                  t("templateSelector.reload")
+                }}</n-button>
               </template>
             </n-empty>
           </div>
@@ -294,12 +367,29 @@ function markdownToHtml(md: string): string {
 
       <template #footer>
         <n-space justify="end">
-          <n-text depth="3" style="font-size: 12px; margin-right: auto;">
-            模式：{{ localInsertMode === 'replace' ? '替换内容' : '插入内容' }}
+          <n-text depth="3" style="font-size: 12px; margin-right: auto">
+            {{
+              t("templateSelector.insertMode.modeLabel", {
+                mode:
+                  localInsertMode === "replace"
+                    ? t("templateSelector.insertMode.replace")
+                    : t("templateSelector.insertMode.insert"),
+              })
+            }}
           </n-text>
-          <n-button @click="cancel">取消</n-button>
-          <n-button type="primary" :disabled="!selectedTemplate" @click="confirmSelect">
-            {{ localInsertMode === 'replace' ? '使用模板替换' : '插入模板内容' }}
+          <n-button @click="cancel">{{
+            t("templateSelector.cancel")
+          }}</n-button>
+          <n-button
+            type="primary"
+            :disabled="!selectedTemplate"
+            @click="confirmSelect"
+          >
+            {{
+              localInsertMode === "replace"
+                ? t("templateSelector.useReplace")
+                : t("templateSelector.useInsert")
+            }}
           </n-button>
         </n-space>
       </template>
@@ -347,7 +437,8 @@ function markdownToHtml(md: string): string {
 
 .template-card-selected {
   border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), 0 4px 16px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25),
+    0 4px 16px rgba(59, 130, 246, 0.15);
   background-color: #f8faff;
 }
 
@@ -511,7 +602,8 @@ function markdownToHtml(md: string): string {
 
 :root.dark .template-card-selected {
   border-color: #60a5fa !important;
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25), 0 4px 16px rgba(96, 165, 250, 0.15);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25),
+    0 4px 16px rgba(96, 165, 250, 0.15);
   background-color: #111827;
 }
 

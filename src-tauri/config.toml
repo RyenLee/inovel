@@ -1,7 +1,7 @@
 [app]
 name = "iNovel"
-version = "1.0.0"
-environment = "development"
+version = "1.0.1"
+environment = "dev"
 description = "一款现代化的小说创作工具"
 
 [gzip]

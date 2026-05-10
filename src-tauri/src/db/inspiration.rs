@@ -6,13 +6,13 @@ use crate::models::InspirationItem;
 pub fn create_inspiration_item(
     conn: &Connection,
     project_id: i64,
-    column_name: &str,
+    column_key: &str,
     content: &str,
 ) -> SqliteResult<InspirationItem> {
     let sort_order: i32 = conn
         .query_row(
-            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM inspiration_items WHERE project_id = ?1 AND column_name = ?2",
-            (project_id, column_name),
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM inspiration_items WHERE project_id = ?1 AND column_key = ?2",
+            (project_id, column_key),
             |row| row.get(0),
         )
         .unwrap_or(0);
@@ -20,15 +20,16 @@ pub fn create_inspiration_item(
     let now = Utc::now().to_rfc3339();
 
     conn.execute(
-        "INSERT INTO inspiration_items (project_id, column_name, content, sort_order, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        (project_id, column_name, content, sort_order, &now, &now),
+        "INSERT INTO inspiration_items (project_id, column_key, column_name, content, sort_order, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        (project_id, column_key, "", content, sort_order, &now, &now),
     )?;
 
     Ok(InspirationItem {
         id: conn.last_insert_rowid(),
         project_id,
-        column_name: column_name.to_string(),
+        column_key: column_key.to_string(),
+        column_name: String::new(),
         content: content.to_string(),
         sort_order,
         created_at: now.clone(),
@@ -53,8 +54,8 @@ pub fn delete_inspiration_item(conn: &Connection, id: i64) -> SqliteResult<usize
 
 pub fn get_inspiration_items(conn: &Connection, project_id: i64) -> SqliteResult<Vec<InspirationItem>> {
     let mut stmt = conn.prepare(
-        "SELECT id, project_id, column_name, content, sort_order, created_at, updated_at
-         FROM inspiration_items WHERE project_id = ?1 ORDER BY column_name, sort_order",
+        "SELECT id, project_id, column_key, column_name, content, sort_order, created_at, updated_at
+         FROM inspiration_items WHERE project_id = ?1 ORDER BY column_key, sort_order",
     )?;
 
     let items = stmt
@@ -62,11 +63,12 @@ pub fn get_inspiration_items(conn: &Connection, project_id: i64) -> SqliteResult
             Ok(InspirationItem {
                 id: row.get(0)?,
                 project_id: row.get(1)?,
-                column_name: row.get(2)?,
-                content: row.get(3)?,
-                sort_order: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
+                column_key: row.get(2)?,
+                column_name: row.get(3)?,
+                content: row.get(4)?,
+                sort_order: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
             })
         })?
         .filter_map(|r| r.ok())

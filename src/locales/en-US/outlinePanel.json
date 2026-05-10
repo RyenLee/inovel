@@ -1,0 +1,10 @@
+{
+  "title": "Outline View",
+  "noChapters": "No chapters",
+  "chapterCount": "{count} chapters",
+  "deleteVolume": "Delete Volume",
+  "deleteVolumeConfirm": "Are you sure you want to delete \"{name}\" and all its chapters?",
+  "wordCount": "{count} words",
+  "summaryPlaceholder": "Enter chapter summary...",
+  "clickToAddSummary": "Click to add summary..."
+}

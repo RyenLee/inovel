@@ -1,21 +1,21 @@
 <template>
   <div class="entry-config-panel">
     <div class="panel-header">
-      <h3 class="panel-title">配置页面入口设置</h3>
+      <h3 class="panel-title">{{ t('entryConfig.title') }}</h3>
       <div class="header-actions">
         <button class="btn-reset" @click="handleReset">
-          重置为默认
+          {{ t('entryConfig.resetToDefault') }}
         </button>
       </div>
     </div>
 
     <div class="config-section">
-      <div class="section-title">基础设置</div>
+      <div class="section-title">{{ t('entryConfig.sections.basic') }}</div>
       
       <div class="config-item">
         <label class="config-label">
-          <span class="label-text">启用入口</span>
-          <span class="label-desc">控制配置页面入口是否可用</span>
+          <span class="label-text">{{ t('entryConfig.fields.enabled.label') }}</span>
+          <span class="label-desc">{{ t('entryConfig.fields.enabled.desc') }}</span>
         </label>
         <div class="config-value">
           <div class="checkbox-wrapper">
@@ -31,23 +31,23 @@
 
       <div class="config-item">
         <label class="config-label">
-          <span class="label-text">显示名称</span>
-          <span class="label-desc">入口在界面上显示的名称</span>
+          <span class="label-text">{{ t('entryConfig.fields.displayName.label') }}</span>
+          <span class="label-desc">{{ t('entryConfig.fields.displayName.desc') }}</span>
         </label>
         <div class="config-value">
           <input
             v-model="localConfig.display_name"
             type="text"
             class="value-input"
-            placeholder="配置管理"
+            :placeholder="t('entryConfig.fields.displayName.placeholder')"
           />
         </div>
       </div>
 
       <div class="config-item">
         <label class="config-label">
-          <span class="label-text">图标样式</span>
-          <span class="label-desc">选择入口图标</span>
+          <span class="label-text">{{ t('entryConfig.fields.icon.label') }}</span>
+          <span class="label-desc">{{ t('entryConfig.fields.icon.desc') }}</span>
         </label>
         <div class="config-value">
           <select v-model="localConfig.icon" class="value-select">
@@ -60,30 +60,30 @@
 
       <div class="config-item">
         <label class="config-label">
-          <span class="label-text">提示文本</span>
-          <span class="label-desc">鼠标悬停时显示的提示信息</span>
+          <span class="label-text">{{ t('entryConfig.fields.tooltip.label') }}</span>
+          <span class="label-desc">{{ t('entryConfig.fields.tooltip.desc') }}</span>
         </label>
         <div class="config-value">
           <input
             v-model="localConfig.tooltip"
             type="text"
             class="value-input"
-            placeholder="打开配置管理页面"
+            :placeholder="t('entryConfig.fields.tooltip.placeholder')"
           />
         </div>
       </div>
     </div>
 
     <div class="config-section">
-      <div class="section-title">入口位置</div>
-      <p class="section-desc">选择配置页面入口的显示位置（可多选）</p>
+      <div class="section-title">{{ t('entryConfig.sections.location') }}</div>
+      <p class="section-desc">{{ t('entryConfig.sections.locationDesc') }}</p>
       
       <div class="location-grid">
         <label
           v-for="location in locationOptions"
           :key="location.value"
           class="location-item"
-          :class="{ selected: localConfig.locations.includes(location.value) }"
+          :class="{ selected: localConfig.locations.includes(location.value as EntryLocation) }"
         >
           <input
             type="checkbox"
@@ -99,15 +99,15 @@
     </div>
 
     <div class="config-section">
-      <div class="section-title">可见性控制</div>
-      <p class="section-desc">设置哪些角色可以看到配置页面入口</p>
+      <div class="section-title">{{ t('entryConfig.sections.visibility') }}</div>
+      <p class="section-desc">{{ t('entryConfig.sections.visibilityDesc') }}</p>
       
       <div class="role-grid">
         <label
           v-for="role in roleOptions"
           :key="role.value"
           class="role-item"
-          :class="{ selected: localConfig.allowed_roles.includes(role.value) }"
+          :class="{ selected: localConfig.allowed_roles.includes(role.value as UserRole) }"
         >
           <input
             type="checkbox"
@@ -122,13 +122,13 @@
     </div>
 
     <div class="config-section" v-if="localConfig.locations.includes('keyboard')">
-      <div class="section-title">快捷键设置</div>
+      <div class="section-title">{{ t('entryConfig.sections.shortcut') }}</div>
       
       <div class="shortcut-config">
         <div class="config-item">
           <label class="config-label">
-            <span class="label-text">修饰键</span>
-            <span class="label-desc">选择快捷键的修饰键（可多选）</span>
+            <span class="label-text">{{ t('entryConfig.fields.modifiers.label') }}</span>
+            <span class="label-desc">{{ t('entryConfig.fields.modifiers.desc') }}</span>
           </label>
           <div class="config-value">
             <div class="modifier-buttons">
@@ -147,8 +147,8 @@
 
         <div class="config-item">
           <label class="config-label">
-            <span class="label-text">快捷键</span>
-            <span class="label-desc">设置触发配置页面的按键</span>
+            <span class="label-text">{{ t('entryConfig.fields.shortcutKey.label') }}</span>
+            <span class="label-desc">{{ t('entryConfig.fields.shortcutKey.desc') }}</span>
           </label>
           <div class="config-value">
             <input
@@ -163,7 +163,7 @@
         </div>
 
         <div class="shortcut-preview">
-          <span class="preview-label">快捷键预览:</span>
+          <span class="preview-label">{{ t('entryConfig.preview.shortcutPreview') }}</span>
           <div class="preview-keys">
             <span
               v-for="modifier in localConfig.shortcut_modifiers"
@@ -181,13 +181,13 @@
     </div>
 
     <div class="config-section">
-      <div class="section-title">配置预览</div>
+      <div class="section-title">{{ t('entryConfig.sections.preview') }}</div>
       
       <div class="preview-container">
         <div class="preview-header">
-          <span class="preview-title">入口预览</span>
+          <span class="preview-title">{{ t('entryConfig.preview.entryPreview') }}</span>
           <span class="preview-status" :class="localConfig.enabled ? 'enabled' : 'disabled'">
-            {{ localConfig.enabled ? '已启用' : '已禁用' }}
+            {{ localConfig.enabled ? t('entryConfig.preview.enabled') : t('entryConfig.preview.disabled') }}
           </span>
         </div>
         
@@ -198,12 +198,12 @@
             <span class="preview-tooltip-hint">{{ localConfig.tooltip }}</span>
           </div>
           <div v-else class="preview-disabled">
-            入口已禁用，启用后将根据配置显示
+            {{ t('entryConfig.preview.disabledHint') }}
           </div>
         </div>
 
         <div class="preview-locations">
-          <span class="preview-label">显示位置:</span>
+          <span class="preview-label">{{ t('entryConfig.preview.displayLocation') }}</span>
           <span class="location-tags">
             <span
               v-for="loc in localConfig.locations"
@@ -213,13 +213,13 @@
               {{ getLocationLabel(loc) }}
             </span>
             <span v-if="localConfig.locations.length === 0" class="empty-tag">
-              未选择
+              {{ t('entryConfig.preview.notSelected') }}
             </span>
           </span>
         </div>
 
         <div class="preview-roles">
-          <span class="preview-label">可见角色:</span>
+          <span class="preview-label">{{ t('entryConfig.preview.visibleRoles') }}</span>
           <span class="role-tags">
             <span
               v-for="role in localConfig.allowed_roles"
@@ -230,7 +230,7 @@
               {{ getRoleLabel(role) }}
             </span>
             <span v-if="localConfig.allowed_roles.length === 0" class="empty-tag">
-              无
+              {{ t('entryConfig.preview.none') }}
             </span>
           </span>
         </div>
@@ -239,10 +239,10 @@
 
     <div class="panel-footer">
       <button class="btn-save" @click="handleSave">
-        保存配置
+        {{ t('entryConfig.actions.save') }}
       </button>
       <button class="btn-apply" @click="handleApply">
-        应用并刷新入口
+        {{ t('entryConfig.actions.apply') }}
       </button>
     </div>
   </div>
@@ -252,15 +252,17 @@
 import { ref, reactive, watch } from "vue";
 import { useMessage } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
-import type { EntryConfigSection } from "../config/types";
+import type { EntryConfigSection, EntryLocation, UserRole, TomlConfig } from "../config/types";
+import { useLocale } from "../i18n/composables/useLocale";
 
 const message = useMessage();
+const { t } = useLocale();
 
 const defaultConfig: EntryConfigSection = {
   enabled: true,
-  display_name: "配置管理",
+  display_name: t('entryConfig.defaults.displayName'),
   icon: "settings",
-  tooltip: "打开配置管理页面",
+  tooltip: t('entryConfig.defaults.tooltip'),
   locations: ["menu_bar", "toolbar"],
   allowed_roles: ["admin", "advanced"],
   shortcut_key: "C",
@@ -270,26 +272,26 @@ const defaultConfig: EntryConfigSection = {
 const localConfig = reactive<EntryConfigSection>({ ...defaultConfig });
 
 const iconOptions = [
-  { value: "settings", label: "⚙️ 设置" },
-  { value: "gear", label: "⚙️ 齿轮" },
-  { value: "wrench", label: "🔧 扳手" },
-  { value: "sliders", label: "🎚️ 滑块" },
-  { value: "cog", label: "⚙️ 齿轮" },
-  { value: "configuration", label: "📋 配置" },
+  { value: "settings", label: t('entryConfig.icons.settings') },
+  { value: "gear", label: t('entryConfig.icons.gear') },
+  { value: "wrench", label: t('entryConfig.icons.wrench') },
+  { value: "sliders", label: t('entryConfig.icons.sliders') },
+  { value: "cog", label: t('entryConfig.icons.cog') },
+  { value: "configuration", label: t('entryConfig.icons.configuration') },
 ];
 
 const locationOptions = [
-  { value: "menu_bar", label: "菜单栏", description: "应用顶部菜单栏", icon: "📋" },
-  { value: "toolbar", label: "工具栏", description: "编辑器工具栏", icon: "🛠️" },
-  { value: "system_tray", label: "系统托盘", description: "系统托盘菜单", icon: "🖥️" },
-  { value: "keyboard", label: "快捷键", description: "键盘快捷键", icon: "⌨️" },
+  { value: "menu_bar", label: t('entryConfig.locations.menu_bar.label'), description: t('entryConfig.locations.menu_bar.description'), icon: "📋" },
+  { value: "toolbar", label: t('entryConfig.locations.toolbar.label'), description: t('entryConfig.locations.toolbar.description'), icon: "🛠️" },
+  { value: "system_tray", label: t('entryConfig.locations.system_tray.label'), description: t('entryConfig.locations.system_tray.description'), icon: "🖥️" },
+  { value: "keyboard", label: t('entryConfig.locations.keyboard.label'), description: t('entryConfig.locations.keyboard.description'), icon: "⌨️" },
 ];
 
 const roleOptions = [
-  { value: "admin", label: "管理员", description: "具有全部权限" },
-  { value: "advanced", label: "高级用户", description: "具有高级功能访问权限" },
-  { value: "standard", label: "普通用户", description: "基础功能访问权限" },
-  { value: "guest", label: "访客", description: "受限访问权限" },
+  { value: "admin", label: t('entryConfig.roles.admin.label'), description: t('entryConfig.roles.admin.description') },
+  { value: "advanced", label: t('entryConfig.roles.advanced.label'), description: t('entryConfig.roles.advanced.description') },
+  { value: "standard", label: t('entryConfig.roles.standard.label'), description: t('entryConfig.roles.standard.description') },
+  { value: "guest", label: t('entryConfig.roles.guest.label'), description: t('entryConfig.roles.guest.description') },
 ];
 
 const modifierOptions = ["Ctrl", "Shift", "Alt", "Meta"];
@@ -303,7 +305,7 @@ const loadConfig = async () => {
       Object.assign(localConfig, config.entry_config);
     }
   } catch (e) {
-    console.error("加载入口配置失败:", e);
+    console.error(t('entryConfig.messages.loadFailed') + ":", e);
   }
 };
 
@@ -317,9 +319,9 @@ const handleSave = async () => {
         entry_config: localConfig,
       },
     });
-    message.success("入口配置保存成功");
+    message.success(t('entryConfig.messages.saveSuccess'));
   } catch (e) {
-    message.error("保存失败: " + (e as Error).message);
+    message.error(t('entryConfig.messages.saveFailed') + ": " + (e as Error).message);
   } finally {
     isSaving.value = false;
   }
@@ -328,13 +330,13 @@ const handleSave = async () => {
 const handleApply = async () => {
   await handleSave();
   window.dispatchEvent(new CustomEvent("entryConfigUpdated", { detail: { ...localConfig } }));
-  message.info("入口配置已更新，将在下次操作时生效");
+  message.info(t('entryConfig.messages.applySuccess'));
 };
 
 const handleReset = () => {
-  if (confirm("确定要重置所有入口配置吗？")) {
+  if (confirm(t('entryConfig.messages.resetConfirm'))) {
     Object.assign(localConfig, defaultConfig);
-    message.info("已重置为默认配置");
+    message.info(t('entryConfig.messages.resetSuccess'));
   }
 };
 

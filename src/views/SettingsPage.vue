@@ -294,14 +294,14 @@ const goBack = () => {
 
                 <!-- Entry Config -->
                 <n-gi>
-                    <n-card :title="t('settings.entryConfig') || '配置页面入口'" hoverable class="settings-card">
+                    <n-card :title="t('settings.entryConfig')" hoverable class="settings-card">
                         <div class="flex items-center gap-4">
                             <n-icon :size="24" class="text-indigo-500">
                                 <Settings />
                             </n-icon>
                             <div>
-                                <p class="font-medium text-gray-900 dark:text-white">配置页面入口设置</p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">自定义配置页面的入口位置、触发方式和可见性</p>
+                                <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.entryConfigTitle') }}</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('settings.entryConfigDescription') }}</p>
                             </div>
                         </div>
                         <template #footer>
@@ -312,7 +312,7 @@ const goBack = () => {
                                             <Settings />
                                         </NIcon>
                                     </template>
-                                    配置入口
+                                    {{ t('settings.entryConfigButton') }}
                                 </n-button>
                             </n-space>
                         </template>
@@ -326,7 +326,7 @@ const goBack = () => {
             <div v-if="showEntryConfig" class="modal-overlay" @click.self="showEntryConfig = false">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h2>配置页面入口设置</h2>
+                        <h2>{{ t('settings.entryConfigTitle') }}</h2>
                         <button class="modal-close" @click="showEntryConfig = false">×</button>
                     </div>
                     <div class="modal-body">

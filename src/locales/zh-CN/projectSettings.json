@@ -1,0 +1,88 @@
+{
+  "title": "项目设置",
+  "tabs": {
+    "basic": "基本设置",
+    "security": "安全性"
+  },
+  "cover": {
+    "title": "封面图片",
+    "alt": "项目封面",
+    "changeButton": "更换封面",
+    "formatHint": "支持 JPG、PNG 格式",
+    "updated": "封面已更新",
+    "changeFailed": "更换封面失败: {error}",
+    "selectTitle": "选择封面图片"
+  },
+  "projectInfo": {
+    "title": "项目信息",
+    "projectId": "项目ID",
+    "projectIdPlaceholder": "项目ID",
+    "projectIdReadonly": "不可修改",
+    "name": "书名",
+    "namePlaceholder": "请输入书名",
+    "nameRequired": "请输入书名",
+    "author": "笔名",
+    "authorPlaceholder": "请输入作者笔名",
+    "description": "简介",
+    "descriptionPlaceholder": "请输入小说简介",
+    "path": "存储路径",
+    "saveButton": "保存项目信息",
+    "saved": "项目信息已保存",
+    "saveFailed": "保存失败: {error}"
+  },
+  "writingGoal": {
+    "title": "写作目标",
+    "dailyGoal": "每日字数目标",
+    "unit": "字/天",
+    "feedback": "设置此项目的每日写作目标，将覆盖全局设置",
+    "saveButton": "保存目标",
+    "saved": "每日目标已保存",
+    "saveFailed": "保存失败"
+  },
+  "encryption": {
+    "status": {
+      "title": "加密状态",
+      "encrypted": "已加密",
+      "notEncrypted": "未加密",
+      "encryptedDesc": "项目文件已加密存储",
+      "notEncryptedDesc": "项目文件未加密"
+    },
+    "enable": {
+      "title": "启用加密",
+      "password": "设置密码",
+      "passwordPlaceholder": "请输入密码（至少8位）",
+      "confirmPassword": "确认密码",
+      "confirmPasswordPlaceholder": "请再次输入密码",
+      "button": "启用加密",
+      "passwordMismatch": "两次输入的密码不一致",
+      "passwordTooShort": "密码长度至少 8 位",
+      "success": "项目已加密",
+      "failed": "加密失败: {error}",
+      "progress": "正在加密: {current} / {total} ({file})"
+    },
+    "change": {
+      "title": "修改密码",
+      "oldPassword": "原密码",
+      "oldPasswordPlaceholder": "请输入原密码",
+      "newPassword": "新密码",
+      "newPasswordPlaceholder": "请输入新密码（至少8位）",
+      "confirmNewPassword": "确认新密码",
+      "confirmNewPasswordPlaceholder": "请再次输入新密码",
+      "button": "修改密码",
+      "passwordMismatch": "两次输入的新密码不一致",
+      "passwordTooShort": "新密码长度至少 8 位",
+      "success": "密码已修改",
+      "failed": "修改密码失败: {error}"
+    },
+    "disable": {
+      "title": "关闭加密",
+      "description": "关闭加密将解密所有项目文件。需要输入密码确认。",
+      "password": "密码",
+      "passwordPlaceholder": "请输入密码",
+      "button": "关闭加密",
+      "success": "项目已解密，加密已关闭",
+      "failed": "关闭加密失败: {error}"
+    }
+  },
+  "project": "项目"
+}

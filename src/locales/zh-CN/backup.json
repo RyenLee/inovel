@@ -1,0 +1,44 @@
+{
+  "title": "项目管理",
+  "tabs": {
+    "create": "创建备份",
+    "history": "备份历史",
+    "logs": "操作日志"
+  },
+  "backupInfo": {
+    "fullDesc": "全量备份：打包整个项目目录（始终排除 .git，可选排除 exports）。",
+    "incrDesc": "增量备份：仅打包自上次备份以来变更的文件，体积更小，速度更快。"
+  },
+  "fullBackup": "全量备份",
+  "incrementalBackup": "增量备份",
+  "excludeExports": "排除 exports 目录",
+  "description": "备份描述（可选）",
+  "descriptionPlaceholder": "例如：完成第三章初稿",
+  "stats": {
+    "totalBackups": "总备份数",
+    "totalSize": "总占用空间",
+    "incrementalCount": "增量备份"
+  },
+  "backingUp": "备份中...",
+  "createFullBackup": "创建全量备份",
+  "createIncrementalBackup": "创建增量备份",
+  "openFolder": "打开目录",
+  "noBackups": "暂无备份记录",
+  "noLogs": "暂无操作日志",
+  "full": "全量",
+  "incremental": "增量",
+  "restore": "恢复",
+  "showLess": "收起（仅显示最新{limit}条）",
+  "showAll": "查看全部（共{total}条）",
+  "messages": {
+    "loadFailed": "加载备份数据失败",
+    "backupSuccess": "备份创建成功：{path}",
+    "restoreConfirm": "确定要恢复此备份吗？\n{description}\n备份时间：{time}\n\n当前项目将被覆盖，请确保已做好重要数据备份。",
+    "restoreSuccess": "恢复成功，请刷新页面查看最新内容",
+    "restoreFailed": "恢复失败: {error}",
+    "deleteConfirm": "确定要删除此备份记录吗？\n文件不会被物理删除，仅删除记录。",
+    "deleteSuccess": "备份记录已删除",
+    "deleteFailed": "删除失败: {error}",
+    "openFolderFailed": "无法打开文件夹"
+  }
+}

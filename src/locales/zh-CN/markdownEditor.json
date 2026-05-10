@@ -1,0 +1,47 @@
+{
+  "toolbar": {
+    "bold": "加粗 (Ctrl+B)",
+    "italic": "斜体 (Ctrl+I)",
+    "heading1": "一级标题",
+    "heading2": "二级标题",
+    "heading3": "三级标题",
+    "bulletList": "无序列表",
+    "orderedList": "有序列表",
+    "blockquote": "引用",
+    "horizontalRule": "分割线",
+    "history": "版本历史",
+    "snapshot": "创建快照",
+    "template": "打开模板库",
+    "nameGenerator": "名称生成",
+    "importText": "导入文本文件 (.txt)"
+  },
+  "lineHeight": {
+    "title": "行间距",
+    "compact": "紧凑",
+    "loose": "宽松",
+    "current": "当前行高：{height}px"
+  },
+  "statusBar": {
+    "chapterWordCount": "本章字数：",
+    "volumeWordCount": "本卷字数：",
+    "totalWordCount": "全书字数："
+  },
+  "splitDialog": {
+    "title": "段落拆分",
+    "threshold": "拆分阈值：",
+    "characters": "字符",
+    "refreshPreview": "刷新预览",
+    "original": "原文（{length} 字）：",
+    "splitResult": "拆分后（{count} 段）：",
+    "segment": "段{index}",
+    "noParagraphs": "当前没有超过阈值的段落",
+    "confirmSplit": "确认拆分"
+  },
+  "imageDialog": {
+    "title": "选择图片"
+  },
+  "messages": {
+    "editorNotInitialized": "编辑器实例未初始化",
+    "applyTemplateFailed": "应用模板失败:"
+  }
+}

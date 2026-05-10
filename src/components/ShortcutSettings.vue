@@ -3,6 +3,9 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { NButton, NModal, NTag, useMessage, NUpload, useDialog } from 'naive-ui'
 import { Download, Upload, RotateCcw, Save } from 'lucide-vue-next'
 import { useShortcutStore, type Shortcut } from '../stores/shortcuts'
+import { useLocale } from '../i18n/composables/useLocale'
+
+const { t } = useLocale()
 
 const props = defineProps<{
   show?: boolean
@@ -52,7 +55,7 @@ const handleKeyUp = () => {
     // Save the recorded keys
     if (editingId.value) {
       shortcutStore.updateShortcut(editingId.value, [...recordingKeys.value])
-      message.success('快捷键已更新')
+      message.success(t('shortcutSettings.messages.shortcutUpdated'))
     }
     stopRecording()
   }
@@ -63,7 +66,7 @@ const startRecording = (shortcut: Shortcut) => {
   editingId.value = shortcut.id
   recordingKeys.value = []
   isRecording.value = true
-  message.info('请按下新的快捷键组合...')
+  message.info(t('shortcutSettings.messages.pressNewShortcut'))
 }
 
 // Stop recording
@@ -81,13 +84,13 @@ const cancelRecording = () => {
 // Reset single shortcut
 const resetShortcut = (shortcut: Shortcut) => {
   dialog.warning({
-    title: '恢复默认',
-    content: `确定要将「${shortcut.name}」的快捷键恢复为默认吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
+    title: t('shortcutSettings.resetDefault'),
+    content: t('shortcutSettings.messages.resetDefaultConfirm', { name: shortcut.name }),
+    positiveText: t('common.action.confirm'),
+    negativeText: t('common.action.cancel'),
     onPositiveClick: () => {
       shortcutStore.resetToDefault(shortcut.id)
-      message.success('已恢复默认快捷键')
+      message.success(t('shortcutSettings.messages.resetDefaultDone'))
     },
   })
 }
@@ -95,13 +98,13 @@ const resetShortcut = (shortcut: Shortcut) => {
 // Reset all shortcuts
 const resetAllShortcuts = () => {
   dialog.warning({
-    title: '恢复所有默认',
-    content: '确定要将所有快捷键恢复为默认值？',
-    positiveText: '确定',
-    negativeText: '取消',
+    title: t('shortcutSettings.resetAll'),
+    content: t('shortcutSettings.messages.resetAllConfirm'),
+    positiveText: t('common.action.confirm'),
+    negativeText: t('common.action.cancel'),
     onPositiveClick: () => {
       shortcutStore.resetAll()
-      message.success('已恢复所有默认快捷键')
+      message.success(t('shortcutSettings.messages.resetAllDone'))
     },
   })
 }
@@ -116,7 +119,7 @@ const exportShortcuts = () => {
   a.download = 'inovel-shortcuts.json'
   a.click()
   URL.revokeObjectURL(url)
-  message.success('快捷键配置已导出')
+  message.success(t('shortcutSettings.messages.exportSuccess'))
 }
 
 // Import shortcuts
@@ -126,9 +129,9 @@ const importShortcuts = (options: { file: File }) => {
   reader.onload = (e) => {
     const content = e.target?.result as string
     if (shortcutStore.importConfig(content)) {
-      message.success('快捷键配置已导入')
+      message.success(t('shortcutSettings.messages.importSuccess'))
     } else {
-      message.error('导入失败：文件格式不正确')
+      message.error(t('shortcutSettings.messages.importFailed'))
     }
   }
   reader.readAsText(file)
@@ -169,7 +172,7 @@ onUnmounted(() => {
   <n-modal
     :show="props.show"
     preset="card"
-    title="快捷键设置"
+    :title="t('shortcutSettings.title')"
     style="width: 700px; max-width: 90vw;"
     :mask-closable="!isRecording"
     @update:show="(val) => !isRecording && emit('update:show', val)"
@@ -178,12 +181,12 @@ onUnmounted(() => {
       <!-- Recording indicator -->
       <div v-if="isRecording" class="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
         <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-        <span class="text-blue-700 dark:text-blue-300 font-medium">正在录制快捷键...</span>
+        <span class="text-blue-700 dark:text-blue-300 font-medium">{{ t('shortcutSettings.recording') }}</span>
         <span class="ml-2 px-3 py-1 bg-blue-100 dark:bg-blue-800 rounded text-blue-600 dark:text-blue-200 font-mono">
-          {{ recordingKeys.length > 0 ? formatKeys(recordingKeys) : '请按下组合键' }}
+          {{ recordingKeys.length > 0 ? formatKeys(recordingKeys) : t('shortcutSettings.pressKeys') }}
         </span>
         <n-button size="small" quaternary class="ml-auto" @click="cancelRecording">
-          取消
+          {{ t('shortcutSettings.cancel') }}
         </n-button>
       </div>
 
@@ -216,7 +219,7 @@ onUnmounted(() => {
                   size="small"
                   class="font-mono"
                 >
-                  {{ recordingKeys.length > 0 ? formatKeys(recordingKeys) : '等待输入...' }}
+                  {{ recordingKeys.length > 0 ? formatKeys(recordingKeys) : t('shortcutSettings.waitingInput') }}
                 </n-tag>
                 <template v-else>
                   <n-tag
@@ -243,7 +246,7 @@ onUnmounted(() => {
                   <template #icon>
                     <Save class="w-3 h-3" />
                   </template>
-                  保存
+                  {{ t('shortcutSettings.save') }}
                 </n-button>
                 <n-button
                   v-else
@@ -251,7 +254,7 @@ onUnmounted(() => {
                   quaternary
                   @click="startRecording(shortcut)"
                 >
-                  编辑
+                  {{ t('shortcutSettings.edit') }}
                 </n-button>
                 <n-button
                   v-if="!isEditing(shortcut.id)"
@@ -276,7 +279,7 @@ onUnmounted(() => {
           <template #icon>
             <RotateCcw class="w-4 h-4" />
           </template>
-          恢复所有默认
+          {{ t('shortcutSettings.resetAll') }}
         </n-button>
         
         <div class="flex gap-2">
@@ -290,7 +293,7 @@ onUnmounted(() => {
               <template #icon>
                 <Upload class="w-4 h-4" />
               </template>
-              导入
+              {{ t('shortcutSettings.import') }}
             </n-button>
           </n-upload>
           
@@ -298,7 +301,7 @@ onUnmounted(() => {
             <template #icon>
               <Download class="w-4 h-4" />
             </template>
-            导出
+            {{ t('shortcutSettings.export') }}
           </n-button>
         </div>
       </div>
@@ -306,7 +309,7 @@ onUnmounted(() => {
 
     <template #footer>
       <div class="flex justify-end gap-2">
-        <n-button @click="closeModal">关闭</n-button>
+        <n-button @click="closeModal">{{ t('shortcutSettings.close') }}</n-button>
       </div>
     </template>
   </n-modal>

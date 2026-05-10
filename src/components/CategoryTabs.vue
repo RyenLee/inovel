@@ -44,13 +44,16 @@
     </div>
 
     <div class="scroll-hint" v-if="hasScroll">
-      <span class="hint-text">← 滑动查看更多 →</span>
+      <span class="hint-text">{{ t('common.scrollHint') }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { useLocale } from "../i18n/composables/useLocale";
+
+const { t } = useLocale();
 
 interface Category {
   name: string;
@@ -238,10 +241,13 @@ watch(
   () => props.activeCategory,
   () => {
     nextTick(() => {
-      const activeTab = wrapperRef.value?.querySelector(".category-tab.active");
+      const wrapper = wrapperRef.value;
+      if (!wrapper) return;
+      
+      const activeTab = wrapper.querySelector(".category-tab.active");
 
       if (activeTab) {
-        const wrapperRect = wrapperRef.value.getBoundingClientRect();
+        const wrapperRect = wrapper.getBoundingClientRect();
         const tabRect = activeTab.getBoundingClientRect();
         const tabLeft = tabRect.left - wrapperRect.left;
         const tabRight = tabRect.right - wrapperRect.left;

@@ -1,0 +1,31 @@
+{
+  "columns": {
+    "inspiration": "灵感",
+    "dialogue": "对白",
+    "scene": "场景"
+  },
+  "deleteColumn": "删除列",
+  "addItem": "添加条目",
+  "doubleClickToEdit": "双击编辑...",
+  "editPlaceholder": "输入灵感内容...",
+  "save": "保存",
+  "insertToEditor": "插入到编辑器",
+  "edit": "编辑",
+  "delete": "删除",
+  "confirmDelete": "确认删除",
+  "deleteItemConfirm": "确定要删除这个灵感条目吗？",
+  "cancel": "取消",
+  "deleted": "已删除",
+  "insertedToEditor": "已插入到编辑器",
+  "enterColumnName": "请输入列名称",
+  "columnExists": "该列已存在",
+  "columnAdded": "已添加新列",
+  "defaultColumnCannotDelete": "默认列不能删除",
+  "deleteColumnConfirm": "确定要删除\"{name}\"列吗？该列下的所有内容也会被删除。",
+  "columnDeleted": "已删除列",
+  "messages": {
+    "createFailed": "创建条目失败",
+    "updateFailed": "更新条目失败",
+    "deleteFailed": "删除条目失败"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "title": "确认删除",
+  "message": "确定要删除吗？此操作不可撤销。",
+  "confirmText": "删除",
+  "cancelText": "取消",
+  "confirmInputLabel": "请输入以下内容以确认：",
+  "keepFiles": "保留本地文件",
+  "keepFilesOn": "仅从列表移除，文件夹保留",
+  "keepFilesOff": "同时删除文件夹和数据"
+}

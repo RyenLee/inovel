@@ -16,6 +16,9 @@ import {
 } from "naive-ui";
 import { FileText, Upload, AlertTriangle, CheckCircle } from "lucide-vue-next";
 import { useTextImport } from "../composables/useTextImport";
+import { useLocale } from "../i18n/composables/useLocale";
+
+const { t } = useLocale();
 
 const props = withDefaults(
   defineProps<{
@@ -33,7 +36,16 @@ const emit = defineEmits<{
 }>();
 
 const message = useMessage();
-const { state, hasContent, isLargeFile, chunkCount, formatFileSize, selectAndReadFile, getChunks, reset } = useTextImport();
+const {
+  state,
+  hasContent,
+  isLargeFile,
+  chunkCount,
+  formatFileSize,
+  selectAndReadFile,
+  getChunks,
+  reset,
+} = useTextImport();
 
 const importMode = ref<"insert" | "replace">("insert");
 const isImporting = ref(false);
@@ -79,10 +91,14 @@ const handleImport = async () => {
       });
     }
 
-    message.success(`成功导入 ${formatFileSize(state.value.file?.size || 0)} 文本内容`);
+    message.success(
+      t("textImport.messages.importSuccess", {
+        size: formatFileSize(state.value.file?.size || 0),
+      })
+    );
     emit("update:show", false);
   } catch (err) {
-    message.error("导入过程中发生错误");
+    message.error(t("textImport.messages.importError"));
   } finally {
     isImporting.value = false;
   }
@@ -112,21 +128,27 @@ const handleClose = () => {
             <FileText class="w-5 h-5" />
           </span>
           <div>
-            <h3 class="import-dialog-title">导入文本文件</h3>
-            <p class="import-dialog-subtitle">选择 .txt 文件导入到编辑器中</p>
+            <h3 class="import-dialog-title">{{ t("textImport.title") }}</h3>
+            <p class="import-dialog-subtitle">{{ t("textImport.subtitle") }}</p>
           </div>
         </div>
       </div>
 
       <div class="import-dialog-body">
         <!-- 加载状态 -->
-        <div v-if="state.isReading" class="flex flex-col items-center justify-center py-16">
+        <div
+          v-if="state.isReading"
+          class="flex flex-col items-center justify-center py-16"
+        >
           <n-spin size="large" />
-          <n-text depth="3" class="mt-4">正在读取文件...</n-text>
+          <n-text depth="3" class="mt-4">{{ t("textImport.reading") }}</n-text>
         </div>
 
         <!-- 错误状态 -->
-        <div v-else-if="state.error" class="flex flex-col items-center gap-4 py-8">
+        <div
+          v-else-if="state.error"
+          class="flex flex-col items-center gap-4 py-8"
+        >
           <div class="import-error-icon">
             <AlertTriangle class="w-10 h-10" />
           </div>
@@ -136,9 +158,11 @@ const handleClose = () => {
               <template #icon>
                 <n-icon><Upload /></n-icon>
               </template>
-              重新选择文件
+              {{ t("textImport.reselect") }}
             </n-button>
-            <n-button @click="handleClose" size="small">取消</n-button>
+            <n-button @click="handleClose" size="small">{{
+              t("textImport.cancel")
+            }}</n-button>
           </div>
         </div>
 
@@ -148,52 +172,74 @@ const handleClose = () => {
           <div class="import-file-info">
             <div class="flex items-center gap-2 mb-3">
               <CheckCircle class="w-4 h-4 text-green-500" />
-              <n-text strong class="text-sm">文件读取成功</n-text>
+              <n-text strong class="text-sm">{{
+                t("textImport.readSuccess")
+              }}</n-text>
             </div>
             <div class="import-file-details">
               <div class="import-file-detail">
-                <span class="import-detail-label">文件名</span>
+                <span class="import-detail-label">{{
+                  t("textImport.fileName")
+                }}</span>
                 <span class="import-detail-value">{{ state.file.name }}</span>
               </div>
               <div class="import-file-detail">
-                <span class="import-detail-label">文件大小</span>
-                <span class="import-detail-value">{{ formatFileSize(state.file.size) }}</span>
+                <span class="import-detail-label">{{
+                  t("textImport.fileSize")
+                }}</span>
+                <span class="import-detail-value">{{
+                  formatFileSize(state.file.size)
+                }}</span>
               </div>
               <div class="import-file-detail">
-                <span class="import-detail-label">编码格式</span>
-                <span class="import-detail-value">{{ state.file.encoding }}</span>
+                <span class="import-detail-label">{{
+                  t("textImport.encoding")
+                }}</span>
+                <span class="import-detail-value">{{
+                  state.file.encoding
+                }}</span>
               </div>
               <div class="import-file-detail">
-                <span class="import-detail-label">字符数</span>
-                <span class="import-detail-value">{{ state.content.length.toLocaleString() }}</span>
+                <span class="import-detail-label">{{
+                  t("textImport.charCount")
+                }}</span>
+                <span class="import-detail-value">{{
+                  state.content.length.toLocaleString()
+                }}</span>
               </div>
             </div>
 
             <div v-if="isLargeFile" class="mt-3">
               <n-alert type="info" :bordered="false" class="text-xs!">
-                文件较大，将分 {{ chunkCount }} 块渐进式导入以避免编辑器卡顿
+                {{ t("textImport.largeFileHint", { chunkCount }) }}
               </n-alert>
             </div>
           </div>
 
           <!-- 导入模式选择 -->
           <div class="import-mode-selector">
-            <span class="import-detail-label mb-2 block">导入方式</span>
-            <n-radio-group v-model:value="importMode" name="importMode" size="small">
+            <span class="import-detail-label mb-2 block">{{
+              t("textImport.importMode")
+            }}</span>
+            <n-radio-group
+              v-model:value="importMode"
+              name="importMode"
+              size="small"
+            >
               <n-radio-button value="insert">
                 <n-tooltip trigger="hover">
                   <template #trigger>
-                    <span>插入到光标位置</span>
+                    <span>{{ t("textImport.insertAtCursor") }}</span>
                   </template>
-                  在当前光标处插入文本内容
+                  {{ t("textImport.insertTooltip") }}
                 </n-tooltip>
               </n-radio-button>
               <n-radio-button value="replace">
                 <n-tooltip trigger="hover">
                   <template #trigger>
-                    <span>替换全部内容</span>
+                    <span>{{ t("textImport.replaceAll") }}</span>
                   </template>
-                  清空当前编辑器内容，使用导入文本
+                  {{ t("textImport.replaceTooltip") }}
                 </n-tooltip>
               </n-radio-button>
             </n-radio-group>
@@ -202,22 +248,34 @@ const handleClose = () => {
           <!-- 内容预览 -->
           <div class="import-preview-section">
             <div class="flex items-center justify-between mb-2">
-              <span class="import-detail-label">内容预览</span>
-              <span v-if="state.content.length > 2000" class="text-xs text-gray-400">
-                显示前 2,000 字符
+              <span class="import-detail-label">{{
+                t("textImport.contentPreview")
+              }}</span>
+              <span
+                v-if="state.content.length > 2000"
+                class="text-xs text-gray-400"
+              >
+                {{ t("textImport.previewHint") }}
               </span>
             </div>
             <div class="import-preview-box">
               <pre class="import-preview-text">{{ state.preview }}</pre>
-              <div v-if="state.content.length > 2000" class="import-preview-fade"></div>
+              <div
+                v-if="state.content.length > 2000"
+                class="import-preview-fade"
+              ></div>
             </div>
           </div>
 
           <!-- 导入进度 -->
           <div v-if="isImporting" class="space-y-2">
             <div class="flex items-center justify-between text-xs">
-              <span class="text-gray-500">导入进度</span>
-              <span class="font-medium text-blue-500">{{ importProgress }}%</span>
+              <span class="text-gray-500">{{
+                t("textImport.importProgress")
+              }}</span>
+              <span class="font-medium text-blue-500"
+                >{{ importProgress }}%</span
+              >
             </div>
             <n-progress
               :percentage="importProgress"
@@ -232,7 +290,9 @@ const handleClose = () => {
 
       <div class="import-dialog-footer">
         <n-space justify="end">
-          <n-button @click="handleClose" :disabled="isImporting">取消</n-button>
+          <n-button @click="handleClose" :disabled="isImporting">{{
+            t("textImport.cancel")
+          }}</n-button>
           <n-button
             type="primary"
             :disabled="!hasContent || isImporting"
@@ -242,7 +302,11 @@ const handleClose = () => {
             <template #icon>
               <n-icon><Upload /></n-icon>
             </template>
-            {{ isImporting ? "导入中..." : "确认导入" }}
+            {{
+              isImporting
+                ? t("textImport.importing")
+                : t("textImport.confirmImport")
+            }}
           </n-button>
         </n-space>
       </div>
@@ -436,7 +500,7 @@ const handleClose = () => {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
 
 .import-preview-fade {

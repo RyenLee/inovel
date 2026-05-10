@@ -12,6 +12,9 @@ import {
 } from "lucide-vue-next";
 import draggable from "vuedraggable";
 import { useTheme } from "../composables/useTheme";
+import { useLocale } from "../i18n/composables/useLocale";
+
+const { t } = useLocale();
 
 // Types
 interface Chapter {
@@ -220,7 +223,7 @@ watch(
     >
       <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
         <AlignLeft class="w-4 h-4" />
-        大纲视图
+        {{ t('outlinePanel.title') }}
       </h2>
     </div>
 
@@ -228,7 +231,7 @@ watch(
     <div class="flex-1 overflow-y-auto p-2">
       <NEmpty
         v-if="!isLoading && volumes.length === 0"
-        description="暂无章节"
+        :description="t('outlinePanel.noChapters')"
         class="py-8"
       />
 
@@ -263,7 +266,7 @@ watch(
               <span
                 class="text-xs text-gray-400 px-1"
               >
-                {{ volume.chapters.length }}章
+                {{ t('outlinePanel.chapterCount', { count: volume.chapters.length }) }}
               </span>
 
               <!-- Delete volume -->
@@ -274,12 +277,12 @@ watch(
                   <button
                     class="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30"
                     @click.stop
-                    title="删除卷"
+                    :title="t('outlinePanel.deleteVolume')"
                   >
                     <Trash2 class="w-3 h-3 text-red-500" />
                   </button>
                 </template>
-                确定删除"{{ volume.name }}"及其所有章节？
+                {{ t('outlinePanel.deleteVolumeConfirm', { name: volume.name }) }}
               </NPopconfirm>
             </div>
 
@@ -316,7 +319,7 @@ watch(
                       </span>
 
                       <span class="text-xs text-gray-400 shrink-0">
-                        {{ chapter.word_count_cache }}字
+                        {{ t('outlinePanel.wordCount', { count: chapter.word_count_cache }) }}
                       </span>
                     </div>
 
@@ -327,7 +330,7 @@ watch(
                           v-model:value="editingSummary"
                           type="textarea"
                           :autosize="{ minRows: 1, maxRows: 3 }"
-                          placeholder="输入章节摘要..."
+                          :placeholder="t('outlinePanel.summaryPlaceholder')"
                           autofocus
                           @blur="finishEditSummary"
                           @keydown="handleSummaryKeydown"
@@ -340,7 +343,7 @@ watch(
                           :class="{ 'text-gray-400 italic': !chapter.summary }"
                           @click="startEditSummary(chapter, $event)"
                         >
-                          {{ chapter.summary || '点击添加摘要...' }}
+                          {{ chapter.summary || t('outlinePanel.clickToAddSummary') }}
                         </div>
                       </template>
                     </div>

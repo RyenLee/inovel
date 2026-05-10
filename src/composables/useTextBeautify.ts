@@ -1,18 +1,9 @@
 import { ref, computed, watch, reactive } from "vue";
+import { useLocale } from "../i18n/composables/useLocale";
 
-// 信纸背景效果类型
 export type PaperStyle = "none" | "lined" | "lined-margin" | "grid" | "dots";
 
-// 行高预设选项
-export const lineHeightPresets = [
-  { label: "紧凑", value: 16 },
-  { label: "标准", value: 20 },
-  { label: "宽松", value: 24 },
-  { label: "超大", value: 36 },
-];
-
-// 全角空格缩进字符
-const INDENT_CHAR = "　　"; // 两个全角空格
+const INDENT_CHAR = "　　";
 
 export interface UseTextBeautifyOptions {
   editor: any;
@@ -21,10 +12,9 @@ export interface UseTextBeautifyOptions {
 
 export function useTextBeautify(options: UseTextBeautifyOptions) {
   const { editor, onContentChange } = options;
+  const { t } = useLocale();
 
-  // 状态
   const paperStyle = ref<PaperStyle>("none");
-  // 行高
   const lineHeight = ref(20);
   const showLineHeightControl = ref(false);
   const showSplitDialog = ref(false);
@@ -33,12 +23,17 @@ export function useTextBeautify(options: UseTextBeautifyOptions) {
   const smartSymbolsEnabled = ref(true);
   const paragraphIndentEnabled = ref(false);
 
-  // 切换信纸效果（仅在开/关状态间切换）
+  const lineHeightPresets = computed(() => [
+    { label: t('textBeautify.lineHeight.compact'), value: 16 },
+    { label: t('textBeautify.lineHeight.standard'), value: 20 },
+    { label: t('textBeautify.lineHeight.loose'), value: 24 },
+    { label: t('textBeautify.lineHeight.extraLoose'), value: 36 },
+  ]);
+
   const togglePaperStyle = () => {
     paperStyle.value = paperStyle.value === "none" ? "lined" : "none";
   };
 
-  // 切换行间距控制面板
   const toggleLineHeightControl = () => {
     showLineHeightControl.value = !showLineHeightControl.value;
   };
@@ -47,23 +42,22 @@ export function useTextBeautify(options: UseTextBeautifyOptions) {
     lineHeight.value = value;
   };
 
-  // 美化菜单选项
   const beautifyDropdownOptions = computed(() => [
     {
-      label: `首行缩进 ${paragraphIndentEnabled.value ? "✓" : ""}`,
+      label: `${t('textBeautify.menu.paragraphIndent')} ${paragraphIndentEnabled.value ? "✓" : ""}`,
       key: "indent",
     },
     { type: "divider", key: "d1" },
     {
-      label: `信纸效果 ${paperStyle.value !== "none" ? "✓" : ""}`,
+      label: `${t('textBeautify.menu.paperEffect')} ${paperStyle.value !== "none" ? "✓" : ""}`,
       key: "paper",
     },
     {
-      label: "行间距设置...",
+      label: t('textBeautify.menu.lineHeightSettings'),
       key: "lineHeight",
     },
     {
-      label: "段落拆分...",
+      label: t('textBeautify.menu.paragraphSplit'),
       key: "split",
     },
   ]);

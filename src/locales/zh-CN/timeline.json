@@ -1,0 +1,28 @@
+{
+  "title": "故事时间轴",
+  "eventCount": "{count}个事件",
+  "addEvent": "添加事件",
+  "emptyDescription": "暂无事件，点击添加按钮创建第一个事件",
+  "noChapter": "无关联章节",
+  "editEvent": "编辑事件",
+  "addEventTitle": "添加事件",
+  "eventTitle": "事件标题",
+  "eventTitleRequired": "*",
+  "eventTitlePlaceholder": "输入事件标题",
+  "storyTime": "故事时间",
+  "storyTimePlaceholder": "选择故事发生的时间",
+  "eventDescription": "事件描述",
+  "eventDescriptionPlaceholder": "描述这个事件的内容...",
+  "relatedChapter": "关联章节",
+  "relatedChapterPlaceholder": "选择关联的章节（可选）",
+  "deleteConfirm": "确定删除这个事件吗？",
+  "messages": {
+    "loadFailed": "加载数据失败",
+    "titleRequired": "请输入事件标题",
+    "eventUpdated": "事件已更新",
+    "eventCreated": "事件已创建",
+    "saveFailed": "保存失败",
+    "eventDeleted": "事件已删除",
+    "deleteFailed": "删除失败"
+  }
+}

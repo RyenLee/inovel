@@ -1,0 +1,25 @@
+{
+  "title": "Shortcut Settings",
+  "recording": "Recording shortcut...",
+  "pressKeys": "Press key combination",
+  "waitingInput": "Waiting for input...",
+  "cancel": "Cancel",
+  "save": "Save",
+  "edit": "Edit",
+  "resetDefault": "Reset Default",
+  "resetAll": "Reset All Defaults",
+  "import": "Import",
+  "export": "Export",
+  "close": "Close",
+  "messages": {
+    "shortcutUpdated": "Shortcut updated",
+    "pressNewShortcut": "Please press the new key combination...",
+    "resetDefaultConfirm": "Are you sure you want to reset the shortcut for \"{name}\" to default?",
+    "resetDefaultDone": "Default shortcut restored",
+    "resetAllConfirm": "Are you sure you want to reset all shortcuts to default?",
+    "resetAllDone": "All default shortcuts restored",
+    "exportSuccess": "Shortcut configuration exported",
+    "importSuccess": "Shortcut configuration imported",
+    "importFailed": "Import failed: invalid file format"
+  }
+}

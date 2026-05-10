@@ -1,0 +1,49 @@
+{
+  "title": "Character Relationship Graph",
+  "stats": "{charCount} characters / {edgeCount} relationships",
+  "addRelation": "Add Relationship",
+  "noCharacters": "No characters yet, please create characters first",
+  "noCharactersHint": "After adding characters in \"Worldbuilding\", you can view the relationship graph here",
+  "addRelationTitle": "Add Character Relationship",
+  "editRelationTitle": "Edit Relationship",
+  "sourceCharacter": "Source Character",
+  "targetCharacter": "Target Character",
+  "relationType": "Relationship Type",
+  "selectSource": "Select source character",
+  "selectTarget": "Select target character",
+  "selectOrInputType": "Select or enter relationship type",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "save": "Save",
+  "deleteRelation": "Delete Relationship",
+  "deleteConfirm": "Are you sure you want to delete this relationship?",
+  "contextMenu": {
+    "addFromSource": "Add relationship from this node",
+    "viewDetails": "View details"
+  },
+  "relationTypes": {
+    "friend": "Friend",
+    "enemy": "Enemy",
+    "lover": "Lover",
+    "family": "Family",
+    "colleague": "Colleague",
+    "superior": "Superior/Subordinate",
+    "teacher": "Teacher/Student",
+    "brother": "Brother",
+    "sister": "Sister",
+    "rival": "Rival",
+    "partner": "Partner",
+    "other": "Other"
+  },
+  "messages": {
+    "loadFailed": "Failed to load data",
+    "relationUpdated": "Relationship updated",
+    "updateFailed": "Update failed",
+    "relationDeleted": "Relationship deleted",
+    "deleteFailed": "Delete failed",
+    "fillAllFields": "Please fill in all fields",
+    "sameSourceTarget": "Source and target cannot be the same",
+    "relationAdded": "Relationship added",
+    "createFailed": "Create failed"
+  }
+}

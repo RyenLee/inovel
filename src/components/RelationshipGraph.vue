@@ -7,10 +7,12 @@ import { NButton, NIcon, NModal, NSelect, NPopconfirm, useMessage, NEmpty, NDrop
 import { Plus, Users } from 'lucide-vue-next'
 import { invoke } from '@tauri-apps/api/core'
 import { useTheme } from '../composables/useTheme'
+import { useLocale } from '../i18n/composables/useLocale'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 
 const { isDark } = useTheme()
+const { t } = useLocale()
 
 // Types
 interface Character {
@@ -127,7 +129,7 @@ const loadData = async () => {
     }))
   } catch (error) {
     console.error('Failed to load data:', error)
-    message.error('加载数据失败')
+    message.error(t('relationshipGraph.messages.loadFailed'))
   } finally {
     isLoading.value = false
   }
@@ -191,13 +193,13 @@ const updateEdgeLabel = async () => {
       edges.value[edgeIndex].label = newRelationType.value
     }
 
-    message.success('关系已更新')
+    message.success(t('relationshipGraph.messages.relationUpdated'))
     showEditEdgeModal.value = false
     editingEdgeId.value = null
     newRelationType.value = ''
   } catch (error) {
     console.error('Failed to update relationship:', error)
-    message.error('更新失败')
+    message.error(t('relationshipGraph.messages.updateFailed'))
   }
 }
 
@@ -206,10 +208,10 @@ const deleteRelationship = async (relationshipId: number) => {
   try {
     await invoke('delete_relationship', { relationshipId })
     edges.value = edges.value.filter(e => e.id !== String(relationshipId))
-    message.success('关系已删除')
+    message.success(t('relationshipGraph.messages.relationDeleted'))
   } catch (error) {
     console.error('Failed to delete relationship:', error)
-    message.error('删除失败')
+    message.error(t('relationshipGraph.messages.deleteFailed'))
   }
 }
 
@@ -224,12 +226,12 @@ const showAddRelationshipModal = (sourceId?: number) => {
 // Add relationship
 const addRelationship = async () => {
   if (!newRelationSource.value || !newRelationTarget.value || !newRelationType.value) {
-    message.warning('请填写完整信息')
+    message.warning(t('relationshipGraph.messages.fillAllFields'))
     return
   }
 
   if (newRelationSource.value === newRelationTarget.value) {
-    message.warning('源和目标不能相同')
+    message.warning(t('relationshipGraph.messages.sameSourceTarget'))
     return
   }
 
@@ -253,11 +255,11 @@ const addRelationship = async () => {
       data: { editable: true }
     })
 
-    message.success('关系已添加')
+    message.success(t('relationshipGraph.messages.relationAdded'))
     showAddModal.value = false
   } catch (error) {
     console.error('Failed to create relationship:', error)
-    message.error('创建失败')
+    message.error(t('relationshipGraph.messages.createFailed'))
   }
 }
 
@@ -278,11 +280,11 @@ const hideContextMenu = () => {
 
 const contextMenuOptions = computed(() => [
   {
-    label: '从此节点添加关系',
+    label: t('relationshipGraph.contextMenu.addFromSource'),
     key: 'add-from-source'
   },
   {
-    label: '查看详情',
+    label: t('relationshipGraph.contextMenu.viewDetails'),
     key: 'view-details'
   }
 ])
@@ -303,18 +305,18 @@ const handleContextMenuSelect = (key: string) => {
 
 // Relation type options
 const relationTypeOptions = [
-  { label: '朋友', value: '朋友' },
-  { label: '敌人', value: '敌人' },
-  { label: '恋人', value: '恋人' },
-  { label: '家人', value: '家人' },
-  { label: '同事', value: '同事' },
-  { label: '上下级', value: '上下级' },
-  { label: '师生', value: '师生' },
-  { label: '兄弟', value: '兄弟' },
-  { label: '姐妹', value: '姐妹' },
-  { label: '竞争对手', value: '竞争对手' },
-  { label: '合作伙伴', value: '合作伙伴' },
-  { label: '其他', value: '其他' }
+  { label: t('relationshipGraph.relationTypes.friend'), value: '朋友' },
+  { label: t('relationshipGraph.relationTypes.enemy'), value: '敌人' },
+  { label: t('relationshipGraph.relationTypes.lover'), value: '恋人' },
+  { label: t('relationshipGraph.relationTypes.family'), value: '家人' },
+  { label: t('relationshipGraph.relationTypes.colleague'), value: '同事' },
+  { label: t('relationshipGraph.relationTypes.superior'), value: '上下级' },
+  { label: t('relationshipGraph.relationTypes.teacher'), value: '师生' },
+  { label: t('relationshipGraph.relationTypes.brother'), value: '兄弟' },
+  { label: t('relationshipGraph.relationTypes.sister'), value: '姐妹' },
+  { label: t('relationshipGraph.relationTypes.rival'), value: '竞争对手' },
+  { label: t('relationshipGraph.relationTypes.partner'), value: '合作伙伴' },
+  { label: t('relationshipGraph.relationTypes.other'), value: '其他' }
 ]
 
 // Character select options
@@ -359,14 +361,14 @@ onMounted(() => {
     <div class="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
       <div class="flex items-center gap-2">
         <Users class="w-5 h-5 text-blue-600" />
-        <h3 class="font-semibold text-gray-900 dark:text-white">人物关系图谱</h3>
-        <span class="text-sm text-gray-500 dark:text-gray-400">({{ characters.length }}人 / {{ edges.length }}条关系)</span>
+        <h3 class="font-semibold text-gray-900 dark:text-white">{{ t('relationshipGraph.title') }}</h3>
+        <span class="text-sm text-gray-500 dark:text-gray-400">({{ t('relationshipGraph.stats', { charCount: characters.length, edgeCount: edges.length }) }})</span>
       </div>
       <NButton type="primary" size="small" @click="showAddRelationshipModal()">
         <template #icon>
           <NIcon><Plus /></NIcon>
         </template>
-        添加关系
+        {{ t('relationshipGraph.addRelation') }}
       </NButton>
     </div>
 
@@ -377,9 +379,9 @@ onMounted(() => {
       </div>
 
       <div v-else-if="characters.length === 0" class="absolute inset-0 flex items-center justify-center">
-        <NEmpty description="暂无人物，请先创建人物">
+        <NEmpty :description="t('relationshipGraph.noCharacters')">
           <template #extra>
-            <p class="text-sm text-gray-500">在"世界观设定"中添加人物后，可以在此查看关系图谱</p>
+            <p class="text-sm text-gray-500">{{ t('relationshipGraph.noCharactersHint') }}</p>
           </template>
         </NEmpty>
       </div>
@@ -413,32 +415,32 @@ onMounted(() => {
       />
 
       <!-- Add Relationship Modal -->
-      <NModal v-model:show="showAddModal" preset="card" title="添加人物关系" style="width: 400px">
+      <NModal v-model:show="showAddModal" preset="card" :title="t('relationshipGraph.addRelationTitle')" style="width: 400px">
         <div class="space-y-4">
           <div>
-            <label class="block text-sm font-medium mb-2">源人物</label>
+            <label class="block text-sm font-medium mb-2">{{ t('relationshipGraph.sourceCharacter') }}</label>
             <NSelect
               v-model:value="newRelationSource"
               :options="characterSelectOptions"
-              placeholder="选择源人物"
+              :placeholder="t('relationshipGraph.selectSource')"
               filterable
             />
           </div>
           <div>
-            <label class="block text-sm font-medium mb-2">目标人物</label>
+            <label class="block text-sm font-medium mb-2">{{ t('relationshipGraph.targetCharacter') }}</label>
             <NSelect
               v-model:value="newRelationTarget"
               :options="characterSelectOptions.filter(o => o.value !== newRelationSource)"
-              placeholder="选择目标人物"
+              :placeholder="t('relationshipGraph.selectTarget')"
               filterable
             />
           </div>
           <div>
-            <label class="block text-sm font-medium mb-2">关系类型</label>
+            <label class="block text-sm font-medium mb-2">{{ t('relationshipGraph.relationType') }}</label>
             <NSelect
               v-model:value="newRelationType"
               :options="relationTypeOptions"
-              placeholder="选择或输入关系类型"
+              :placeholder="t('relationshipGraph.selectOrInputType')"
               filterable
               allow-create
             />
@@ -446,21 +448,21 @@ onMounted(() => {
         </div>
         <template #footer>
           <div class="flex justify-end gap-2">
-            <NButton @click="showAddModal = false">取消</NButton>
-            <NButton type="primary" @click="addRelationship">确定</NButton>
+            <NButton @click="showAddModal = false">{{ t('relationshipGraph.cancel') }}</NButton>
+            <NButton type="primary" @click="addRelationship">{{ t('relationshipGraph.confirm') }}</NButton>
           </div>
         </template>
       </NModal>
 
       <!-- Edit Edge Modal -->
-      <NModal v-model:show="showEditEdgeModal" preset="card" title="编辑关系" style="width: 400px">
+      <NModal v-model:show="showEditEdgeModal" preset="card" :title="t('relationshipGraph.editRelationTitle')" style="width: 400px">
         <div class="space-y-4">
           <div>
-            <label class="block text-sm font-medium mb-2">关系类型</label>
+            <label class="block text-sm font-medium mb-2">{{ t('relationshipGraph.relationType') }}</label>
             <NSelect
               v-model:value="newRelationType"
               :options="relationTypeOptions"
-              placeholder="选择或输入关系类型"
+              :placeholder="t('relationshipGraph.selectOrInputType')"
               filterable
               allow-create
             />
@@ -470,13 +472,13 @@ onMounted(() => {
           <div class="flex justify-between">
             <NPopconfirm v-if="editingEdgeId" @positive-click="() => deleteRelationship(Number(editingEdgeId))">
               <template #trigger>
-                <NButton type="error" secondary>删除关系</NButton>
+                <NButton type="error" secondary>{{ t('relationshipGraph.deleteRelation') }}</NButton>
               </template>
-              确定删除这条关系吗？
+              {{ t('relationshipGraph.deleteConfirm') }}
             </NPopconfirm>
             <div class="flex gap-2 ml-auto">
-              <NButton @click="showEditEdgeModal = false">取消</NButton>
-              <NButton type="primary" @click="updateEdgeLabel">保存</NButton>
+              <NButton @click="showEditEdgeModal = false">{{ t('relationshipGraph.cancel') }}</NButton>
+              <NButton type="primary" @click="updateEdgeLabel">{{ t('relationshipGraph.save') }}</NButton>
             </div>
           </div>
         </template>

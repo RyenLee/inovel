@@ -1,0 +1,18 @@
+{
+  "title": "Sensitive Words Manager",
+  "addPlaceholder": "Enter a sensitive word and press Enter to add",
+  "add": "Add",
+  "importHint": "Click to select a .txt file to import, or drag and drop a file here",
+  "importSubHint": "One sensitive word per line",
+  "noWords": "No sensitive words",
+  "messages": {
+    "loadFailed": "Failed to load sensitive words",
+    "added": "Added: {word}",
+    "addFailed": "Add failed, may already exist",
+    "deleteFailed": "Delete failed",
+    "onlyTxt": "Only .txt files are supported",
+    "imported": "Imported {name}",
+    "importFailed": "Import failed",
+    "importComplete": "Import complete, {count} new sensitive words added"
+  }
+}
