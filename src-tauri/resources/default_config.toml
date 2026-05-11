@@ -65,7 +65,7 @@ api_key = ""
 secret_token = ""
 
 [entry_config]
-enabled = true
+enabled = false
 display_name = "配置管理"
 icon = "settings"
 tooltip = "打开配置管理页面"
