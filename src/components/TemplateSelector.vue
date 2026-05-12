@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
+import { marked } from "marked";
 import {
   NModal,
   NCard,
@@ -23,13 +24,19 @@ import { useTemplateStore } from "../stores/template";
 import type { WritingTemplate } from "../types/template";
 import { useLocale } from "../i18n/composables/useLocale";
 
+// Configure marked
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+});
+
 const { t } = useLocale();
 
 const props = withDefaults(
   defineProps<{
     show: boolean;
     projectId?: number;
-    insertMode?: "replace" | "insert"; // 来自父组件的模式设置
+    insertMode?: "replace" | "append" | "merge"; // 来自父组件的模式设置
   }>(),
   {
     projectId: 0,
@@ -39,26 +46,29 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: "update:show", value: boolean): void;
-  (e: "select", payload: { content: string; mode: "replace" | "insert" }): void;
+  (
+    e: "select",
+    payload: { content: string; mode: "replace" | "append" | "merge" }
+  ): void;
 }>();
 
 // 本地模式状态（用于预览）
-const localInsertMode = ref<"replace" | "insert">("replace");
+const localInsertMode = ref<"replace" | "append" | "merge">("replace");
 
 const message = useMessage();
 const templateStore = useTemplateStore();
 
 const selectedTemplateId = ref<string | null>(null);
-const activeCategory = ref<string>(t("templateSelector.categories.all"));
+const activeCategory = ref<string>("自定义");
 
 // 加载模板（带重试机制）
 const loadTemplates = async () => {
   try {
-    if (props.projectId > 0) {
-      await templateStore.loadAllTemplates(props.projectId);
-    } else {
-      await templateStore.loadBuiltinTemplates();
-    }
+    // 始终同时加载内置模板和用户自定义模板，无论 projectId 是否为 0
+    await Promise.all([
+      templateStore.loadBuiltinTemplates(),
+      templateStore.loadUserTemplates(props.projectId),
+    ]);
   } catch (error) {
     console.error(t("templateSelector.messages.loadFailed") + ":", error);
     message.error(t("templateSelector.messages.loadFailedRetry"));
@@ -76,14 +86,16 @@ onMounted(() => {
   loadTemplates();
 });
 
-// 监听 show 变化，重置选中状态
+// 监听 show 变化，重置选中状态并重新加载模板
 watch(
   () => props.show,
-  (newVal) => {
+  async (newVal) => {
     if (newVal) {
       selectedTemplateId.value = null;
       // 同步父组件的模式设置
       localInsertMode.value = props.insertMode;
+      // 每次打开时都重新加载最新模板
+      await loadTemplates();
     }
   }
 );
@@ -113,8 +125,11 @@ const allTemplates = computed(() => {
 
 // 根据分类筛选模板
 const filteredTemplates = computed(() => {
-  if (activeCategory.value === "全部") {
-    return allTemplates.value;
+  if (activeCategory.value === "自定义") {
+    // 显示用户自定义模板：包括 is_builtin 为 false 的模板和 category 为 "customize" 的模板
+    return allTemplates.value.filter(
+      (t) => !t.is_builtin || t.category === "customize"
+    );
   }
   return allTemplates.value.filter((t) => t.category === activeCategory.value);
 });
@@ -154,46 +169,15 @@ function handleClose() {
   emit("update:show", false);
 }
 
-// 简单 Markdown 转 HTML（用于预览）
+// Markdown 转 HTML（用于预览，与编辑器保持一致）
 function markdownToHtml(md: string): string {
   if (!md) return "";
-
-  let html = md;
-
-  // 标题
-  html = html.replace(/^### (.*$)/gim, "<h3>$1</h3>");
-  html = html.replace(/^## (.*$)/gim, "<h2>$1</h2>");
-  html = html.replace(/^# (.*$)/gim, "<h1>$1</h1>");
-
-  // 粗体
-  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-
-  // 斜体
-  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
-
-  // 引用
-  html = html.replace(/^> (.*$)/gim, "<blockquote>$1</blockquote>");
-
-  // 无序列表
-  html = html.replace(/^- (.*$)/gim, "<li>$1</li>");
-  html = html.replace(/(<li>.*<\/li>)/gims, "<ul>$1</ul>");
-
-  // 有序列表
-  html = html.replace(/^\d+\. (.*$)/gim, "<li>$1</li>");
-
-  // 段落
-  html = html.replace(/\n\n/g, "</p><p>");
-  html = "<p>" + html + "</p>";
-
-  // 清理
-  html = html.replace(/<p><h/g, "<h");
-  html = html.replace(/<\/h[123]><\/p>/g, "");
-  html = html.replace(/<p><blockquote/g, "<blockquote");
-  html = html.replace(/<\/blockquote><\/p>/g, "</blockquote>");
-  html = html.replace(/<p><ul>/g, "<ul>");
-  html = html.replace(/<\/ul><\/p>/g, "</ul>");
-
-  return html;
+  try {
+    return marked.parse(md) as string;
+  } catch (error) {
+    console.error("Markdown parsing failed:", error);
+    return md;
+  }
 }
 </script>
 
@@ -225,8 +209,8 @@ function markdownToHtml(md: string): string {
         <div class="flex items-center justify-between mb-4">
           <n-tabs v-model:value="activeCategory" type="line" style="flex: 1">
             <n-tab-pane
-              name="全部"
-              :tab="t('templateSelector.categories.all')"
+              name="自定义"
+              :tab="t('templateSelector.categories.custom')"
             />
             <n-tab-pane
               name="章节"
@@ -261,12 +245,20 @@ function markdownToHtml(md: string): string {
                   {{ t("templateSelector.insertMode.replaceTooltip") }}
                 </n-tooltip>
               </n-radio-button>
-              <n-radio-button value="insert">
+              <n-radio-button value="append">
                 <n-tooltip trigger="hover">
                   <template #trigger>
-                    <span>{{ t("templateSelector.insertMode.insert") }}</span>
+                    <span>{{ t("templateSelector.insertMode.append") }}</span>
                   </template>
-                  {{ t("templateSelector.insertMode.insertTooltip") }}
+                  {{ t("templateSelector.insertMode.appendTooltip") }}
+                </n-tooltip>
+              </n-radio-button>
+              <n-radio-button value="merge">
+                <n-tooltip trigger="hover">
+                  <template #trigger>
+                    <span>{{ t("templateSelector.insertMode.merge") }}</span>
+                  </template>
+                  {{ t("templateSelector.insertMode.mergeTooltip") }}
                 </n-tooltip>
               </n-radio-button>
             </n-radio-group>
@@ -373,7 +365,9 @@ function markdownToHtml(md: string): string {
                 mode:
                   localInsertMode === "replace"
                     ? t("templateSelector.insertMode.replace")
-                    : t("templateSelector.insertMode.insert"),
+                    : localInsertMode === "append"
+                    ? t("templateSelector.insertMode.append")
+                    : t("templateSelector.insertMode.merge"),
               })
             }}
           </n-text>
@@ -388,7 +382,9 @@ function markdownToHtml(md: string): string {
             {{
               localInsertMode === "replace"
                 ? t("templateSelector.useReplace")
-                : t("templateSelector.useInsert")
+                : localInsertMode === "append"
+                ? t("templateSelector.useAppend")
+                : t("templateSelector.useMerge")
             }}
           </n-button>
         </n-space>

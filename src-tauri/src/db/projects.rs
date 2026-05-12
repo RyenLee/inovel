@@ -55,15 +55,15 @@ pub fn create_project(
 /// 
 /// # 参数
 /// - `conn`: SQLite 数据库连接
-/// - `project_id`: 数据库主键 ID
+/// - `id`: 数据库主键 ID
 /// 
 /// # 返回值
 /// 找到返回 `Ok(Some(ProjectMeta))`，未找到返回 `Ok(None)`，出错返回 `rusqlite::Error`
-pub fn get_project_by_id(conn: &Connection, project_id: i64) -> SqliteResult<Option<ProjectMeta>> {
+pub fn get_project_by_id(conn: &Connection, id: i64) -> SqliteResult<Option<ProjectMeta>> {
     conn.query_row(
         "SELECT id, project_id, name, author, description, path, created_at, last_opened_at
          FROM projects WHERE id = ?1",
-        [project_id],
+        [id],
         |row| {
             Ok(ProjectMeta {
                 id: row.get(0)?,

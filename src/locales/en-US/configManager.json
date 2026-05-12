@@ -19,8 +19,7 @@
     "gzip": { "label": "Gzip Config", "description": "Compression settings" },
     "pagination": { "label": "Pagination", "description": "Pagination settings" },
     "requestMerging": { "label": "Request Merging", "description": "Request merging config" },
-    "security": { "label": "Security", "description": "Sensitive settings" },
-    "entryConfig": { "label": "Entry Config", "description": "Config page entry settings" }
+    "security": { "label": "Security", "description": "Sensitive settings" }
   },
   "fields": {
     "app": {
@@ -85,16 +84,6 @@
     "security": {
       "api_key": "API Key",
       "secret_token": "Secret Token"
-    },
-    "entryConfig": {
-      "entry_enabled": "Enable Config Page Entry",
-      "entry_display_name": "Entry Display Name",
-      "entry_icon": "Entry Icon",
-      "entry_tooltip": "Entry Tooltip",
-      "entry_locations": "Entry Locations (comma separated: menu_bar, toolbar, system_tray, keyboard)",
-      "entry_roles": "Allowed Roles (comma separated: admin, advanced, standard, guest)",
-      "entry_shortcut_key": "Shortcut Key",
-      "entry_shortcut_modifiers": "Shortcut Modifiers (comma separated: Ctrl, Shift, Alt, Meta)"
     }
   },
   "messages": {

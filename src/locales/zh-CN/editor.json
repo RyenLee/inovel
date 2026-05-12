@@ -6,6 +6,7 @@
   "autoSaveEnabled": "已自动保存",
   "saveSuccess": "保存成功",
   "saveError": "保存失败",
+  "loadChapterFailed": "加载章节失败：{chapterTitle}",
   "words": "字数",
   "chars": "字符",
   "chapter": "章节",
@@ -136,7 +137,9 @@
     "exited": "已退出禅模式",
     "exitButton": "退出禅模式 (Esc)",
     "exitFocus": "退出专注模式",
-    "tooltip": "禅模式 (Ctrl+Shift+Z)"
+    "tooltip": "禅模式 (Ctrl+Shift+Z)",
+    "openingLastChapter": "正在打开最后一个章节...",
+    "noChapterAvailable": "当前项目中没有可用的章节"
   },
   "fullscreenTooltip": "全屏 (F11)",
   "fullscreenFailed": "全屏切换失败",
@@ -172,9 +175,15 @@
     "created": "快照已创建",
     "gitInitAndCreated": "Git 已初始化，快照已创建",
     "gitInitFailed": "Git 初始化失败，快照创建失败。请在项目目录下手动执行 git init",
-    "autoSaveMessage": "自动保存 - {title} @ {time}",
-    "manualSnapshotMessage": "手动快照 @ {time}",
-    "appCloseMessage": "应用关闭 @ {time}"
+    "autoSaveMessage": "自动保存 - {title} {'@'} {time}",
+    "manualSnapshotMessage": "手动快照 {'@'} {time}",
+    "appCloseMessage": "应用关闭 {'@'} {time}",
+    "noChapter": "请先打开一个章节",
+    "noProject": "当前没有打开的项目",
+    "projectNotFound": "项目目录不存在，请检查项目路径配置",
+    "permissionDenied": "没有权限访问项目目录，请检查文件夹权限设置",
+    "createFailed": "快照创建失败：{error}",
+    "unknownError": "未知错误"
   },
   "mode": {
     "typewriterOn": "打字机模式已开启",
@@ -214,5 +223,10 @@
     "show": "显示灵感看板",
     "hide": "隐藏灵感看板",
     "hint": "双击卡片编辑，右键插入到编辑器"
+  },
+  "applyTemplate": {
+    "button": "应用模板",
+    "noChapter": "请先选择一个章节",
+    "success": "模板已成功应用"
   }
 }

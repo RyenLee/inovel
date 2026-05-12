@@ -1,0 +1,61 @@
+{
+  "title": "Custom Template Management",
+  "open": "Template Management",
+  "newTemplate": "New Template",
+  "editTemplate": "Edit Template",
+  "templateName": "Template Name",
+  "templateDescription": "Template Description",
+  "templateCategory": "Template Category",
+  "templateContent": "Template Content",
+  "placeholder": {
+    "name": "Enter template name",
+    "description": "Enter template description",
+    "category": "Select category",
+    "content": "Enter template content (Markdown supported)"
+  },
+  "buttons": {
+    "create": "Create",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "preview": "Preview"
+  },
+  "confirm": {
+    "deleteTitle": "Confirm Delete",
+    "deleteMessage": "Are you sure you want to delete template \"{name}\"? This action cannot be undone."
+  },
+  "messages": {
+    "saveSuccess": "Template saved successfully!",
+    "updateSuccess": "Template updated successfully!",
+    "deleteSuccess": "Template deleted successfully!",
+    "saveError": "Failed to save template",
+    "updateError": "Failed to update template",
+    "deleteError": "Failed to delete template",
+    "loadError": "Failed to load templates",
+    "emptyList": "No custom templates yet, click the button above to create a new template",
+    "nameRequired": "Please enter template name",
+    "contentRequired": "Please enter template content"
+  },
+  "table": {
+    "name": "Name",
+    "description": "Description",
+    "category": "Category",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "actions": "Actions"
+  },
+  "modal": {
+    "createTitle": "Create New Template",
+    "editTitle": "Edit Template",
+    "previewTitle": "Preview Template",
+    "createSubtitle": "Fill in the information below to create a new custom writing template",
+    "editSubtitle": "Modify template information, changes will be saved upon confirmation",
+    "previewSubtitle": "View the complete content and rendered output of the template"
+  },
+  "help": {
+    "name": "Give your template a clear name for easy identification and use",
+    "description": "Briefly describe the purpose and features of the template",
+    "content": "Supports Markdown syntax, including headings, lists, quotes, etc."
+  }
+}

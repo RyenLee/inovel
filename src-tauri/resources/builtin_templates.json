@@ -1,66 +1,342 @@
 [
   {
-    "id": "builtin_blank",
-    "name": "空白页",
-    "description": "从空白页面开始写作",
-    "category": "章节",
-    "content": "# 新章节\n\n",
-    "is_builtin": true
+    "category": "chapter",
+    "objects": [
+      {
+        "id": "builtin_blank",
+        "name": "空白页",
+        "description": "从空白页面开始写作",
+        "content": "# 新章节\n\n",
+        "category": "章节",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_quote",
+        "name": "引用开头",
+        "description": "以引用开始的章节，营造氛围",
+        "content": "> \"在命运的十字路口，每个选择都通往不同的未来。\"\n> — 《古老预言集》\n\n\n从这里开始你的故事...\n",
+        "category": "章节",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_character_entry",
+        "name": "人物出场",
+        "description": "人物首次出场场景模板",
+        "content": "## 章节标题\n\n**出场人物：** 张三、李四\n\n**场景：** 咖啡店\n\n---\n\n张三推开门，风铃清脆地响了一声。他扫视了一圈，很快就看到了角落里那个熟悉的身影。\n\n[在这里继续描写人物的动作、对话和心理活动]\n",
+        "category": "章节",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_cliffhanger",
+        "name": "悬念结尾",
+        "description": "以强烈悬念结束章节，吸引读者继续阅读",
+        "content": "## 章节标题\n\n[正文内容...]\n\n---\n\n突然，灯光全部熄灭。\n门外传来细微的脚步声，越来越近。\n\n[人物名] 握紧手中的东西，心跳如雷。\n\n**—— 待续 —**\n",
+        "category": "章节",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_flashback",
+        "name": "闪回场景",
+        "description": "插入过去回忆的章节模板",
+        "content": "## 章节标题\n\n[当前场景描述...]\n\n---\n\n**记忆如潮水般涌来...**\n\n三年前的同一个地方，[人物名] 还...\n\n[详细描写闪回内容]\n\n---\n\n[回到现实]\n眼前的景象与记忆重叠，[人物名] 忍不住颤抖起来。\n",
+        "category": "章节",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_battle_scene",
+        "name": "战斗场景",
+        "description": "紧张激烈的战斗描写模板",
+        "content": "## 章节标题\n\n剑光闪烁，杀气四溢。\n\n[人物名] 侧身躲过致命一击，反手一剑刺出。鲜血溅起，空气中弥漫着铁锈味。\n\n敌人冷笑：\"就这点本事？\"\n\n[详细描写招式、感官、心理、环境]\n\n战斗仍在继续...\n",
+        "category": "章节",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_emotional_peak",
+        "name": "情感高潮",
+        "description": "人物情绪爆发或情感爆发场景",
+        "content": "## 章节标题\n\n[人物名] 再也忍不住，眼泪夺眶而出。\n\n\"你知道这些年我是怎么过来的吗？！\"\n\n[详细描写情感爆发、动作、环境烘托、内心独白]\n\n空气仿佛都凝固了...\n",
+        "category": "章节",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_dream_sequence",
+        "name": "梦境序列",
+        "description": "梦境或幻觉场景模板",
+        "content": "## 章节标题\n\n[人物名] 陷入沉睡...\n\n**梦中：**\n\n世界扭曲，色彩斑斓。熟悉的人影在雾气中若隐若现...\n\n[梦境描写，可超现实]\n\n---\n\n[醒来]\n\n[人物名] 猛地惊醒，满头大汗。\n",
+        "category": "章节",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_time_skip",
+        "name": "时间跳转",
+        "description": "快速跨越时间线的章节模板",
+        "content": "## 章节标题\n\n**三个月后**\n\n[场景变化描写]\n\n[人物名] 看着镜子中的自己，已经完全不同了。\n\n[交代这段时间发生的重要变化]\n",
+        "category": "章节",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_mystery_opening",
+        "name": "谜团开场",
+        "description": "以谜团或悬疑开始的章节",
+        "content": "## 章节标题\n\n桌上躺着一封没有署名的信。\n\n[人物名] 拆开信纸，只有短短一行字：\n\n**\"我知道你三年前做了什么。\"**\n\n[人物反应与后续调查描写]\n",
+        "category": "章节",
+        "is_builtin": true
+      }
+    ]
   },
   {
-    "id": "builtin_image_text",
-    "name": "图文混排",
-    "description": "上图下文式布局，适合场景描写",
-    "category": "图文",
-    "content": "## 章节标题\n\n![在此插入图片]()\n\n正文内容开始...\n\n在这里描述场景、人物或情节。",
-    "is_builtin": true
+    "category": "textual",
+    "objects": [
+      {
+        "id": "builtin_image_text",
+        "name": "图文混排",
+        "description": "上图下文式布局，适合场景描写",
+        "content": "## 章节标题\n\n![在此插入图片]()\n\n正文内容开始...\n\n在这里描述场景、人物或情节。\n",
+        "category": "图文",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_dual_image",
+        "name": "并列图文",
+        "description": "左右或上下并列两张图片+文字",
+        "content": "## 章节标题\n\n![左侧图片]()\n\n**描述1**\n\n[文字说明...]\n\n![右侧图片]()\n\n**描述2**\n\n[对应文字说明...]\n",
+        "category": "图文",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_full_image",
+        "name": "全屏图片描述",
+        "description": "以大图为主的场景渲染模板",
+        "content": "## 章节标题\n\n![场景大图]()\n\n**地点：** [地点描述]\n\n[沉浸式环境描写...]\n",
+        "category": "图文",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_image_gallery",
+        "name": "图片画廊",
+        "description": "多图并排展示模板",
+        "content": "## 章节标题\n\n![图1]()\n![图2]()\n![图3]()\n\n[为每张图片添加对应文字说明]\n",
+        "category": "图文",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_text_image_interleave",
+        "name": "图文交错",
+        "description": "文字与图片交替出现的布局",
+        "content": "## 章节标题\n\n[一段文字...]\n\n![插入图片1]()\n\n[继续文字...]\n\n![插入图片2]()\n\n[结尾文字...]\n",
+        "category": "图文",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_poetry_layout",
+        "name": "诗意排版",
+        "description": "适合诗歌、歌词或文艺描写的排版",
+        "content": "## 章节标题\n\n**诗意片段**\n\n这里是诗句或优美描写\n\n---\n\n更多诗意的文字...\n",
+        "category": "图文",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_letter_format",
+        "name": "书信格式",
+        "description": "以书信或日记形式呈现",
+        "content": "## 章节标题\n\n**亲爱的[收信人]：**\n\n[书信正文...]\n\n**落款**\n[写信人]\n[日期]\n",
+        "category": "图文",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_newspaper_style",
+        "name": "新闻报道式",
+        "description": "报纸或新闻稿风格排版",
+        "content": "## 【XX日报】\n\n**标题：** [耸人听闻的标题]\n\n**时间：** [日期]  **地点：** [地点]\n\n[正文报道...]\n\n![新闻图片]()\n",
+        "category": "图文",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_chat_record",
+        "name": "聊天记录",
+        "description": "手机聊天界面风格",
+        "content": "## 章节标题\n\n**微信聊天记录**\n\n**对方：** 你在哪？\n\n**我：** [回复内容]\n\n![图片或语音]()\n\n**对方：** ...\n",
+        "category": "图文",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_split_screen",
+        "name": "分屏对比",
+        "description": "左右分屏对比不同场景或视角",
+        "content": "## 章节标题\n\n| 左侧视角 | 右侧视角 |\n| --- | --- |\n| ![左图]() | ![右图]() |\n| [描述文字] | [描述文字] |\n",
+        "category": "图文",
+        "is_builtin": true
+      }
+    ]
   },
   {
-    "id": "builtin_list",
-    "name": "列表结构",
-    "description": "使用列表组织要点，适合大纲或笔记",
-    "category": "结构化",
-    "content": "## 标题\n\n- 要点 A\n- 要点 B\n  - 子项 1\n  - 子项 2\n- 要点 C\n\n列表可以帮助你清晰地组织思路。",
-    "is_builtin": true
+    "category": "structured",
+    "objects": [
+      {
+        "id": "builtin_list",
+        "name": "列表结构",
+        "description": "使用列表组织要点，适合大纲或笔记",
+        "content": "## 标题\n\n- 要点 A\n- 要点 B\n  - 子项 1\n  - 子项 2\n- 要点 C\n\n列表可以帮助你清晰地组织思路。\n",
+        "category": "结构化",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_three_act",
+        "name": "三段式",
+        "description": "经典三幕结构，适合章节内容组织",
+        "content": "## 起始\n\n第一段：引入场景或人物...\n\n## 发展\n\n第二段：展开情节或冲突...\n\n## 结局\n\n第三段：收束或留下悬念...\n",
+        "category": "结构化",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_split_notes",
+        "name": "分栏笔记",
+        "description": "左右分栏式笔记，适合对比或双线叙事",
+        "content": "**提示：** 你可以使用表格来实现分栏效果\n\n| 左侧内容 | 右侧内容 |\n| --- | --- |\n| 第一条线索 | 对应的发现 |\n| 人物 A 的视角 | 人物 B 的视角 |\n\n或者使用并排的两个引用块。\n",
+        "category": "结构化",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_timeline",
+        "name": "时间线结构",
+        "description": "按时间顺序组织事件的模板",
+        "content": "## 章节标题\n\n**时间线：**\n\n- **日期/时刻**：事件描述...\n- **日期/时刻**：事件描述...\n\n[在时间线之间添加过渡叙述]\n",
+        "category": "结构化",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_character_profile",
+        "name": "人物小传",
+        "description": "在章节中插入人物背景信息卡",
+        "content": "## 章节标题\n\n**人物档案**\n\n**姓名：**\n**年龄：**\n**身份：**\n**当前目标：**\n**关键秘密：**\n\n---\n\n[正文开始，融入上述信息...]\n",
+        "category": "结构化",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_hero_journey",
+        "name": "英雄之旅",
+        "description": "经典英雄成长阶段模板",
+        "content": "## 章节标题\n\n**英雄之旅阶段：**\n\n1. 普通世界\n2. 冒险召唤\n3. 拒绝召唤\n4. 遇见导师\n5. 越过第一道门槛\n6. 考验、盟友与敌人\n7. 接近最深的洞穴\n8. 苦难之路\n9. 报酬\n10. 返回的路\n11. 复活\n12. 携药而归\n\n[当前所处阶段描写]\n",
+        "category": "结构化",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_contrast_table",
+        "name": "对比表格",
+        "description": "使用表格进行强烈对比",
+        "content": "## 章节标题\n\n| 过去 | 现在 |\n| --- | --- |\n| [过去状态] | [现在状态] |\n| [过去关系] | [现在关系] |\n",
+        "category": "结构化",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_question_answer",
+        "name": "问答结构",
+        "description": "以问题驱动情节发展的模板",
+        "content": "## 章节标题\n\n**Q：** [核心问题？]\n\n**A：** [初步回答...]\n\n[继续展开情节]\n",
+        "category": "结构化",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_branching_choice",
+        "name": "分支选择",
+        "description": "多结局或选择分支结构",
+        "content": "## 章节标题\n\n[当前困境...]\n\n**选择：**\n\n1. [选项A] → [后果预览]\n2. [选项B] → [后果预览]\n\n[在此描写实际选择后的发展]\n",
+        "category": "结构化",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_evidence_log",
+        "name": "证据记录",
+        "description": "适合侦探、悬疑类小说的证据整理模板",
+        "content": "## 证据档案\n\n- **证据1**：[描述] → [推论]\n- **证据2**：[描述] → [推论]\n- **证据3**：[描述] → [推论]\n\n**当前最大疑点：**\n",
+        "category": "结构化",
+        "is_builtin": true
+      }
+    ]
   },
   {
-    "id": "builtin_dialogue",
-    "name": "对话剧本",
-    "description": "对话格式模板，适合编写对话场景",
-    "category": "对话",
-    "content": "**张三**：\"你好，很久不见了。\"\n\n**李四**：\"是啊，最近过得怎么样？\"\n\n[两人走进咖啡店，找了个靠窗的位置坐下]\n\n**张三**：\"其实我今天找你，是有件事想和你商量...\"\n\n**李四**：\"什么事？你说。\"",
-    "is_builtin": true
-  },
-  {
-    "id": "builtin_quote",
-    "name": "引用开头",
-    "description": "以引用开始的章节，营造氛围",
-    "category": "章节",
-    "content": "> \"在命运的十字路口，每个选择都通往不同的未来。\"\n> — 《古老预言集》\n\n\n\n从这里开始你的故事...\n\n",
-    "is_builtin": true
-  },
-  {
-    "id": "builtin_three_act",
-    "name": "三段式",
-    "description": "经典三幕结构，适合章节内容组织",
-    "category": "结构化",
-    "content": "## 起始\n\n第一段：引入场景或人物...\n\n## 发展\n\n第二段：展开情节或冲突...\n\n## 结局\n\n第三段：收束或留下悬念...\n\n",
-    "is_builtin": true
-  },
-  {
-    "id": "builtin_character_entry",
-    "name": "人物出场",
-    "description": "人物首次出场场景模板",
-    "category": "章节",
-    "content": "## 章节标题\n\n**出场人物：** 张三、李四\n\n**场景：** 咖啡店\n\n---\n\n张三推开门，风铃清脆地响了一声。他扫视了一圈，很快就看到了角落里那个熟悉的身影。\n\n[在这里继续描写人物的动作、对话和心理活动]",
-    "is_builtin": true
-  },
-  {
-    "id": "builtin_split_notes",
-    "name": "分栏笔记",
-    "description": "左右分栏式笔记，适合对比或双线叙事",
-    "category": "结构化",
-    "content": "> **提示：** 你可以使用表格来实现分栏效果\n\n| 左侧内容 | 右侧内容 |\n| --- | --- |\n| 第一条线索 | 对应的发现 |\n| 人物 A 的视角 | 人物 B 的视角 |\n| 过去发生的事 | 现在的影响 |\n\n---\n\n或者使用并排的两个引用块：\n\n> **左侧叙事**\n> \n> 在这里写下第一条叙事线...\n\n> **右侧叙事**\n> \n> 在这里写下第二条叙事线...",
-    "is_builtin": true
+    "category": "dialogue",
+    "objects": [
+      {
+        "id": "builtin_dialogue",
+        "name": "对话剧本",
+        "description": "对话格式模板，适合编写对话场景",
+        "content": "**张三**：\"你好，很久不见了。\"\n\n**李四**：\"是啊，最近过得怎么样？\"\n\n[动作描写]\n\n**张三**：\"其实我今天找你，是有件事想和你商量...\"\n",
+        "category": "对话",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_group_dialogue",
+        "name": "多人对话",
+        "description": "适合三人及以上群聊式对话场景",
+        "content": "**张三**：\"大家听我说，这件事不能再拖了！\"\n\n**李四**：\"可是风险太大了...\"\n\n**王五**（冷笑）：\"你们两个胆小鬼。\"\n",
+        "category": "对话",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_monologue",
+        "name": "内心独白",
+        "description": "人物内心活动与自言自语模板",
+        "content": "**[人物名] 的内心独白**\n\n*为什么会变成这样？*\n\n[人物名] 望着窗外，拳头不由自主地握紧。\n\n**（低声自语）** \"够了，别再想了。\"\n",
+        "category": "对话",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_argument",
+        "name": "激烈争吵",
+        "description": "争执、对抗式对话模板",
+        "content": "**张三**（愤怒）：\"你居然瞒着我做了这种事！\"\n\n**李四**（提高音量）：\"那你呢？你又比我好到哪里去？！\"\n\n[动作与情绪升级描写]\n",
+        "category": "对话",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_flirt",
+        "name": "暧昧调情",
+        "description": "轻松暧昧的对话场景",
+        "content": "**[男/女]**（微笑）：\"你每次看我的眼神都不一样哦。\"\n\n**[女/男]**（轻笑）：\"那你猜猜我现在在想什么？\"\n",
+        "category": "对话",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_interrogation",
+        "name": "审问逼供",
+        "description": "审讯、逼问式对话",
+        "content": "**审问者**：\"说吧，那天晚上你到底在哪里？\"\n\n**嫌疑人**（紧张）：\"我...我记不清了...\"\n\n**审问者**（冷声）：\"别跟我耍花样！\"\n",
+        "category": "对话",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_phone_call",
+        "name": "电话对话",
+        "description": "单边或双边电话通话模板",
+        "content": "**[人物名] 接起电话：**\n\n“喂？什么事这么急？”\n\n[对方声音]：“......”\n\n**[人物名] 脸色骤变**：\"你说什么？！\"\n",
+        "category": "对话",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_whisper",
+        "name": "低语耳语",
+        "description": "秘密、亲密、低声对话",
+        "content": "**[人物名] 贴近耳朵轻声说：**\n\n“听好了，这件事只有我们两个人知道……”\n\n[对方反应与氛围描写]\n",
+        "category": "对话",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_banter",
+        "name": "轻松打趣",
+        "description": "朋友间幽默、斗嘴对话",
+        "content": "**张三**（坏笑）：\"你今天这衣服，是不是穿反了？\"\n\n**李四**：\"闭嘴！那你昨天那发型呢？像被狗舔过一样。\"\n",
+        "category": "对话",
+        "is_builtin": true
+      },
+      {
+        "id": "builtin_confession",
+        "name": "告白表白",
+        "description": "情感告白或重要表白场景",
+        "content": "**[人物名] 深吸一口气：**\n\n“我喜欢你，已经很久了。”\n\n[对方反应...]\n\n“我不是一时冲动，我是认真的。”\n",
+        "category": "对话",
+        "is_builtin": true
+      }
+    ]
   }
 ]

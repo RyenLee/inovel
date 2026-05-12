@@ -4,9 +4,7 @@
     "security": {
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**"
-        ]
+        "scope": ["**"]
       },
       "csp": null
     }
@@ -39,14 +37,7 @@
       "resources/default_config.toml"
     ],
     "shortDescription": "Novel writing and management tool",
-    "targets": [
-      "msi",
-      "nsis",
-      "dmg",
-      "app",
-      "deb",
-      "appimage"
-    ],
+    "targets": ["msi", "nsis", "dmg", "app", "deb", "appimage"],
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
@@ -66,5 +57,5 @@
     }
   },
   "productName": "iNovel",
-  "version": "1.0.1"
+  "version": "1.1.0"
 }

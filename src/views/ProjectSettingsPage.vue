@@ -144,7 +144,7 @@ const changeCover = async () => {
     isChangingCover.value = true;
     try {
       const newCoverPath = await invoke<string>("set_cover", {
-        projectId: projectId.value,
+        id: projectId.value,
         imagePath: path,
       });
 

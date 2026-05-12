@@ -8,6 +8,7 @@ import ProjectStatsDashboard from "../views/ProjectStatsDashboard.vue";
 import WorldbuildingPage from "../views/WorldbuildingPage.vue";
 import TaskChecklistPage from "../views/TaskChecklistPage.vue";
 import ConfigManagerPage from "../views/ConfigManagerPage.vue";
+import UserTemplatesPage from "../views/UserTemplatesPage.vue";
 
 const router = createRouter({
     history: createWebHashHistory(),
@@ -61,6 +62,11 @@ const router = createRouter({
             path: "/config",
             name: "ConfigManager",
             component: ConfigManagerPage,
+        },
+        {
+            path: "/templates",
+            name: "UserTemplates",
+            component: UserTemplatesPage,
         },
     ],
 });

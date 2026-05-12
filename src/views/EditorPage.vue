@@ -61,6 +61,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useTheme } from "../composables/useTheme";
 import { useLocale } from "../i18n/composables/useLocale";
+import { useSnapshotMessage } from "../i18n/composables/useSnapshotMessage";
 
 import TreeSidebar from "../components/TreeSidebar.vue";
 import OutlinePanel from "../components/OutlinePanel.vue";
@@ -98,7 +99,8 @@ const InspirationBoard = defineAsyncComponent(
 );
 
 const { isDark, toggleDark } = useTheme();
-const { t } = useLocale();
+const { t, isZhCN, isEnUS } = useLocale();
+const { formatSnapshotMessage } = useSnapshotMessage();
 
 // Initialize enum dictionary
 const enumDictionary = useEnumDictionary();
@@ -260,6 +262,32 @@ const toggleZenMode = async () => {
     message.warning(t("editor.zenMode.pomodoroActive"));
     return;
   }
+
+  // If enabling zen mode, perform pre-checks
+  if (!isZenMode.value) {
+    // Check if editor instance exists and has content
+    const hasEditorInstance = editorRef.value?.editor !== undefined;
+    const hasCurrentChapter = currentChapter.value !== null;
+
+    if (!hasEditorInstance || !hasCurrentChapter) {
+      // Scan chapter tree for the last chapter
+      let lastChapter: Chapter | null = null;
+      for (const volume of chapterTree.value) {
+        if (volume.chapters.length > 0) {
+          lastChapter = volume.chapters[volume.chapters.length - 1];
+        }
+      }
+
+      if (lastChapter) {
+        message.info(t("editor.zenMode.openingLastChapter"));
+        await handleSelectChapter(lastChapter.id, lastChapter);
+      } else {
+        message.warning(t("editor.zenMode.noChapterAvailable"));
+        return;
+      }
+    }
+  }
+
   isZenMode.value = !isZenMode.value;
   if (isZenMode.value) {
     message.info(t("editor.zenMode.activated"));
@@ -381,6 +409,14 @@ const projectName = computed(() => {
     (p) => p.id === Number(projectId.value)
   );
   return project?.name || t("editor.project") + ` ${projectId.value}`;
+});
+
+const truncatedProjectName = computed(() => {
+  const name = projectName.value;
+  if (name.length > 5) {
+    return name.slice(0, 5) + "...";
+  }
+  return name;
 });
 
 // 计算本卷字数（优先使用 currentChapter 的实时字数）
@@ -525,20 +561,31 @@ const loadTodayRecord = async () => {
 
 // 加载章节内容（使用 chapterId）
 const loadChapterContentByPath = async (chapterId: number): Promise<string> => {
+  if (!projectId.value) {
+    console.error("加载章节失败: 项目ID为空");
+    throw new Error("项目ID为空");
+  }
+
   try {
     const content = await invoke<string>("get_chapter_content", {
       projectId: String(projectId.value),
       chapterId: String(chapterId),
     });
+
+    if (content === undefined || content === null) {
+      console.warn(`章节 ${chapterId} 内容为空`);
+      return "";
+    }
+
     return content;
   } catch (error) {
-    console.error("加载章节失败:", error);
-    return "";
+    console.error(`加载章节 ${chapterId} 失败:`, error);
+    throw error;
   }
 };
 
 // 保存章节内容（支持 HTML）
-const saveChapter = async () => {
+const saveChapter = async (autoCreateSnapshot: boolean = true) => {
   if (isSaving.value || !currentChapter.value) return;
 
   isSaving.value = true;
@@ -552,17 +599,20 @@ const saveChapter = async () => {
       content: contentToSave,
     });
     // Auto-commit to git after save
-    try {
-      const now = new Date().toLocaleString("zh-CN");
-      await invoke("create_snapshot", {
-        projectId: Number(projectId.value),
-        message: t("editor.snapshot.autoSaveMessage", {
+    if (autoCreateSnapshot) {
+      try {
+        const now = new Date().toLocaleString();
+        const commitMessage = formatSnapshotMessage("auto", {
           title: currentChapter.value.title,
           time: now,
-        }),
-      });
-    } catch (_e) {
-      // If git repo doesn't exist yet, ignore silently
+        });
+        await invoke("create_snapshot", {
+          projectId: Number(projectId.value),
+          message: commitMessage,
+        });
+      } catch (_e) {
+        // If git repo doesn't exist yet, ignore silently
+      }
     }
     // 获取当前编辑器中的实时字数
     const finalWordCount = editorRef.value?.getWordCount() ?? 0;
@@ -608,33 +658,49 @@ const saveChapter = async () => {
 
 // 手动创建快照（先保存，再创建 Git 快照）
 const manualSnapshot = async () => {
-  if (!currentChapter.value) return;
-  await saveChapter();
+  if (!currentChapter.value) {
+    message.warning(t("editor.snapshot.noChapter"));
+    return;
+  }
+
+  if (!projectId.value) {
+    message.warning(t("editor.snapshot.noProject"));
+    return;
+  }
+
   try {
-    const now = new Date().toLocaleString("zh-CN");
-    await invoke("create_snapshot", {
+    // 先保存当前章节，但是不自动创建快照（避免重复快照）
+    await saveChapter(false);
+
+    const now = new Date().toLocaleString();
+    const commitMessage = formatSnapshotMessage("manual", { time: now });
+
+    console.log("准备创建快照，消息:", commitMessage);
+    const result = await invoke("create_snapshot", {
       projectId: Number(projectId.value),
-      message: t("editor.snapshot.manualSnapshotMessage", { time: now }),
+      message: commitMessage,
     });
+
+    console.log("快照创建成功:", result);
     message.success(t("editor.snapshot.created"));
-  } catch (e) {
-    console.error("快照创建失败:", e);
-    // Try to init git first, then retry
-    try {
-      await invoke("init_project_git", {
-        projectId: Number(projectId.value),
-        gitignore: null,
-      });
-      await invoke("create_snapshot", {
-        projectId: Number(projectId.value),
-        message: t("editor.snapshot.manualSnapshotMessage", {
-          time: new Date().toLocaleString("zh-CN"),
-        }),
-      });
-      message.success(t("editor.snapshot.gitInitAndCreated"));
-    } catch (e2) {
-      message.error(t("editor.snapshot.gitInitFailed"));
-      console.error("Git init 失败:", e2);
+  } catch (error: any) {
+    console.error("快照创建失败:", error);
+
+    // 提取详细错误信息
+    const errorMessage =
+      typeof error === "string"
+        ? error
+        : error.message ||
+          error.toString() ||
+          t("editor.snapshot.unknownError");
+
+    // 根据错误类型显示不同的提示
+    if (errorMessage.includes("项目目录不存在")) {
+      message.error(t("editor.snapshot.projectNotFound"));
+    } else if (errorMessage.includes("权限")) {
+      message.error(t("editor.snapshot.permissionDenied"));
+    } else {
+      message.error(t("editor.snapshot.createFailed", { error: errorMessage }));
     }
   }
 };
@@ -736,25 +802,43 @@ const handleSelectChapter = async (chapterId: number, chapter: Chapter) => {
     await saveChapter();
   }
 
-  // 设置加载状态，编辑器会显示占位符
-  currentChapter.value = chapter;
-  currentContent.value = ""; // 清空内容
+  // 设置加载状态
+  isLoading.value = true;
 
-  // 加载新章节内容
-  const content = await loadChapterContentByPath(chapter.id);
+  try {
+    // 设置当前章节
+    currentChapter.value = chapter;
+    currentContent.value = ""; // 清空内容
 
-  // 内容加载完成后再更新，避免中间状态导致的闪烁
-  currentContent.value = content;
+    // 加载新章节内容
+    const content = await loadChapterContentByPath(chapter.id);
 
-  // 重新加载章节树以获取最新字数
-  await loadChapterTree();
+    // 内容加载完成后再更新，避免中间状态导致的闪烁
+    currentContent.value = content;
 
-  // 同步 currentChapter 的字数缓存（如果章节树中有最新数据）
-  const updatedChapter = chapterTree.value
-    .flatMap((v) => v.chapters)
-    .find((c) => c.id === chapterId);
-  if (updatedChapter) {
-    currentChapter.value.word_count_cache = updatedChapter.word_count_cache;
+    // 重新加载章节树以获取最新字数
+    await loadChapterTree();
+
+    // 同步 currentChapter 的字数缓存（如果章节树中有最新数据）
+    const updatedChapter = chapterTree.value
+      .flatMap((v) => v.chapters)
+      .find((c) => c.id === chapterId);
+    if (updatedChapter) {
+      currentChapter.value.word_count_cache = updatedChapter.word_count_cache;
+    }
+
+    console.log(`章节 ${chapterId} 加载成功，内容长度: ${content.length} 字符`);
+  } catch (error) {
+    console.error(`加载章节 ${chapterId} 失败:`, error);
+    message.error(
+      t("editor.loadChapterFailed", { chapterTitle: chapter.title })
+    );
+
+    // 重置状态
+    currentChapter.value = null;
+    currentContent.value = "";
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -820,11 +904,11 @@ onUnmounted(async () => {
   }
   // Auto-commit on close
   try {
+    const now = new Date().toLocaleString();
+    const commitMessage = formatSnapshotMessage("appClose", { time: now });
     await invoke("create_snapshot", {
       projectId: Number(projectId.value),
-      message: t("editor.snapshot.appCloseMessage", {
-        time: new Date().toLocaleString("zh-CN"),
-      }),
+      message: commitMessage,
     });
   } catch {
     /* ok */
@@ -914,20 +998,27 @@ const todayNewWords = computed(() => {
           </button>
           <FileText class="w-6 h-6 text-blue-600" />
           <h1 class="text-lg font-bold">{{ t("welcome.title") }}</h1>
-          <span
-            class="px-3 py-1 rounded-full text-sm font-medium"
-            :class="
-              isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
-            "
-          >
+          <n-tooltip trigger="hover">
+            <template #trigger>
+              <span
+                class="px-3 py-1 rounded-full text-sm font-medium cursor-pointer"
+                :class="
+                  isDark
+                    ? 'bg-gray-700 text-gray-300'
+                    : 'bg-gray-100 text-gray-600'
+                "
+              >
+                {{ truncatedProjectName }}
+              </span>
+            </template>
             {{ projectName }}
-          </span>
+          </n-tooltip>
         </div>
         <div class="flex items-center gap-2">
           <n-button
             type="primary"
             size="small"
-            @click="saveChapter"
+            @click="() => saveChapter()"
             :loading="isSaving"
             :disabled="!currentChapter"
           >
@@ -938,15 +1029,6 @@ const todayNewWords = computed(() => {
             </template>
             {{ t("editor.save") }}
           </n-button>
-          <!-- <n-tooltip trigger="hover">
-            <template #trigger>
-              <button @click="openNameGenerator" class="p-2 rounded-lg transition-colors duration-300"
-                :class="isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
-                <User class="w-5 h-5" />
-              </button>
-            </template>
-            名称生成
-          </n-tooltip> -->
           <n-tooltip trigger="hover">
             <template #trigger>
               <button

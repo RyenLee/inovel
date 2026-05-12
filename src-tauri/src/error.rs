@@ -8,51 +8,51 @@ use thiserror::Error;
 pub enum AppError {
     /// 数据库操作相关错误（如连接失败、查询失败、插入失败等）
     /// 通过 `#[from]` 自动将 `rusqlite::Error` 转换为此类型
-    #[error("数据库错误: {0}")]
+    #[error("database error: {0}")]
     Database(#[from] rusqlite::Error),
 
     /// 文件系统操作相关错误（如文件读写失败、目录创建失败等）
-    #[error("IO 错误: {0}")]
+    #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
     /// JSON 序列化/反序列化错误
-    #[error("序列化错误: {0}")]
+    #[error("serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
 
     /// 配置文件读取或解析错误
-    #[error("配置错误: {0}")]
+    #[error("configuration error: {0}")]
     Config(String),
 
     /// 用户输入验证失败（如密码太短、参数格式错误等）
-    #[error("验证错误: {0}")]
+    #[error("validation error: {0}")]
     Validation(String),
 
     /// 请求的资源未找到（如项目不存在、章节不存在等）
-    #[error("未找到: {0}")]
+    #[error("not found error: {0}")]
     NotFound(String),
 
     /// 权限不足（如尝试访问未授权资源）
-    #[error("权限不足: {0}")]
+    #[error("permission error: {0}")]
     Permission(String),
 
     /// 加密/解密操作失败（如密码错误、密钥派生失败等）
-    #[error("加密错误: {0}")]
+    #[error("encryption error: {0}")]
     Encryption(String),
 
     /// Git 操作失败（如仓库初始化失败、提交失败等）
-    #[error("Git 操作失败: {0}")]
+    #[error("git error: {0}")]
     Git(String),
 
     /// 导出操作失败（如生成 EPUB 失败、写入文件失败等）
-    #[error("导出失败: {0}")]
+    #[error("export error: {0}")]
     Export(String),
 
     /// 备份操作失败（如压缩失败、保存失败等）
-    #[error("备份失败: {0}")]
+    #[error("backup error: {0}")]
     Backup(String),
 
     /// 未分类的内部错误
-    #[error("内部错误: {0}")]
+    #[error("internal error: {0}")]
     Internal(String),
 }
 

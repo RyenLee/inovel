@@ -286,5 +286,17 @@
   "peopleUnit": "人",
   "alert": {
     "openProject": "请先在编辑器中打开一个项目"
+  },
+  "validation": {
+    "required": "此字段为必填项",
+    "characterNameRequired": "请输入人物姓名",
+    "characterGenderRequired": "请选择人物性别",
+    "locationNameRequired": "请输入地点名称",
+    "organizationNameRequired": "请输入组织名称",
+    "summaryPrefix": "请完善以下必填项：",
+    "fieldCharacterName": "人物姓名",
+    "fieldCharacterGender": "人物性别",
+    "fieldLocationName": "地点名称",
+    "fieldOrganizationName": "组织名称"
   }
 }

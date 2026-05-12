@@ -1,10 +1,11 @@
-import { ref, watch, onMounted, onUnmounted, nextTick, toRef, type Ref } from "vue";
+import { ref, watch, onUnmounted, nextTick, toRef, type Ref } from "vue";
 import { useEditor, EditorContent } from "@tiptap/vue-3";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { invoke } from "@tauri-apps/api/core";
 import { PluginKey } from "prosemirror-state";
 import { DecorationSet } from "prosemirror-view";
+import { marked } from 'marked';
 import { createSmartSymbolsExtension } from "../components/SmartSymbolsExtension";
 import { createMentionExtension } from "../components/MentionExtension";
 import {
@@ -15,6 +16,44 @@ import {
 } from "../components/SensitiveHighlightPlugin";
 import type { SensitiveMatch } from "../components/SensitiveHighlightPlugin";
 import type { EditorMode } from "../stores/editor";
+
+// Configure marked
+marked.setOptions({
+    breaks: true,
+    gfm: true,
+});
+
+// Detect if content is Markdown
+function isMarkdownContent(content: string): boolean {
+    if (!content) return false;
+    const markdownPatterns = [
+        /^#+\s/m,                    // Headers (# ## ###)
+        /^\s*[-*+]\s/m,             // Unordered lists (- * +)
+        /^\s*\d+\.\s/m,             // Ordered lists (1. 2. 3.)
+        /^\s*>/m,                   // Blockquotes (>)
+        /```[\s\S]*?```/g,          // Code blocks
+        /`[^`]+`/g,                 // Inline code
+        /\[.+?\]\(.+?\)/g,          // Links [text](url)
+        /!\[.+?\]\(.+?\)/g,         // Images ![alt](url)
+        /\*\*[^*]+\*\*/g,           // Bold **text**
+        /\*[^*]+\*/g,               // Italic *text*
+        /^---$/m,                   // Horizontal rules ---
+        /\|.+\|.+\|/m,              // Tables
+    ];
+    const matchCount = markdownPatterns.filter(pattern => pattern.test(content)).length;
+    return matchCount >= 2;
+}
+
+// Convert Markdown to HTML
+function markdownToHtml(markdown: string): string {
+    if (!markdown) return "";
+    try {
+        return marked.parse(markdown) as string;
+    } catch (error) {
+        console.error("Markdown parsing failed:", error);
+        return markdown;
+    }
+}
 
 export interface UseEditorOptions {
     modelValue: string | Ref<string>;
@@ -148,46 +187,74 @@ export function useEditorComposable(options: UseEditorOptions) {
         }
     };
 
-    // 更新段落样式
     const updateParagraphStyles = (editorInstance: any) => {
+        if (!editorInstance) return;
         const { view } = editorInstance;
-        const { $anchor } = view.state.selection;
 
-        let paragraphIndex = 0;
-        const anchorPos = $anchor.pos;
-        view.state.doc.descendants((node: any, pos: number) => {
-            if (node.isBlock && node.isTextblock) {
-                if (pos <= anchorPos) {
-                    paragraphIndex++;
-                }
-                return false;
-            }
-            return true;
+        if (editorModeRef.value !== "typewriter" && editorModeRef.value !== "focus") {
+            const paragraphs = view.dom.querySelectorAll("p, h1, h2, h3, li, blockquote");
+            paragraphs.forEach((p: Element) => {
+                (p as HTMLElement).classList.remove("typewriter-dim", "focus-dim", "focus-active");
+            });
+            return;
+        }
+
+        const { from } = view.state.selection;
+        const domAtPos = view.domAtPos.bind(view);
+
+        const paragraphs = view.dom.querySelectorAll("p, h1, h2, h3, li, blockquote");
+
+        paragraphs.forEach((p: HTMLElement) => {
+            p.classList.remove("typewriter-dim", "focus-dim", "focus-active");
         });
 
-        currentParagraphIndex.value = paragraphIndex;
-
-        if (editorModeRef.value === "typewriter" || editorModeRef.value === "focus") {
-            const paragraphs = view.dom.querySelectorAll("p, h1, h2, h3, li, blockquote");
-            let currentIndex = 0;
-
-            paragraphs.forEach((p: HTMLElement) => {
-                p.classList.remove("typewriter-dim", "focus-dim", "focus-active");
-
-                if (currentIndex === paragraphIndex - 1) {
-                    if (editorModeRef.value === "focus") {
-                        p.classList.add("focus-active");
-                    }
-                } else {
-                    if (editorModeRef.value === "typewriter") {
-                        p.classList.add("typewriter-dim");
-                    } else {
-                        p.classList.add("focus-dim");
+        let activeElement: HTMLElement | null = null;
+        try {
+            const $pos = view.state.doc.resolve(from);
+            for (let d = $pos.depth; d > 0; d--) {
+                const node = $pos.node(d);
+                if (node.isBlock && node.isTextblock) {
+                    const domNode = view.nodeDOM($pos.before(d));
+                    if (domNode && domNode instanceof HTMLElement) {
+                        activeElement = domNode;
+                        break;
                     }
                 }
-                currentIndex++;
-            });
+            }
+            if (!activeElement) {
+                const parent = domAtPos(from).node;
+                if (parent instanceof HTMLElement) {
+                    activeElement = parent.closest("p, h1, h2, h3, li, blockquote") as HTMLElement;
+                }
+            }
+        } catch (e) {
+            try {
+                const parent = domAtPos(from).node;
+                if (parent instanceof HTMLElement) {
+                    activeElement = parent.closest("p, h1, h2, h3, li, blockquote") as HTMLElement;
+                }
+            } catch (e2) {
+                console.warn("Failed to find active paragraph:", e2);
+            }
         }
+
+        paragraphs.forEach((p: HTMLElement) => {
+            if (p === activeElement) {
+                if (editorModeRef.value === "focus") {
+                    p.classList.add("focus-active");
+                }
+            } else {
+                if (editorModeRef.value === "typewriter") {
+                    p.classList.add("typewriter-dim");
+                } else {
+                    p.classList.add("focus-dim");
+                }
+            }
+        });
+
+        currentParagraphIndex.value = activeElement
+            ? Array.from(paragraphs).indexOf(activeElement) + 1
+            : -1;
     };
 
     // 使用 Tiptap 的 useEditor
@@ -226,12 +293,19 @@ export function useEditorComposable(options: UseEditorOptions) {
             nextTick(() => {
                 if (!editor.value) return;
 
+                // Check if content is Markdown and convert if needed
+                let contentToSet = content;
+                if (isMarkdownContent(content)) {
+                    console.log("Detected Markdown content, converting to HTML...");
+                    contentToSet = markdownToHtml(content);
+                }
+
                 const currentText = editor.value.getText().trim();
-                const newText = content.replace(/<[^>]*>/g, '').trim();
+                const newText = contentToSet.replace(/<[^>]*>/g, '').trim();
 
                 if (currentText !== newText || !lastSyncedContent) {
-                    lastSyncedContent = content;
-                    editor.value.commands.setContent(content, { emitUpdate: false });
+                    lastSyncedContent = contentToSet;
+                    editor.value.commands.setContent(contentToSet, { emitUpdate: false });
 
                     nextTick(() => {
                         if (editor.value) {
@@ -263,14 +337,9 @@ export function useEditorComposable(options: UseEditorOptions) {
         editorModeRef,
         (newMode) => {
             if (!editor.value) return;
-
-            if (newMode === "normal") {
-                const paragraphs = editor.value.view.dom.querySelectorAll("p, h1, h2, h3, li, blockquote");
-                paragraphs.forEach((p: Element) => {
-                    (p as HTMLElement).classList.remove("typewriter-dim", "focus-dim", "focus-active");
-                });
-            } else {
-                requestAnimationFrame(() => updateParagraphStyles(editor.value));
+            requestAnimationFrame(() => updateParagraphStyles(editor.value));
+            if (newMode === "typewriter") {
+                requestAnimationFrame(() => scrollToCursor());
             }
         }
     );
@@ -299,26 +368,59 @@ export function useEditorComposable(options: UseEditorOptions) {
         }
     };
 
-    // 监听选择更新
-    onMounted(() => {
-        if (editor.value) {
-            editor.value.on("selectionUpdate", () => {
-                if (editorModeRef.value === "typewriter") {
-                    requestAnimationFrame(() => scrollToCursor());
-                }
-                if (editorModeRef.value === "typewriter" || editorModeRef.value === "focus") {
-                    requestAnimationFrame(() => updateParagraphStyles(editor.value!));
-                }
-            });
+    let selectionUpdateHandler: (() => void) | null = null;
+    let mentionClickHandler: ((id: string) => void) | null = null;
 
-            (editor.value as any).on("mention-click", (id: string) => {
-                onMentionClick?.(id);
-            });
+    const registerEditorEvents = (editorInstance: any) => {
+        if (!editorInstance) return;
+
+        if (selectionUpdateHandler) {
+            editorInstance.off("selectionUpdate", selectionUpdateHandler);
         }
-    });
+        if (mentionClickHandler) {
+            (editorInstance as any).off("mention-click", mentionClickHandler);
+        }
 
-    // 清理
+        selectionUpdateHandler = () => {
+            if (editorModeRef.value === "typewriter") {
+                requestAnimationFrame(() => scrollToCursor());
+            }
+            if (editorModeRef.value === "typewriter" || editorModeRef.value === "focus") {
+                requestAnimationFrame(() => updateParagraphStyles(editor.value!));
+            }
+        };
+
+        mentionClickHandler = (id: string) => {
+            onMentionClick?.(id);
+        };
+
+        editorInstance.on("selectionUpdate", selectionUpdateHandler);
+        (editorInstance as any).on("mention-click", mentionClickHandler);
+
+        if (editorModeRef.value === "typewriter" || editorModeRef.value === "focus") {
+            requestAnimationFrame(() => updateParagraphStyles(editorInstance));
+        }
+    };
+
+    watch(
+        () => editor.value,
+        (newEditor) => {
+            if (newEditor) {
+                nextTick(() => registerEditorEvents(newEditor));
+            }
+        },
+        { immediate: true }
+    );
+
     onUnmounted(() => {
+        if (editor.value) {
+            if (selectionUpdateHandler) {
+                editor.value.off("selectionUpdate", selectionUpdateHandler);
+            }
+            if (mentionClickHandler) {
+                (editor.value as any).off("mention-click", mentionClickHandler);
+            }
+        }
         if (scanTimer.value) {
             clearTimeout(scanTimer.value);
         }

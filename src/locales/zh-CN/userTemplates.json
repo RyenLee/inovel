@@ -1,0 +1,61 @@
+{
+  "title": "自定义模板管理",
+  "open": "模板管理",
+  "newTemplate": "新建模板",
+  "editTemplate": "编辑模板",
+  "templateName": "模板名称",
+  "templateDescription": "模板描述",
+  "templateCategory": "模板分类",
+  "templateContent": "模板内容",
+  "placeholder": {
+    "name": "请输入模板名称",
+    "description": "请输入模板描述",
+    "category": "请选择分类",
+    "content": "请输入模板内容（支持Markdown）"
+  },
+  "buttons": {
+    "create": "新建",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "preview": "预览"
+  },
+  "confirm": {
+    "deleteTitle": "确认删除",
+    "deleteMessage": "确定要删除模板 \"{name}\" 吗？此操作不可恢复。"
+  },
+  "messages": {
+    "saveSuccess": "模板保存成功！",
+    "updateSuccess": "模板更新成功！",
+    "deleteSuccess": "模板删除成功！",
+    "saveError": "模板保存失败",
+    "updateError": "模板更新失败",
+    "deleteError": "模板删除失败",
+    "loadError": "加载模板失败",
+    "emptyList": "暂无自定义模板，点击上方按钮创建新模板",
+    "nameRequired": "请输入模板名称",
+    "contentRequired": "请输入模板内容"
+  },
+  "table": {
+    "name": "名称",
+    "description": "描述",
+    "category": "分类",
+    "createdAt": "创建时间",
+    "updatedAt": "更新时间",
+    "actions": "操作"
+  },
+  "modal": {
+    "createTitle": "创建新模板",
+    "editTitle": "编辑模板",
+    "previewTitle": "预览模板",
+    "createSubtitle": "填写以下信息创建一个新的自定义写作模板",
+    "editSubtitle": "修改模板信息，保存后将更新模板内容",
+    "previewSubtitle": "查看模板的完整内容和渲染效果"
+  },
+  "help": {
+    "name": "给模板起一个清晰的名称，便于后续识别和使用",
+    "description": "简短描述模板的用途和特点，帮助快速了解",
+    "content": "支持 Markdown 语法，可包含标题、列表、引用等格式"
+  }
+}

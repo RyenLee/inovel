@@ -18,10 +18,6 @@
   "settingsSaveFailed": "保存设置失败",
   "writingStats": "写作统计",
   "viewStatsDetail": "查看详细统计数据，请点击此处",
-  "entryConfig": "配置页面入口",
-  "entryConfigTitle": "配置页面入口设置",
-  "entryConfigDescription": "自定义配置页面的入口位置、触发方式和可见性",
-  "entryConfigButton": "配置入口",
   "windowSizeOptions": {
     "defaultLandscape": "默认横屏 (1200×800)",
     "compactLandscape": "紧凑横屏 (1024×768)",

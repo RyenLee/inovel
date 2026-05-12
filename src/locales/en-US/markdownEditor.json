@@ -24,7 +24,9 @@
   "statusBar": {
     "chapterWordCount": "Chapter words: ",
     "volumeWordCount": "Volume words: ",
-    "totalWordCount": "Total words: "
+    "totalWordCount": "Total words: ",
+    "typewriterMode": "Typewriter",
+    "focusMode": "Focus"
   },
   "splitDialog": {
     "title": "Paragraph Split",

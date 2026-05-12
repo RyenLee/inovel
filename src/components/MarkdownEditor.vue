@@ -1,5 +1,16 @@
-<script setup lang="ts">import { ref, toRef, toRefs, computed } from "vue";
-import { NButton, NIcon, NSpace, NTooltip, NDropdown, NModal, NSlider, NText } from "naive-ui";
+<script setup lang="ts">
+import { ref, toRef, toRefs, computed } from "vue";
+import { marked } from "marked";
+import {
+  NButton,
+  NIcon,
+  NSpace,
+  NTooltip,
+  NDropdown,
+  NModal,
+  NSlider,
+  NText,
+} from "naive-ui";
 import { useEditorComposable } from "../composables/useEditor";
 import { useWordCount } from "../composables/useWordCount";
 import { useTextBeautify } from "../composables/useTextBeautify";
@@ -34,6 +45,13 @@ import type { EditorMode } from "../stores/editor";
 import TemplateSelector from "./TemplateSelector.vue";
 import TextImportDialog from "./TextImportDialog.vue";
 import { useLocale } from "../i18n/composables/useLocale";
+import { useTemplateMerge } from "../composables/useTemplateMerge";
+
+// Configure marked
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+});
 
 const { t } = useLocale();
 const props = defineProps<{
@@ -57,11 +75,23 @@ const emit = defineEmits<{
 }>();
 const editorRootRef = ref<HTMLElement | null>(null);
 const editorContainerRef = ref<HTMLElement | null>(null);
-const modelValueRef = toRef(props, 'modelValue');
-const projectIdRef = toRef(props, 'projectId');
-const editorModeRef = toRef(props, 'editorMode');
+const modelValueRef = toRef(props, "modelValue");
+const projectIdRef = toRef(props, "projectId");
+const editorModeRef = toRef(props, "editorMode");
 
-const { editor, wordCount: editorWordCount, EditorContent, toggleBold, toggleItalic, setHeading, toggleBulletList, toggleOrderedList, toggleBlockquote, toggleHorizontalRule, isActive, } = useEditorComposable({
+const {
+  editor,
+  wordCount: editorWordCount,
+  EditorContent,
+  toggleBold,
+  toggleItalic,
+  setHeading,
+  toggleBulletList,
+  toggleOrderedList,
+  toggleBlockquote,
+  toggleHorizontalRule,
+  isActive,
+} = useEditorComposable({
   modelValue: modelValueRef,
   projectId: projectIdRef,
   editorMode: editorModeRef,
@@ -75,7 +105,7 @@ const { editor, wordCount: editorWordCount, EditorContent, toggleBold, toggleIta
     emit("mention-click", id);
   },
 });
-const chapterIdRef = toRef(props, 'chapterId');
+const chapterIdRef = toRef(props, "chapterId");
 
 const { wordCount } = useWordCount({
   chapterId: chapterIdRef,
@@ -102,8 +132,8 @@ const {
 
 // 行高比例
 const lineHeightRatio = computed(() => {
-    const fontSize = 14;
-    return lineHeight.value / fontSize;
+  const fontSize = 14;
+  return lineHeight.value / fontSize;
 });
 const lineHeightPx = computed(() => `${lineHeight.value}px`);
 const lineHeightNum = computed(() => lineHeight.value);
@@ -114,205 +144,121 @@ useEditorLayout({
 const { selectFile } = useFolderDialog();
 const showTemplateSelector = ref(false);
 const showTextImportDialog = ref(false);
-const templateInsertMode = ref<'replace' | 'insert'>('replace');
+const templateInsertMode = ref<"replace" | "append" | "merge">("replace");
 const isApplyingTemplate = ref(false);
+const { merge } = useTemplateMerge();
 const markdownToHtml = (markdown: string): string => {
-  if (!markdown)
-    return '';
-  let html = markdown;
-  const tableRegex = /^\|(.+)\|\s*\n\|[-:\s|]+\|\s*\n((?:\|.+\|\s*\n?)+)/gm;
-  html = html.replace(tableRegex, (_match, headerRow, bodyRows) => {
-    const headers = headerRow.split('|').map((h: string) => h.trim()).filter(Boolean);
-    const rows = bodyRows.trim().split('\n').map((row: string) => row.split('|').map((cell: string) => cell.trim()).filter(Boolean));
-    let tableHtml = '<table><thead><tr>';
-    headers.forEach((h: string) => { tableHtml += `<th>${h}</th>`; });
-    tableHtml += '</tr></thead><tbody>';
-    rows.forEach((row: string[]) => {
-      tableHtml += '<tr>';
-      row.forEach((cell: string) => { tableHtml += `<td>${cell}</td>`; });
-      tableHtml += '</tr>';
-    });
-    tableHtml += '</tbody></table>';
-    return tableHtml;
-  });
-  html = html.replace(/^---$/gim, '<hr>');
-  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  html = html.replace(/!\[(.*?)\]\((.*?)\)/g, '<img alt="$1" src="$2">');
-  html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
-  const quoteBlocks = html.split(/(?:<table>[\s\S]*?<\/table>)/);
-  html = quoteBlocks.map(block => {
-    if (block.includes('<table>'))
-      return block;
-    const lines = block.split('\n');
-    let result = '';
-    let inQuote = false;
-    let quoteContent: string[] = [];
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('>')) {
-        if (!inQuote) {
-          inQuote = true;
-          quoteContent = [];
-        }
-        const quoteText = trimmed.replace(/^>\s*/g, '');
-        if (quoteText) {
-          quoteContent.push(quoteText);
-        }
-      }
-      else {
-        if (inQuote) {
-          result += `<blockquote><p>${quoteContent.join('</p><p>')}</p></blockquote>`;
-          inQuote = false;
-          quoteContent = [];
-        }
-        result += (result ? '\n' : '') + line;
-      }
-    }
-    if (inQuote && quoteContent.length > 0) {
-      result += `<blockquote><p>${quoteContent.join('</p><p>')}</p></blockquote>`;
-    }
-    return result;
-  }).join('');
-  const ulParts = html.split(/(<blockquote>[\s\S]*?<\/blockquote>)/);
-  html = ulParts.map(part => {
-    if (part.includes('<blockquote>'))
-      return part;
-    const lines = part.split('\n');
-    let inList = false;
-    let listItems: string[] = [];
-    let result = '';
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (/^-\s/.test(trimmed)) {
-        if (!inList) {
-          inList = true;
-          listItems = [];
-        }
-        listItems.push(`<li>${trimmed.replace(/^-\s/, '')}</li>`);
-      }
-      else {
-        if (inList) {
-          result += `<ul>${listItems.join('')}</ul>`;
-          inList = false;
-          listItems = [];
-        }
-        result += (result ? '\n' : '') + line;
-      }
-    }
-    if (inList) {
-      result += `<ul>${listItems.join('')}</ul>`;
-    }
-    return result;
-  }).join('');
-  const olParts = html.split(/(<ul>[\s\S]*?<\/ul>)/);
-  html = olParts.map(part => {
-    if (part.includes('<ul>'))
-      return part;
-    const lines = part.split('\n');
-    let inList = false;
-    let listItems: string[] = [];
-    let result = '';
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (/^\d+\.\s/.test(trimmed)) {
-        if (!inList) {
-          inList = true;
-          listItems = [];
-        }
-        listItems.push(`<li>${trimmed.replace(/^\d+\.\s/, '')}</li>`);
-      }
-      else {
-        if (inList) {
-          result += `<ol>${listItems.join('')}</ol>`;
-          inList = false;
-          listItems = [];
-        }
-        result += (result ? '\n' : '') + line;
-      }
-    }
-    if (inList) {
-      result += `<ol>${listItems.join('')}</ol>`;
-    }
-    return result;
-  }).join('');
-  const blockParts = html.split(/(<h[123]>|<\/h[123]>|<ul>[\s\S]*?<\/ul>|<ol>[\s\S]*?<\/ol>|<blockquote>[\s\S]*?<\/blockquote>|<hr>|<table>[\s\S]*?<\/table>)/);
-  html = blockParts.map(part => {
-    if (/^<(h[123]>|<\/h[123]>|<ul>|<ol>|<li>|<blockquote>|<\/blockquote>|<hr>|<table>|<\/table>|<thead>|<tbody>|<tr>|<th>|<td>)/.test(part)) {
-      return part;
-    }
-    const trimmed = part.trim();
-    if (!trimmed)
-      return '';
-    return `<p>${trimmed.replace(/\n/g, '<br>')}</p>`;
-  }).join('');
-  html = html.replace(/<p><\/p>/g, '');
-  html = html.replace(/<p>\s*<\/p>/g, '');
-  html = html.replace(/<p>(<br>)+<\/p>/g, '<br>');
-  return html;
+  if (!markdown) return "";
+  try {
+    return marked.parse(markdown) as string;
+  } catch (error) {
+    console.error("Markdown parsing failed:", error);
+    return markdown;
+  }
 };
-const handleTemplateSelect = async (payload: string | {
-  content: string;
-  mode: 'replace' | 'insert';
-}) => {
+const htmlToText = (html: string): string => {
+  if (!html) return "";
+  // 简单的 HTML 转文本函数
+  return html
+    .replace(/<br\s*\/?>/g, "\n")
+    .replace(/<p\s*[^>]*>/g, "")
+    .replace(/<\/p>/g, "\n\n")
+    .replace(/<h[123]\s*[^>]*>/g, "")
+    .replace(/<\/h[123]>/g, "\n\n")
+    .replace(/<li\s*[^>]*>/g, "\n- ")
+    .replace(/<\/li>/g, "")
+    .replace(/<ul\s*[^>]*>/g, "")
+    .replace(/<\/ul>/g, "\n")
+    .replace(/<ol\s*[^>]*>/g, "")
+    .replace(/<\/ol>/g, "\n")
+    .replace(/<blockquote\s*[^>]*>/g, "")
+    .replace(/<\/blockquote>/g, "\n\n")
+    .replace(/<[^>]+>/g, "") // 移除所有标签
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .trim();
+};
+
+const handleTemplateSelect = async (
+  payload:
+    | string
+    | {
+        content: string;
+        mode: "replace" | "append" | "merge";
+      }
+) => {
   if (!editor.value) {
-    console.error(t('markdownEditor.messages.editorNotInitialized'));
+    console.error(t("markdownEditor.messages.editorNotInitialized"));
     return;
   }
   let content: string;
-  let mode: 'replace' | 'insert';
-  if (typeof payload === 'string') {
+  let mode: "replace" | "append" | "merge";
+  if (typeof payload === "string") {
     content = payload;
     mode = templateInsertMode.value;
-  }
-  else {
+  } else {
     content = payload.content;
     mode = payload.mode;
     templateInsertMode.value = mode;
   }
   try {
     isApplyingTemplate.value = true;
-    const htmlContent = markdownToHtml(content);
-    if (mode === 'replace') {
-      editor.value.commands.setContent(htmlContent || content, { emitUpdate: false });
+
+    if (mode === "merge") {
+      // 智能合并模式：需要获取当前文本内容并合并
+      const currentHtml = editor.value.getHTML();
+      const currentText = htmlToText(currentHtml);
+      const mergedText = merge(content, currentText, {
+        mode: "merge",
+        dedupEnabled: true,
+      });
+      const mergedHtml = markdownToHtml(mergedText);
+      editor.value.commands.setContent(mergedHtml || mergedText, {
+        emitUpdate: false,
+      });
+    } else if (mode === "append") {
+      // 追加模式：在当前内容后面添加
+      const htmlContent = markdownToHtml(content);
+      editor.value.commands.insertContent(htmlContent || content);
+    } else {
+      // 替换模式：直接替换
+      const htmlContent = markdownToHtml(content);
+      editor.value.commands.setContent(htmlContent || content, {
+        emitUpdate: false,
+      });
     }
-    else {
-      if (htmlContent) {
-        editor.value.commands.insertContent(htmlContent);
-      }
-      else {
-        editor.value.commands.insertContent(content);
-      }
-    }
-    await new Promise(resolve => setTimeout(resolve, 0));
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
     const newHtml = editor.value.getHTML();
-    emit('update:modelValue', newHtml);
+    emit("update:modelValue", newHtml);
     const text = editor.value.getText();
     const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
     const englishLetters = (text.match(/[a-zA-Z]/g) || []).length;
     const digits = (text.match(/[0-9]/g) || []).length;
     wordCount.value = chineseChars + englishLetters + digits;
     showTemplateSelector.value = false;
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
     editor.value?.commands.focus();
-  }
-  catch (error) {
-    console.error('应用模板失败:', error);
+  } catch (error) {
+    console.error("应用模板失败:", error);
     if (editor.value) {
       editor.value.commands.insertContent(content);
     }
-  }
-  finally {
+  } finally {
     isApplyingTemplate.value = false;
   }
 };
 const handleTemplateSelectorClose = () => {
   showTemplateSelector.value = false;
 };
-const handleTextImport = (payload: { content: string; mode: "insert" | "replace" }) => {
+const handleTextImport = (payload: {
+  content: string;
+  mode: "insert" | "replace";
+}) => {
   if (!editor.value) return;
 
   if (payload.mode === "replace") {
@@ -326,15 +272,23 @@ const handleTextImport = (payload: { content: string; mode: "insert" | "replace"
   emit("requestSave");
 };
 const toggleTemplateMode = () => {
-  templateInsertMode.value = templateInsertMode.value === 'replace' ? 'insert' : 'replace';
+  if (templateInsertMode.value === "replace") {
+    templateInsertMode.value = "append";
+  } else if (templateInsertMode.value === "append") {
+    templateInsertMode.value = "merge";
+  } else {
+    templateInsertMode.value = "replace";
+  }
 };
 const selectImageForImg = async (img: HTMLImageElement) => {
   const { path, error } = await selectFile({
-    title: t('markdownEditor.imageDialog.title'),
-    filters: [{
-      name: 'Image',
-      extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']
-    }]
+    title: t("markdownEditor.imageDialog.title"),
+    filters: [
+      {
+        name: "Image",
+        extensions: ["png", "jpg", "jpeg", "gif", "bmp", "webp"],
+      },
+    ],
   });
   if (error) {
     console.error(error);
@@ -342,42 +296,59 @@ const selectImageForImg = async (img: HTMLImageElement) => {
   }
   if (path) {
     const fileData = await readFile(path);
-    let binary = '';
+    let binary = "";
     for (let i = 0; i < fileData.length; i++) {
       binary += String.fromCharCode(fileData[i]);
     }
     const base64Data = btoa(binary);
-    const fileName = path.replace(/\\/g, '/').split('/').pop() || 'image.png';
-    const newPath = await invoke<string>('save_image', {
+    const fileName = path.replace(/\\/g, "/").split("/").pop() || "image.png";
+    const newPath = await invoke<string>("save_image", {
       projectId: props.projectId,
       fileName,
-      fileData: base64Data
+      fileData: base64Data,
     });
     img.src = newPath;
     if (editor.value) {
       const html = editor.value.getHTML();
-      emit('update:modelValue', html);
-      emit('requestSave');
+      emit("update:modelValue", html);
+      emit("requestSave");
     }
   }
 };
 defineExpose({
   getWordCount: () => editorWordCount.value,
-  getHTML: () => editor.value?.getHTML() || '',
+  getHTML: () => editor.value?.getHTML() || "",
   editor,
 });
 </script>
 
 <template>
-  <div ref="editorRootRef" class="flex flex-col h-full rounded-lg border transition-colors duration-300 overflow-hidden"
-    :class="editor ? (isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200') : ''">
-    <div v-if="editor" data-editor-toolbar class="relative flex items-center gap-1 px-3 py-2 border-b flex-wrap"
-      :class="isDark ? 'border-gray-700' : 'border-gray-200'">
+  <div
+    ref="editorRootRef"
+    class="flex flex-col h-full rounded-lg border transition-colors duration-300 overflow-hidden"
+    :class="
+      editor
+        ? isDark
+          ? 'bg-gray-800 border-gray-700'
+          : 'bg-white border-gray-200'
+        : ''
+    "
+  >
+    <div
+      v-if="editor"
+      data-editor-toolbar
+      class="relative flex items-center gap-1 px-3 py-2 border-b flex-wrap"
+      :class="isDark ? 'border-gray-700' : 'border-gray-200'"
+    >
       <NSpace :size="4">
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton size="small" :type="isActive('bold') ? 'primary' : 'default'" :tertiary="!isActive('bold')"
-              @click="toggleBold">
+            <NButton
+              size="small"
+              :type="isActive('bold') ? 'primary' : 'default'"
+              :tertiary="!isActive('bold')"
+              @click="toggleBold"
+            >
               <template #icon>
                 <NIcon>
                   <Bold />
@@ -385,13 +356,17 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.bold') }}
+          {{ t("markdownEditor.toolbar.bold") }}
         </NTooltip>
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton size="small" :type="isActive('italic') ? 'primary' : 'default'" :tertiary="!isActive('italic')"
-              @click="toggleItalic">
+            <NButton
+              size="small"
+              :type="isActive('italic') ? 'primary' : 'default'"
+              :tertiary="!isActive('italic')"
+              @click="toggleItalic"
+            >
               <template #icon>
                 <NIcon>
                   <Italic />
@@ -399,15 +374,19 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.italic') }}
+          {{ t("markdownEditor.toolbar.italic") }}
         </NTooltip>
 
         <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton size="small" :type="isActive('heading', { level: 1 }) ? 'primary' : 'default'"
-              :tertiary="!isActive('heading', { level: 1 })" @click="setHeading(1)">
+            <NButton
+              size="small"
+              :type="isActive('heading', { level: 1 }) ? 'primary' : 'default'"
+              :tertiary="!isActive('heading', { level: 1 })"
+              @click="setHeading(1)"
+            >
               <template #icon>
                 <NIcon>
                   <Heading1 />
@@ -415,13 +394,17 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.heading1') }}
+          {{ t("markdownEditor.toolbar.heading1") }}
         </NTooltip>
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton size="small" :type="isActive('heading', { level: 2 }) ? 'primary' : 'default'"
-              :tertiary="!isActive('heading', { level: 2 })" @click="setHeading(2)">
+            <NButton
+              size="small"
+              :type="isActive('heading', { level: 2 }) ? 'primary' : 'default'"
+              :tertiary="!isActive('heading', { level: 2 })"
+              @click="setHeading(2)"
+            >
               <template #icon>
                 <NIcon>
                   <Heading2 />
@@ -429,13 +412,17 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.heading2') }}
+          {{ t("markdownEditor.toolbar.heading2") }}
         </NTooltip>
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton size="small" :type="isActive('heading', { level: 3 }) ? 'primary' : 'default'"
-              :tertiary="!isActive('heading', { level: 3 })" @click="setHeading(3)">
+            <NButton
+              size="small"
+              :type="isActive('heading', { level: 3 }) ? 'primary' : 'default'"
+              :tertiary="!isActive('heading', { level: 3 })"
+              @click="setHeading(3)"
+            >
               <template #icon>
                 <NIcon>
                   <Heading3 />
@@ -443,15 +430,19 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.heading3') }}
+          {{ t("markdownEditor.toolbar.heading3") }}
         </NTooltip>
 
         <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton size="small" :type="isActive('bulletList') ? 'primary' : 'default'"
-              :tertiary="!isActive('bulletList')" @click="toggleBulletList">
+            <NButton
+              size="small"
+              :type="isActive('bulletList') ? 'primary' : 'default'"
+              :tertiary="!isActive('bulletList')"
+              @click="toggleBulletList"
+            >
               <template #icon>
                 <NIcon>
                   <List />
@@ -459,13 +450,17 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.bulletList') }}
+          {{ t("markdownEditor.toolbar.bulletList") }}
         </NTooltip>
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton size="small" :type="isActive('orderedList') ? 'primary' : 'default'"
-              :tertiary="!isActive('orderedList')" @click="toggleOrderedList">
+            <NButton
+              size="small"
+              :type="isActive('orderedList') ? 'primary' : 'default'"
+              :tertiary="!isActive('orderedList')"
+              @click="toggleOrderedList"
+            >
               <template #icon>
                 <NIcon>
                   <ListOrdered />
@@ -473,13 +468,17 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.orderedList') }}
+          {{ t("markdownEditor.toolbar.orderedList") }}
         </NTooltip>
 
         <NTooltip trigger="hover">
           <template #trigger>
-            <NButton size="small" :type="isActive('blockquote') ? 'primary' : 'default'"
-              :tertiary="!isActive('blockquote')" @click="toggleBlockquote">
+            <NButton
+              size="small"
+              :type="isActive('blockquote') ? 'primary' : 'default'"
+              :tertiary="!isActive('blockquote')"
+              @click="toggleBlockquote"
+            >
               <template #icon>
                 <NIcon>
                   <Quote />
@@ -487,7 +486,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.blockquote') }}
+          {{ t("markdownEditor.toolbar.blockquote") }}
         </NTooltip>
 
         <NTooltip trigger="hover">
@@ -500,7 +499,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.horizontalRule') }}
+          {{ t("markdownEditor.toolbar.horizontalRule") }}
         </NTooltip>
 
         <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
@@ -515,7 +514,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.history') }}
+          {{ t("markdownEditor.toolbar.history") }}
         </NTooltip>
 
         <NTooltip trigger="hover">
@@ -528,7 +527,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.snapshot') }}
+          {{ t("markdownEditor.toolbar.snapshot") }}
         </NTooltip>
 
         <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
@@ -543,7 +542,7 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.template') }}
+          {{ t("markdownEditor.toolbar.template") }}
         </NTooltip>
 
         <NTooltip trigger="hover">
@@ -556,10 +555,14 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.nameGenerator') }}
+          {{ t("markdownEditor.toolbar.nameGenerator") }}
         </NTooltip>
-        
-        <NDropdown trigger="hover" :options="beautifyDropdownOptions" @select="beautify.handleBeautifyDropdown">
+
+        <NDropdown
+          trigger="hover"
+          :options="beautifyDropdownOptions"
+          @select="beautify.handleBeautifyDropdown"
+        >
           <NButton size="small" tertiary>
             <template #icon>
               <NIcon>
@@ -579,41 +582,64 @@ defineExpose({
               </template>
             </NButton>
           </template>
-          {{ t('markdownEditor.toolbar.importText') }}
+          {{ t("markdownEditor.toolbar.importText") }}
         </NTooltip>
 
-        <div v-if="showLineHeightControl"
-          class="absolute top-full right-0 mt-2 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 min-w-[240px]">
+        <div
+          v-if="showLineHeightControl"
+          class="absolute top-full right-0 mt-2 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 min-w-[240px]"
+        >
           <div class="flex items-center justify-between mb-3">
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('markdownEditor.lineHeight.title') }}</span>
-            <button @click="beautify.toggleLineHeightControl"
-              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <span
+              class="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >{{ t("markdownEditor.lineHeight.title") }}</span
+            >
+            <button
+              @click="beautify.toggleLineHeightControl"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
               <X class="w-4 h-4" />
             </button>
           </div>
 
           <div class="flex gap-1 mb-3">
-            <button v-for="preset in beautify.lineHeightPresets" :key="preset.value"
-              @click="beautify.setLineHeight(preset.value)" class="flex-1 px-2 py-1.5 text-xs rounded transition-colors"
-              :class="lineHeight === preset.value
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'">
+            <button
+              v-for="preset in beautify.lineHeightPresets"
+              :key="preset.value"
+              @click="beautify.setLineHeight(preset.value)"
+              class="flex-1 px-2 py-1.5 text-xs rounded transition-colors"
+              :class="
+                lineHeight === preset.value
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              "
+            >
               {{ preset.label }}
             </button>
           </div>
 
           <div class="space-y-2">
-            <NSlider v-model:value="lineHeight" :min="16" :max="50" :step="1" :tooltip="false" />
-            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-              <span>{{ t('markdownEditor.lineHeight.compact') }}</span>
+            <NSlider
+              v-model:value="lineHeight"
+              :min="16"
+              :max="50"
+              :step="1"
+              :tooltip="false"
+            />
+            <div
+              class="flex justify-between text-xs text-gray-500 dark:text-gray-400"
+            >
+              <span>{{ t("markdownEditor.lineHeight.compact") }}</span>
               <span class="font-medium text-blue-500">{{ lineHeight }}px</span>
-              <span>{{ t('markdownEditor.lineHeight.loose') }}</span>
+              <span>{{ t("markdownEditor.lineHeight.loose") }}</span>
             </div>
           </div>
 
           <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
             <p class="text-xs text-gray-500 dark:text-gray-400">
-              {{ t('markdownEditor.lineHeight.current', { height: lineHeight }) }}
+              {{
+                t("markdownEditor.lineHeight.current", { height: lineHeight })
+              }}
             </p>
           </div>
         </div>
@@ -622,44 +648,104 @@ defineExpose({
 
     <div ref="editorContainerRef" class="flex-1 min-h-0">
       <div class="h-full min-h-0" :class="`paper-${paperStyle || 'none'}`">
-        <EditorContent :editor="editor" class="h-full min-h-0 editor-content-wrapper" />
+        <EditorContent
+          :editor="editor"
+          class="h-full min-h-0 editor-content-wrapper"
+        />
       </div>
     </div>
 
-    <div data-editor-statusbar class="flex items-center justify-between px-4 py-2 text-sm border-t"
-      :class="isDark ? 'border-gray-700 text-gray-400 bg-gray-800' : 'border-gray-200 text-gray-500 bg-gray-50'">
+    <div
+      data-editor-statusbar
+      class="flex items-center justify-between px-4 py-2 text-sm border-t"
+      :class="
+        isDark
+          ? 'border-gray-700 text-gray-400 bg-gray-800'
+          : 'border-gray-200 text-gray-500 bg-gray-50'
+      "
+    >
       <div class="flex items-center gap-4">
         <div class="flex items-center gap-1">
           <Type class="w-4 h-4" />
-          <span>{{ t('markdownEditor.statusBar.chapterWordCount') }}</span>
-          <span class="font-medium text-blue-600 dark:text-blue-400">{{ editorWordCount }}</span>
+          <span>{{ t("markdownEditor.statusBar.chapterWordCount") }}</span>
+          <span class="font-medium text-blue-600 dark:text-blue-400">{{
+            editorWordCount
+          }}</span>
         </div>
-        <div v-if="volumeWordCount !== undefined" class="flex items-center gap-1">
+        <div
+          v-if="volumeWordCount !== undefined"
+          class="flex items-center gap-1"
+        >
           <BookOpen class="w-4 h-4" />
-          <span>{{ t('markdownEditor.statusBar.volumeWordCount') }}</span>
-          <span class="font-medium">{{ volumeWordCount.toLocaleString() }}</span>
+          <span>{{ t("markdownEditor.statusBar.volumeWordCount") }}</span>
+          <span class="font-medium">{{
+            volumeWordCount.toLocaleString()
+          }}</span>
         </div>
-        <div v-if="totalWordCount !== undefined" class="flex items-center gap-1">
+        <div
+          v-if="totalWordCount !== undefined"
+          class="flex items-center gap-1"
+        >
           <BookOpen class="w-4 h-4" />
-          <span>{{ t('markdownEditor.statusBar.totalWordCount') }}</span>
+          <span>{{ t("markdownEditor.statusBar.totalWordCount") }}</span>
           <span class="font-medium">{{ totalWordCount.toLocaleString() }}</span>
         </div>
       </div>
+      <div class="flex items-center gap-3">
+        <span
+          v-if="editorMode === 'typewriter'"
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
+          :class="isDark ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-100 text-amber-700'"
+        >
+          <Eye class="w-3 h-3" />
+          {{ t("markdownEditor.statusBar.typewriterMode") }}
+        </span>
+        <span
+          v-if="editorMode === 'focus'"
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
+          :class="isDark ? 'bg-blue-900/40 text-blue-300' : 'bg-blue-100 text-blue-700'"
+        >
+          <Eye class="w-3 h-3" />
+          {{ t("markdownEditor.statusBar.focusMode") }}
+        </span>
+      </div>
     </div>
 
-    <TemplateSelector v-model:show="showTemplateSelector" :project-id="projectId || 0" :insert-mode="templateInsertMode"
-      @select="handleTemplateSelect" @update:show="handleTemplateSelectorClose" />
+    <TemplateSelector
+      v-model:show="showTemplateSelector"
+      :project-id="0"
+      :insert-mode="templateInsertMode"
+      @select="handleTemplateSelect"
+      @update:show="handleTemplateSelectorClose"
+    />
 
-    <TextImportDialog v-model:show="showTextImportDialog" :is-dark="isDark"
-      @import="handleTextImport" />
+    <TextImportDialog
+      v-model:show="showTextImportDialog"
+      :is-dark="isDark"
+      @import="handleTextImport"
+    />
 
-    <NModal v-model:show="showSplitDialog" preset="card" :title="t('markdownEditor.splitDialog.title')" style="width: 600px; max-width: 90vw"
-      :segmented="{ content: true, footer: true }">
+    <NModal
+      v-model:show="showSplitDialog"
+      preset="card"
+      :title="t('markdownEditor.splitDialog.title')"
+      style="width: 600px; max-width: 90vw"
+      :segmented="{ content: true, footer: true }"
+    >
       <div class="space-y-4">
         <div class="flex items-center gap-4">
-          <NText>{{ t('markdownEditor.splitDialog.threshold') }}</NText>
-          <NSlider v-model:value="splitThreshold" :min="100" :max="500" :step="10" style="width: 200px" />
-          <NText>{{ splitThreshold }} {{ t('markdownEditor.splitDialog.characters') }}</NText>
+          <NText>{{ t("markdownEditor.splitDialog.threshold") }}</NText>
+          <NSlider
+            v-model:value="splitThreshold"
+            :min="100"
+            :max="500"
+            :step="10"
+            style="width: 200px"
+          />
+          <NText
+            >{{ splitThreshold }}
+            {{ t("markdownEditor.splitDialog.characters") }}</NText
+          >
         </div>
 
         <NButton @click="beautify.previewSplitParagraphs" secondary>
@@ -668,38 +754,60 @@ defineExpose({
               <Eye />
             </NIcon>
           </template>
-          {{ t('markdownEditor.splitDialog.refreshPreview') }}
+          {{ t("markdownEditor.splitDialog.refreshPreview") }}
         </NButton>
 
-        <div v-if="splitPreview && splitPreview.length > 0"
-          class="max-h-80 overflow-auto border rounded-lg p-4 space-y-4">
+        <div
+          v-if="splitPreview && splitPreview.length > 0"
+          class="max-h-80 overflow-auto border rounded-lg p-4 space-y-4"
+        >
           <div v-for="(item, index) in splitPreview" :key="index">
-            <NText depth="3" class="text-xs mb-1 block">{{ t('markdownEditor.splitDialog.original', { length: item.original.length }) }}</NText>
+            <NText depth="3" class="text-xs mb-1 block">{{
+              t("markdownEditor.splitDialog.original", {
+                length: item.original.length,
+              })
+            }}</NText>
             <div class="bg-gray-100 dark:bg-gray-800 rounded p-2 mb-2 text-sm">
-              {{ item.original.slice(0, 100) }}{{ item.original.length > 100 ? '...' : '' }}
+              {{ item.original.slice(0, 100)
+              }}{{ item.original.length > 100 ? "..." : "" }}
             </div>
 
-            <NText depth="3" class="text-xs mb-1 block">{{ t('markdownEditor.splitDialog.splitResult', { count: item.split.length }) }}</NText>
+            <NText depth="3" class="text-xs mb-1 block">{{
+              t("markdownEditor.splitDialog.splitResult", {
+                count: item.split.length,
+              })
+            }}</NText>
             <div class="bg-blue-50 dark:bg-blue-900/30 rounded p-2 space-y-1">
               <div v-for="(split, si) in item.split" :key="si" class="text-sm">
-                <span class="text-blue-500 font-medium">[{{ t('markdownEditor.splitDialog.segment', { index: si + 1 }) }}]</span>
-                {{ split.slice(0, 50) }}{{ split.length > 50 ? '...' : '' }}
+                <span class="text-blue-500 font-medium"
+                  >[{{
+                    t("markdownEditor.splitDialog.segment", { index: si + 1 })
+                  }}]</span
+                >
+                {{ split.slice(0, 50) }}{{ split.length > 50 ? "..." : "" }}
               </div>
             </div>
           </div>
         </div>
 
         <div v-else class="flex items-center justify-center py-8">
-          <NText depth="3">{{ t('markdownEditor.splitDialog.noParagraphs') }}</NText>
+          <NText depth="3">{{
+            t("markdownEditor.splitDialog.noParagraphs")
+          }}</NText>
         </div>
       </div>
 
       <template #footer>
         <NSpace justify="end">
-          <NButton @click="showSplitDialog = false">{{ t('common.action.cancel') }}</NButton>
-          <NButton type="primary" :disabled="!splitPreview || splitPreview.length === 0"
-            @click="beautify.applySplitParagraphs">
-            {{ t('markdownEditor.splitDialog.confirmSplit') }}
+          <NButton @click="showSplitDialog = false">{{
+            t("common.action.cancel")
+          }}</NButton>
+          <NButton
+            type="primary"
+            :disabled="!splitPreview || splitPreview.length === 0"
+            @click="beautify.applySplitParagraphs"
+          >
+            {{ t("markdownEditor.splitDialog.confirmSplit") }}
           </NButton>
         </NSpace>
       </template>
@@ -872,18 +980,26 @@ defineExpose({
 
 /* ===== Editor Modes ===== */
 .typewriter-dim {
-  opacity: 0.3;
+  opacity: 0.35;
   transition: opacity 0.3s ease;
+  filter: grayscale(0.3);
 }
 
 .focus-dim {
   opacity: 0.2;
   transition: opacity 0.3s ease;
+  filter: grayscale(0.4);
 }
 
 .focus-active {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgba(59, 130, 246, 0.08);
   border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.15);
+}
+
+.dark .focus-active {
+  background-color: rgba(59, 130, 246, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.25);
 }
 
 /* ===== Dynamic Line Height Override ===== */
@@ -909,26 +1025,29 @@ defineExpose({
 }
 
 .paper-lined .ProseMirror {
-  background-image: repeating-linear-gradient(transparent,
-      transparent calc(v-bind(lineHeightNum) * 1px - 1px),
-      #e5e7eb calc(v-bind(lineHeightNum) * 1px - 1px),
-      #e5e7eb calc(v-bind(lineHeightNum) * 1px));
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent calc(v-bind(lineHeightNum) * 1px - 1px),
+    #e5e7eb calc(v-bind(lineHeightNum) * 1px - 1px),
+    #e5e7eb calc(v-bind(lineHeightNum) * 1px)
+  );
   background-position: 0 calc(v-bind(lineHeightNum) * 1px - 9px);
   background-attachment: local;
 }
 
 .paper-lined-margin .ProseMirror {
-  background-image:
-    repeating-linear-gradient(transparent,
-      transparent calc(v-bind(lineHeightNum) * 1px - 9px),
-      #e5e7eb calc(v-bind(lineHeightNum) * 1px - 9px),
-      #e5e7eb calc(v-bind(lineHeightNum) * 1px));
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent calc(v-bind(lineHeightNum) * 1px - 9px),
+    #e5e7eb calc(v-bind(lineHeightNum) * 1px - 9px),
+    #e5e7eb calc(v-bind(lineHeightNum) * 1px)
+  );
   background-position: 0 calc(v-bind(lineHeightNum) * 1px - 9px);
   background-attachment: local;
 }
 
 .paper-lined-margin .tiptap::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 40px;
   top: 0;
@@ -945,23 +1064,20 @@ defineExpose({
 }
 
 .paper-grid .ProseMirror {
-  background-image:
-    repeating-linear-gradient(transparent,
+  background-image: repeating-linear-gradient(
+      transparent,
       transparent calc(v-bind(lineHeightNum) * 1px - 9px),
       #d1d5db calc(v-bind(lineHeightNum) * 1px - 9px),
-      #d1d5db calc(v-bind(lineHeightNum) * 1px)),
-    repeating-linear-gradient(to right,
-      #f3f4f6 1px,
-      transparent 1px);
+      #d1d5db calc(v-bind(lineHeightNum) * 1px)
+    ),
+    repeating-linear-gradient(to right, #f3f4f6 1px, transparent 1px);
   background-position: 0 calc(v-bind(lineHeightNum) * 1px - 9px), 0 0;
   background-size: 100% v-bind(lineHeightPx), 24px 100%;
   background-attachment: local, local;
 }
 
 .paper-dots .ProseMirror {
-  background-image: radial-gradient(circle,
-      #d1d5db 1px,
-      transparent 1px);
+  background-image: radial-gradient(circle, #d1d5db 1px, transparent 1px);
   background-size: 24px v-bind(lineHeightPx);
   background-position: 0 calc(v-bind(lineHeightNum) * 1px - 9px);
   background-attachment: local;
@@ -1058,18 +1174,21 @@ defineExpose({
 }
 
 .dark .paper-lined .ProseMirror {
-  background-image: repeating-linear-gradient(transparent,
-      transparent calc(v-bind(lineHeightNum) * 1px - 9px),
-      #374151 calc(v-bind(lineHeightNum) * 1px - 9px),
-      #374151 calc(v-bind(lineHeightNum) * 1px));
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent calc(v-bind(lineHeightNum) * 1px - 9px),
+    #374151 calc(v-bind(lineHeightNum) * 1px - 9px),
+    #374151 calc(v-bind(lineHeightNum) * 1px)
+  );
 }
 
 .dark .paper-lined-margin .ProseMirror {
-  background-image:
-    repeating-linear-gradient(transparent,
-      transparent calc(v-bind(lineHeightNum) * 1px - 9px),
-      #374151 calc(v-bind(lineHeightNum) * 1px - 9px),
-      #374151 calc(v-bind(lineHeightNum) * 1px));
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent calc(v-bind(lineHeightNum) * 1px - 9px),
+    #374151 calc(v-bind(lineHeightNum) * 1px - 9px),
+    #374151 calc(v-bind(lineHeightNum) * 1px)
+  );
 }
 
 .dark .paper-lined-margin .tiptap::before {
@@ -1077,19 +1196,16 @@ defineExpose({
 }
 
 .dark .paper-grid .ProseMirror {
-  background-image:
-    repeating-linear-gradient(transparent,
+  background-image: repeating-linear-gradient(
+      transparent,
       transparent calc(v-bind(lineHeightNum) * 1px - 9px),
       #374151 calc(v-bind(lineHeightNum) * 1px - 9px),
-      #374151 calc(v-bind(lineHeightNum) * 1px)),
-    repeating-linear-gradient(to right,
-      #374151 1px,
-      transparent 1px);
+      #374151 calc(v-bind(lineHeightNum) * 1px)
+    ),
+    repeating-linear-gradient(to right, #374151 1px, transparent 1px);
 }
 
 .dark .paper-dots .ProseMirror {
-  background-image: radial-gradient(circle,
-      #4b5563 1px,
-      transparent 1px);
+  background-image: radial-gradient(circle, #4b5563 1px, transparent 1px);
 }
 </style>

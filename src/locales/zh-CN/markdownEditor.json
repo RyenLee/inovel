@@ -24,7 +24,9 @@
   "statusBar": {
     "chapterWordCount": "本章字数：",
     "volumeWordCount": "本卷字数：",
-    "totalWordCount": "全书字数："
+    "totalWordCount": "全书字数：",
+    "typewriterMode": "打字机模式",
+    "focusMode": "聚焦模式"
   },
   "splitDialog": {
     "title": "段落拆分",

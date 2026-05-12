@@ -4,6 +4,13 @@
   "newProject": "New Project",
   "recentProjects": "Recent Projects",
   "noProjects": "No projects yet. Click the button above to create a new project.",
+  "pagination": {
+    "showing": "Showing",
+    "of": "of",
+    "items": "items",
+    "prev": "Previous",
+    "next": "Next"
+  },
   "projectName": "Project Name",
   "author": "Author",
   "description": "Description",
@@ -19,6 +26,7 @@
   "days": "days",
   "wordsPerDay": "words/day",
   "shortcuts": "Shortcuts",
+  "shortcutsButton": "Shortcuts",
   "stats": "Writing Stats",
   "settings": "Settings",
   "config": "Config Manager",

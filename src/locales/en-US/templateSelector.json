@@ -1,7 +1,7 @@
 {
   "title": "Select Writing Template",
   "categories": {
-    "all": "All",
+    "custom": "Custom",
     "chapter": "Chapter",
     "illustrated": "Illustrated",
     "dialogue": "Dialogue",
@@ -9,9 +9,11 @@
   },
   "insertMode": {
     "replace": "Replace Content",
-    "insert": "Insert Content",
+    "append": "Append Content",
+    "merge": "Smart Merge",
     "replaceTooltip": "Clear current content and use template",
-    "insertTooltip": "Insert template at current cursor position",
+    "appendTooltip": "Append template after existing content",
+    "mergeTooltip": "Preserve user edits and smartly add new content",
     "modeLabel": "Mode: {mode}"
   },
   "badges": {
@@ -23,7 +25,8 @@
   "reload": "Reload",
   "cancel": "Cancel",
   "useReplace": "Use Template (Replace)",
-  "useInsert": "Insert Template Content",
+  "useAppend": "Append Template Content",
+  "useMerge": "Smart Merge Template",
   "messages": {
     "loadFailed": "Failed to load templates",
     "loadFailedRetry": "Failed to load templates, please try again"

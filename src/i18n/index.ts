@@ -42,10 +42,12 @@ const i18n = createI18n({
   missing: import.meta.env.DEV ? handleMissing : undefined,
   missingWarn: import.meta.env.DEV,
   fallbackWarn: import.meta.env.DEV,
+  // 禁用 ICU 消息格式，使用简单的 {variable} 占位符格式
+  messageFormat: false,
 })
 
 export function setLocale(locale: AppLocale): void {
-  ;(i18n.global.locale as unknown as { value: AppLocale }).value = locale
+  ; (i18n.global.locale as unknown as { value: AppLocale }).value = locale
   localStorage.setItem(LOCALE_STORAGE_KEY, locale)
   document.documentElement.setAttribute('lang', locale)
 }

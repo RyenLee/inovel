@@ -85,6 +85,23 @@ pub struct UpdateProjectParams {
     pub description: String,
 }
 
+/// 分页项目列表响应
+///
+/// 包含分页信息和项目列表
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaginatedProjects {
+    /// 项目列表
+    pub items: Vec<ProjectMeta>,
+    /// 总项目数
+    pub total: i64,
+    /// 当前页码（从1开始）
+    pub page: i32,
+    /// 每页项目数
+    pub page_size: i32,
+    /// 总页数
+    pub total_pages: i32,
+}
+
 // ==================== 章节结构相关 ====================
 
 /// 卷（书籍的分卷）结构
@@ -679,6 +696,13 @@ pub struct WritingTemplate {
     pub category: String,
     pub content: String,
     pub is_builtin: bool,
+}
+
+/// 模板分组（用于新格式的 JSON 解析）
+#[derive(Debug, Deserialize)]
+pub struct TemplateGroup {
+    pub category: String,
+    pub objects: Vec<WritingTemplate>,
 }
 
 /// 用户自定义模板（存储在数据库中）

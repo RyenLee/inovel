@@ -58,7 +58,7 @@ impl PerformanceMonitor {
 
         if duration_ms > self.slow_threshold_ms {
             warn!(
-                "慢请求: {} 耗时 {}ms (阈值 {}ms)",
+                "slow request: {} cost {}ms (threshold {}ms)",
                 command, duration_ms, self.slow_threshold_ms
             );
         }
@@ -88,7 +88,7 @@ impl PerformanceMonitor {
     pub fn generate_report(&self) -> String {
         let metrics = self.metrics.lock().unwrap();
         if metrics.is_empty() {
-            return "暂无性能数据".to_string();
+            return "no performance data".to_string();
         }
 
         let total_requests = metrics.len();
@@ -116,15 +116,18 @@ impl PerformanceMonitor {
 
         let mut report = String::new();
         report.push_str("========================================\n");
-        report.push_str("        API 性能优化报告\n");
+        report.push_str("        API performance optimization report\n");
         report.push_str("========================================\n\n");
 
-        report.push_str(&format!("总请求数:        {}\n", total_requests));
-        report.push_str(&format!("平均响应时间:    {:.2} ms\n", avg_duration));
-        report.push_str(&format!("最小响应时间:    {} ms\n", min_duration));
-        report.push_str(&format!("最大响应时间:    {} ms\n", max_duration));
+        report.push_str(&format!("total requests:        {}\n", total_requests));
         report.push_str(&format!(
-            "慢请求数(>{}ms): {}\n\n",
+            "average response time:    {:.2} ms\n",
+            avg_duration
+        ));
+        report.push_str(&format!("minimum response time:    {} ms\n", min_duration));
+        report.push_str(&format!("maximum response time:    {} ms\n", max_duration));
+        report.push_str(&format!(
+            "slow requests (>{}ms): {}\n\n",
             self.slow_threshold_ms, slow_requests
         ));
 
@@ -132,10 +135,10 @@ impl PerformanceMonitor {
             "缓存命中率:      {:.1}% ({}/{})\n",
             cache_hit_rate, cache_hits, total_requests
         ));
-        report.push_str(&format!("Gzip 压缩请求数: {}\n", gzip_count));
-        report.push_str(&format!("原始数据总量:    {} bytes\n", total_original));
-        report.push_str(&format!("压缩后总量:      {} bytes\n", total_compressed));
-        report.push_str(&format!("带宽节省:        {:.1}%\n\n", savings));
+        report.push_str(&format!("Gzip compressed requests: {}\n", gzip_count));
+        report.push_str(&format!("total original data size:    {} bytes\n", total_original));
+        report.push_str(&format!("compressed size:      {} bytes\n", total_compressed));
+        report.push_str(&format!("bandwidth savings:        {:.1}%\n\n", savings));
 
         report.push_str("========================================\n");
 
@@ -169,6 +172,6 @@ impl OptimizationEngine {
         *self.cache.lock().unwrap() = ResponseCache::new(cfg.cache.clone());
         *self.pagination.lock().unwrap() = PaginationHelper::new(cfg.pagination.clone());
         *self.merger.lock().unwrap() = RequestMerger::new(cfg.request_merging.clone());
-        info!("优化引擎配置已刷新");
+        info!("optimization engine configuration refreshed successfully");
     }
 }

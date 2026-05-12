@@ -4,6 +4,13 @@
   "newProject": "新建项目",
   "recentProjects": "最近项目",
   "noProjects": "暂无项目，点击上方按钮创建新项目",
+  "pagination": {
+    "showing": "显示第",
+    "of": "条，共",
+    "items": "个项目",
+    "prev": "上一页",
+    "next": "下一页"
+  },
   "projectName": "项目名称",
   "author": "笔名",
   "description": "简介",
@@ -19,6 +26,7 @@
   "days": "天",
   "wordsPerDay": "字/天",
   "shortcuts": "快捷键",
+  "shortcutsButton": "快捷键",
   "stats": "写作统计",
   "settings": "应用设置",
   "config": "配置管理",

@@ -64,16 +64,6 @@ min_height = 800.0
 api_key = ""
 secret_token = ""
 
-[entry_config]
-enabled = false
-display_name = "配置管理"
-icon = "settings"
-tooltip = "打开配置管理页面"
-locations = ["menu_bar", "toolbar"]
-allowed_roles = ["admin", "advanced"]
-shortcut_key = "C"
-shortcut_modifiers = ["Ctrl", "Shift"]
-
 [features]
 auto_save_enabled = true
 sync_enabled = false

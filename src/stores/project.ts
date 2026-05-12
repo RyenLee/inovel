@@ -18,6 +18,14 @@ export interface ProjectMeta {
   encrypted?: boolean;
 }
 
+export interface PaginatedProjects {
+  items: ProjectMeta[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export interface CreateProjectParams {
   name: string;
   author: string;
@@ -60,17 +68,29 @@ export const useProjectStore = defineStore("project", () => {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
+  // 分页相关状态
+  const currentPage = ref(1);
+  const totalPages = ref(0);
+  const totalProjects = ref(0);
+  const pageSize = ref(5);
+
   // 加密相关状态
   const isEncrypted = ref(false);
   const isDecrypting = ref(false);
   const decryptProgress = ref<EncryptionProgress | null>(null);
 
-  async function fetchRecentProjects() {
+  async function fetchRecentProjects(page: number = 1) {
     isLoading.value = true;
     error.value = null;
     try {
-      const projects = await invoke<ProjectMeta[]>("get_recent_projects");
-      recentProjects.value = projects;
+      const result = await invoke<PaginatedProjects>("get_recent_projects", {
+        page,
+        page_size: pageSize.value,
+      });
+      recentProjects.value = result.items;
+      currentPage.value = result.page;
+      totalPages.value = result.total_pages;
+      totalProjects.value = result.total;
     } catch (e) {
       error.value = String(e);
       console.error("Failed to fetch recent projects:", e);
@@ -236,7 +256,7 @@ export const useProjectStore = defineStore("project", () => {
   /** 检查项目是否已加密 */
   async function isProjectEncrypted(projectPath: string): Promise<boolean> {
     try {
-      return await invoke<boolean>("is_project_encrypted_command", { project_path: projectPath });
+      return await invoke<boolean>("is_project_encrypted_command", { projectPath });
     } catch (e) {
       console.error("Failed to check if project is encrypted:", e);
       return false;
@@ -311,6 +331,12 @@ export const useProjectStore = defineStore("project", () => {
     removeProjectFromList,
     updateProject,
     setCurrentProject,
+
+    // 分页相关
+    currentPage,
+    totalPages,
+    totalProjects,
+    pageSize,
 
     // 加密相关
     isEncrypted,

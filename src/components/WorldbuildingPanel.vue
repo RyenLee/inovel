@@ -382,20 +382,35 @@
         closable
       >
         <n-form label-placement="top">
+          <div v-if="characterErrors.length > 0" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p class="text-sm font-medium text-red-600 dark:text-red-400">{{ t("worldbuilding.validation.summaryPrefix") }}</p>
+            <ul class="mt-1 text-sm text-red-500 dark:text-red-400 list-disc list-inside">
+              <li v-for="(error, index) in characterErrors" :key="index">{{ error }}</li>
+            </ul>
+          </div>
+
           <n-form-item :label="t('worldbuilding.character.name')" required>
             <n-input
               v-model:value="characterForm.name"
               :placeholder="t('worldbuilding.character.placeholder.name')"
+              :status="!characterForm.name.trim() && characterErrors.length > 0 ? 'error' : undefined"
             />
+            <template v-if="!characterForm.name.trim() && characterErrors.length > 0" #feedback>
+              <span class="text-red-500 text-xs">{{ t("worldbuilding.validation.characterNameRequired") }}</span>
+            </template>
           </n-form-item>
 
-          <n-form-item :label="t('worldbuilding.character.gender')">
+          <n-form-item :label="t('worldbuilding.character.gender')" required>
             <n-select
               v-model:value="characterForm.gender"
               :options="enumDictionary.genderOptions.value"
               :placeholder="t('worldbuilding.character.placeholder.gender')"
+              :status="showGenderError ? 'error' : undefined"
               style="width: 100%"
             />
+            <template v-if="showGenderError" #feedback>
+              <span class="text-red-500 text-xs">{{ t("worldbuilding.validation.characterGenderRequired") }}</span>
+            </template>
           </n-form-item>
 
           <n-form-item :label="t('worldbuilding.character.age')">
@@ -479,11 +494,22 @@
         closable
       >
         <n-form label-placement="top">
+          <div v-if="locationErrors.length > 0" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p class="text-sm font-medium text-red-600 dark:text-red-400">{{ t("worldbuilding.validation.summaryPrefix") }}</p>
+            <ul class="mt-1 text-sm text-red-500 dark:text-red-400 list-disc list-inside">
+              <li v-for="(error, index) in locationErrors" :key="index">{{ error }}</li>
+            </ul>
+          </div>
+
           <n-form-item :label="t('worldbuilding.location.name')" required>
             <n-input
               v-model:value="locationForm.name"
               :placeholder="t('worldbuilding.location.placeholder.name')"
+              :status="!locationForm.name.trim() && locationErrors.length > 0 ? 'error' : undefined"
             />
+            <template v-if="!locationForm.name.trim() && locationErrors.length > 0" #feedback>
+              <span class="text-red-500 text-xs">{{ t("worldbuilding.validation.locationNameRequired") }}</span>
+            </template>
           </n-form-item>
 
           <n-form-item :label="t('worldbuilding.location.type')">
@@ -572,11 +598,22 @@
         closable
       >
         <n-form label-placement="top">
+          <div v-if="organizationErrors.length > 0" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p class="text-sm font-medium text-red-600 dark:text-red-400">{{ t("worldbuilding.validation.summaryPrefix") }}</p>
+            <ul class="mt-1 text-sm text-red-500 dark:text-red-400 list-disc list-inside">
+              <li v-for="(error, index) in organizationErrors" :key="index">{{ error }}</li>
+            </ul>
+          </div>
+
           <n-form-item :label="t('worldbuilding.organization.name')" required>
             <n-input
               v-model:value="organizationForm.name"
               :placeholder="t('worldbuilding.organization.placeholder.name')"
+              :status="!organizationForm.name.trim() && organizationErrors.length > 0 ? 'error' : undefined"
             />
+            <template v-if="!organizationForm.name.trim() && organizationErrors.length > 0" #feedback>
+              <span class="text-red-500 text-xs">{{ t("worldbuilding.validation.organizationNameRequired") }}</span>
+            </template>
           </n-form-item>
 
           <n-form-item :label="t('worldbuilding.organization.type')">
@@ -1104,6 +1141,8 @@ const showGenderError = ref(false);
 
 const characterCustomFields = ref<CustomField[]>([]);
 
+const characterErrors = ref<string[]>([]);
+
 const locationForm = reactive({
   name: "",
   location_type: "",
@@ -1115,6 +1154,8 @@ const locationForm = reactive({
 
 const locationCustomFields = ref<CustomField[]>([]);
 
+const locationErrors = ref<string[]>([]);
+
 const organizationForm = reactive({
   name: "",
   org_type: "",
@@ -1125,6 +1166,8 @@ const organizationForm = reactive({
 });
 
 const organizationCustomFields = ref<CustomField[]>([]);
+
+const organizationErrors = ref<string[]>([]);
 
 // Helper functions
 function getLocationTypeLabel(type: string): string {
@@ -1167,6 +1210,7 @@ function resetCharacterForm() {
   characterForm.background = "";
   characterCustomFields.value = [];
   showGenderError.value = false;
+  characterErrors.value = [];
 }
 
 function resetLocationForm() {
@@ -1178,6 +1222,7 @@ function resetLocationForm() {
   locationForm.population = null;
   locationForm.notable_features = "";
   locationCustomFields.value = [];
+  locationErrors.value = [];
 }
 
 function resetOrganizationForm() {
@@ -1189,6 +1234,7 @@ function resetOrganizationForm() {
   organizationForm.headquarters = "";
   organizationForm.member_count = null;
   organizationCustomFields.value = [];
+  organizationErrors.value = [];
 }
 
 // Open drawer functions
@@ -1294,17 +1340,22 @@ function openOrganizationDrawer(org?: Organization) {
 
 // Save functions
 async function handleSaveCharacter() {
-  // 重置错误状态
   showGenderError.value = false;
+  characterErrors.value = [];
 
-  // 验证姓名
+  const errors: string[] = [];
+
   if (!characterForm.name.trim()) {
-    return;
+    errors.push(t("worldbuilding.validation.fieldCharacterName"));
   }
 
-  // 验证性别
   if (!characterForm.gender) {
     showGenderError.value = true;
+    errors.push(t("worldbuilding.validation.fieldCharacterGender"));
+  }
+
+  if (errors.length > 0) {
+    characterErrors.value = errors;
     return;
   }
 
@@ -1343,7 +1394,10 @@ async function handleSaveCharacter() {
 }
 
 async function handleSaveLocation() {
+  locationErrors.value = [];
+
   if (!locationForm.name.trim()) {
+    locationErrors.value = [t("worldbuilding.validation.fieldLocationName")];
     return;
   }
 
@@ -1382,7 +1436,10 @@ async function handleSaveLocation() {
 }
 
 async function handleSaveOrganization() {
+  organizationErrors.value = [];
+
   if (!organizationForm.name.trim()) {
+    organizationErrors.value = [t("worldbuilding.validation.fieldOrganizationName")];
     return;
   }
 
@@ -1480,6 +1537,12 @@ defineExpose({
 
 :deep(.worldbuilding-tabs .n-tabs-tab--active) {
   font-weight: 600 !important;
+}
+
+:deep(.n-form-item-label--required::before) {
+  color: #ef4444 !important;
+  font-weight: 700 !important;
+  margin-right: 2px;
 }
 
 @media screen and (max-width: 640px) {

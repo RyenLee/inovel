@@ -21,6 +21,7 @@ import {
   NTimeline,
   NTimelineItem,
   NSpace,
+  NPagination,
 } from "naive-ui";
 import {
   Book,
@@ -43,7 +44,8 @@ import {
   Eye,
   CheckCircle,
   XCircle,
-  Wrench,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 import {
@@ -52,7 +54,7 @@ import {
   type MigrateResult,
 } from "../stores/project";
 import { useTheme } from "../composables/useTheme";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import DeleteConfirmModal from "../components/DeleteConfirmModal.vue";
 import { configService } from "../services/configService";
 import { useLocale } from "../i18n/composables/useLocale";
@@ -65,14 +67,15 @@ const { selectFolder } = useFolderDialog();
 const projectStore = useProjectStore();
 const { t } = useLocale();
 
-// 配置管理入口是否启用
-const isConfigEntryEnabled = ref(true);
-
 const showModal = ref(false);
 const showShortcuts = ref(false);
 const isCreating = ref(false);
 const isEditing = ref(false);
 const editingProject = ref<ProjectMeta | null>(null);
+
+const goToTemplates = () => {
+  router.push("/templates");
+};
 
 // 删除确认弹窗状态
 const showDeleteProjectModal = ref(false);
@@ -113,7 +116,7 @@ onMounted(async () => {
     await projectStore.fetchRecentProjects();
   } catch (error) {
     console.error("加载项目列表失败:", error);
-    message.error(t('welcome.dialog.loadFailed'));
+    message.error(t("welcome.dialog.loadFailed"));
   }
 
   try {
@@ -127,30 +130,7 @@ onMounted(async () => {
   } catch (error) {
     console.error("检查迁移状态失败:", error);
   }
-
-  // 加载配置管理入口配置
-  try {
-    await loadEntryConfig();
-  } catch (error) {
-    console.error("加载入口配置失败:", error);
-  }
 });
-
-/**
- * 加载配置管理入口配置
- * 从配置文件中读取 entry_config.enabled 属性，决定是否显示配置管理入口
- */
-const loadEntryConfig = async () => {
-  try {
-    const config = await configService.loadConfig();
-    isConfigEntryEnabled.value = config.entry_config?.enabled ?? true;
-    console.log("Config entry enabled status:", isConfigEntryEnabled.value);
-  } catch (error) {
-    console.error("Failed to load entry config:", error);
-    // 如果加载失败，默认显示配置管理入口
-    isConfigEntryEnabled.value = true;
-  }
-};
 
 const loadStats = async () => {
   isLoadingStats.value = true;
@@ -210,18 +190,22 @@ const executeMigration = async () => {
 const handleRollback = async () => {
   const dialog = useDialog();
   dialog.warning({
-    title: t('welcome.dialog.rollbackTitle'),
-    content: t('welcome.dialog.rollbackContent'),
-    positiveText: t('welcome.dialog.rollbackConfirm'),
-    negativeText: t('common.action.cancel'),
+    title: t("welcome.dialog.rollbackTitle"),
+    content: t("welcome.dialog.rollbackContent"),
+    positiveText: t("welcome.dialog.rollbackConfirm"),
+    negativeText: t("common.action.cancel"),
     onPositiveClick: async () => {
       const result = await projectStore.rollbackMigration();
       if (result && result.success > 0) {
-        message.success(t('welcome.dialog.rollbackSuccess', { count: result.success }));
+        message.success(
+          t("welcome.dialog.rollbackSuccess", { count: result.success })
+        );
         await projectStore.fetchRecentProjects();
         await checkMigrationStatus();
       } else if (result) {
-        message.error(t('welcome.dialog.rollbackFailed', { path: result.backup_path }));
+        message.error(
+          t("welcome.dialog.rollbackFailed", { path: result.backup_path })
+        );
       }
     },
   });
@@ -235,13 +219,9 @@ const goToStats = () => {
   router.push("/stats");
 };
 
-const goToConfig = () => {
-  router.push("/config");
-};
-
 const openFolderDialog = async () => {
   const { path, error } = await selectFolder({
-    title: t('welcome.dialog.selectStoragePath'),
+    title: t("welcome.dialog.selectStoragePath"),
   });
   if (error) {
     message.error(error);
@@ -277,7 +257,7 @@ const openEditModal = (project: ProjectMeta, event: Event) => {
 const handleEditProject = async () => {
   if (!editingProject.value) return;
   if (!formData.value.name.trim()) {
-    message.warning(t('welcome.dialog.enterBookName'));
+    message.warning(t("welcome.dialog.enterBookName"));
     return;
   }
 
@@ -334,6 +314,11 @@ const handleCreateProject = async () => {
   } finally {
     isCreating.value = false;
   }
+};
+
+const handlePageChange = async (page: number) => {
+  await projectStore.fetchRecentProjects(page);
+  window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
 const handleOpenProject = async (project: ProjectMeta) => {
@@ -420,7 +405,7 @@ const closeModal = () => {
     class="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300"
   >
     <header
-      class="border-b bg-white dark:bg-gray-800 dark:border-gray-700 transition-colors duration-300"
+      class="sticky top-0 z-50 border-b bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm dark:border-gray-700 transition-colors duration-300"
     >
       <div
         class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between"
@@ -436,10 +421,21 @@ const closeModal = () => {
             quaternary
             circle
             @click="showShortcuts = true"
-            :title="t('welcome.shortcuts')"
+            :title="t('welcome.shortcutsButton')"
           >
             <template #icon>
               <NIcon><Keyboard /></NIcon>
+            </template>
+          </n-button>
+
+          <n-button
+            quaternary
+            circle
+            @click="goToTemplates"
+            :title="t('userTemplates.open')"
+          >
+            <template #icon>
+              <NIcon><FileText /></NIcon>
             </template>
           </n-button>
 
@@ -473,17 +469,6 @@ const closeModal = () => {
           >
             <template #icon>
               <NIcon><Settings /></NIcon>
-            </template>
-          </n-button>
-          <n-button
-            v-if="isConfigEntryEnabled"
-            quaternary
-            circle
-            @click="goToConfig"
-            :title="t('welcome.config')"
-          >
-            <template #icon>
-              <NIcon><Wrench /></NIcon>
             </template>
           </n-button>
 
@@ -692,119 +677,203 @@ const closeModal = () => {
           </template>
         </n-empty>
 
-        <n-grid
-          v-else
-          :cols="3"
-          :x-gap="16"
-          :y-gap="16"
-          responsive="screen"
-          :item-responsive="true"
-        >
-          <n-gi
-            v-for="project in projectStore.recentProjects"
-            :key="project.id"
-            span="0:24 640:12 1024:8"
+        <div v-else>
+          <div
+            class="max-h-[calc(100vh-370px)] overflow-y-auto scroll-smooth space-y-6 pr-1"
           >
-            <n-card
-              hoverable
-              class="cursor-pointer transition-all duration-200 hover:shadow-lg relative group"
-              :class="
-                project.is_valid
-                  ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500'
-                  : 'bg-gray-100 dark:bg-gray-800 border-orange-300 dark:border-orange-700 opacity-75'
-              "
-              @click="handleOpenProject(project)"
+            <div
+              v-for="project in projectStore.recentProjects"
+              :key="project.id"
             >
-              <!-- Invalid project indicator -->
-              <div v-if="!project.is_valid" class="absolute top-2 right-2">
-                <n-tooltip trigger="hover">
-                  <template #trigger>
-                    <AlertTriangle class="w-5 h-5 text-orange-500" />
-                  </template>
-                  {{ t("welcome.dialog.invalidPath") }}
-                </n-tooltip>
-              </div>
-
-              <!-- Remove button -->
               <div
-                class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1"
-                v-if="project.is_valid"
+                class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group border border-gray-100 dark:border-gray-700"
+                :class="project.is_valid ? '' : 'opacity-60'"
+                @click="handleOpenProject(project)"
               >
-                <n-button
-                  quaternary
-                  circle
-                  size="small"
-                  @click="openEditModal(project, $event)"
-                  class="hover:text-blue-500"
+                <!-- Invalid project indicator -->
+                <div
+                  v-if="!project.is_valid"
+                  class="absolute top-4 right-4 z-10"
                 >
-                  <template #icon>
-                    <NIcon>
-                      <Edit3 />
-                    </NIcon>
-                  </template>
-                </n-button>
-                <n-button
-                  quaternary
-                  circle
-                  size="small"
-                  type="error"
-                  @click="openDeleteProjectModal(project, $event)"
-                >
-                  <template #icon>
-                    <NIcon>
-                      <Trash2 />
-                    </NIcon>
-                  </template>
-                </n-button>
-              </div>
-
-              <div class="flex flex-col gap-2">
-                <div class="flex items-center gap-2">
-                  <h3
-                    class="font-semibold text-lg text-gray-900 dark:text-white truncate"
-                  >
-                    {{ project.name }}
-                  </h3>
-                  <span
-                    class="px-2 py-0.5 text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded"
-                  >
-                    {{ project.project_id }}
-                  </span>
+                  <n-tooltip trigger="hover">
+                    <template #trigger>
+                      <AlertTriangle class="w-5 h-5 text-orange-500" />
+                    </template>
+                    {{ t("welcome.dialog.invalidPath") }}
+                  </n-tooltip>
                 </div>
-                <p
-                  v-if="project.author"
-                  class="text-sm text-gray-500 dark:text-gray-400"
+
+                <!-- Action buttons -->
+                <div
+                  class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 z-10"
+                  v-if="project.is_valid"
                 >
-                  {{ t('welcome.author') }}: {{ project.author }}
-                </p>
-                <p
-                  v-if="project.description"
-                  class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2"
-                >
-                  {{ project.description }}
-                </p>
-                <div class="flex items-center justify-between mt-2">
-                  <p class="text-xs text-gray-400 dark:text-gray-500">
-                    {{ t("welcome.createdAt") }}:
-                    {{ new Date(project.created_at).toLocaleDateString() }}
-                  </p>
                   <n-button
-                    type="primary"
+                    quaternary
+                    circle
                     size="small"
-                    @click.stop="handleOpenProject(project)"
+                    @click="openEditModal(project, $event)"
+                    class="bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm hover:text-blue-500 hover:bg-white dark:hover:bg-gray-700"
                   >
                     <template #icon>
                       <NIcon>
-                        <Edit3 />
+                        <Edit3 class="w-4 h-4" />
                       </NIcon>
                     </template>
-                    {{ t("welcome.open") }}
+                  </n-button>
+                  <n-button
+                    quaternary
+                    circle
+                    size="small"
+                    type="error"
+                    @click="openDeleteProjectModal(project, $event)"
+                    class="bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700"
+                  >
+                    <template #icon>
+                      <NIcon>
+                        <Trash2 class="w-4 h-4" />
+                      </NIcon>
+                    </template>
                   </n-button>
                 </div>
+
+                <div class="flex p-6 gap-6">
+                  <!-- Book Cover -->
+                  <div class="relative flex-shrink-0">
+                    <div
+                      class="w-24 h-32 rounded-lg overflow-hidden shadow-lg transform group-hover:scale-105 group-hover:-translate-y-1 transition-all duration-300"
+                      style="perspective: 1000px"
+                    >
+                      <template v-if="project.cover_path">
+                        <img
+                          :src="convertFileSrc(project.cover_path)"
+                          :alt="project.name"
+                          class="w-full h-full object-cover"
+                          @error="(e: Event) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const placeholder = target.parentElement?.querySelector('.cover-placeholder');
+                          if (placeholder) placeholder.classList.remove('hidden');
+                        }"
+                        />
+                        <div
+                          class="hidden absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-600 cover-placeholder"
+                        >
+                          <Book class="w-8 h-8 text-gray-400" />
+                        </div>
+                      </template>
+                      <template v-else>
+                        <div
+                          class="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center"
+                        >
+                          <Book
+                            class="w-10 h-10 text-blue-400 dark:text-blue-300"
+                          />
+                        </div>
+                      </template>
+                    </div>
+                    <!-- Book shadow effect -->
+                    <div
+                      class="absolute -bottom-2 -right-2 w-full h-full bg-black/10 rounded-lg blur-md -z-10"
+                    ></div>
+                  </div>
+
+                  <!-- Project Info -->
+                  <div class="flex-1 flex flex-col justify-between min-w-0">
+                    <div>
+                      <h3
+                        class="text-xl font-bold text-gray-900 dark:text-white mb-2 truncate"
+                      >
+                        {{ project.name }}
+                      </h3>
+                      <div class="flex items-center gap-2 mb-3">
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                          {{ project.author }}
+                        </span>
+                        <span
+                          class="px-2 py-0.5 text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded"
+                        >
+                          {{ project.project_id }}
+                        </span>
+                      </div>
+                      <p
+                        v-if="project.description"
+                        class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2"
+                      >
+                        {{ project.description }}
+                      </p>
+                    </div>
+                    <div class="flex items-center justify-between mt-4">
+                      <p class="text-xs text-gray-400 dark:text-gray-500">
+                        {{ t("welcome.createdAt") }}:
+                        {{ new Date(project.created_at).toLocaleDateString() }}
+                      </p>
+                      <n-button
+                        type="primary"
+                        size="small"
+                        @click.stop="handleOpenProject(project)"
+                        class="group-hover:scale-105 transition-transform"
+                      >
+                        <template #icon>
+                          <NIcon>
+                            <Edit3 class="w-4 h-4" />
+                          </NIcon>
+                        </template>
+                        {{ t("welcome.open") }}
+                      </n-button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </n-card>
-          </n-gi>
-        </n-grid>
+            </div>
+          </div>
+
+          <!-- Pagination -->
+          <div
+            v-if="projectStore.totalPages > 1"
+            class="flex justify-center mt-8"
+          >
+            <n-pagination
+              v-model:page="projectStore.currentPage"
+              :page-count="projectStore.totalPages"
+              :page-slot="7"
+              show-quick-jumper
+              @update:page="handlePageChange"
+            >
+              <template #prev>
+                <span class="flex items-center gap-1">
+                  <ChevronLeft class="w-4 h-4" />
+                  {{ t("welcome.pagination.prev") }}
+                </span>
+              </template>
+              <template #next>
+                <span class="flex items-center gap-1">
+                  {{ t("welcome.pagination.next") }}
+                  <ChevronRight class="w-4 h-4" />
+                </span>
+              </template>
+            </n-pagination>
+          </div>
+
+          <!-- Project count info -->
+          <div
+            v-if="projectStore.totalProjects > 0"
+            class="text-center mt-4 text-sm text-gray-500 dark:text-gray-400"
+          >
+            {{ t("welcome.pagination.showing") }}
+            {{ (projectStore.currentPage - 1) * projectStore.pageSize + 1 }}
+            -
+            {{
+              Math.min(
+                projectStore.currentPage * projectStore.pageSize,
+                projectStore.totalProjects
+              )
+            }}
+            {{ t("welcome.pagination.of") }}
+            {{ projectStore.totalProjects }}
+            {{ t("welcome.pagination.items") }}
+          </div>
+        </div>
       </section>
     </main>
 
@@ -921,7 +990,7 @@ const closeModal = () => {
         class="flex flex-col items-center py-8 gap-4"
       >
         <n-spin size="large" />
-        <p class="text-gray-500">{{ t('welcome.migrate.migrating') }}</p>
+        <p class="text-gray-500">{{ t("welcome.migrate.migrating") }}</p>
         <n-progress
           type="line"
           :percentage="migrationProgress"
@@ -932,7 +1001,11 @@ const closeModal = () => {
 
       <div v-else class="space-y-4">
         <n-alert type="info" :bordered="false">
-          {{ t('welcome.migrate.previewDescription', { count: dryRunResult?.total || 0 }) }}
+          {{
+            t("welcome.migrate.previewDescription", {
+              count: dryRunResult?.total || 0,
+            })
+          }}
         </n-alert>
 
         <div class="max-h-64 overflow-y-auto space-y-2">
@@ -945,7 +1018,9 @@ const closeModal = () => {
               <span class="font-medium text-gray-900 dark:text-white">{{
                 detail.old_name
               }}</span>
-              <n-tag size="small" type="info">{{ t('welcome.migrate.pendingTag') }}</n-tag>
+              <n-tag size="small" type="info">{{
+                t("welcome.migrate.pendingTag")
+              }}</n-tag>
             </div>
             <div class="mt-1 text-sm text-gray-500">
               <p class="font-mono text-xs">
@@ -962,7 +1037,7 @@ const closeModal = () => {
           <n-button
             @click="showMigrationModal = false"
             :disabled="projectStore.isMigrating"
-            >{{ t('welcome.migrate.cancel') }}</n-button
+            >{{ t("welcome.migrate.cancel") }}</n-button
           >
           <n-button
             type="primary"
@@ -972,7 +1047,7 @@ const closeModal = () => {
             <template #icon>
               <NIcon><Play /></NIcon>
             </template>
-            {{ t('welcome.migrate.confirm') }}
+            {{ t("welcome.migrate.confirm") }}
           </n-button>
         </n-space>
       </template>
@@ -991,13 +1066,15 @@ const closeModal = () => {
           class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
         >
           <p class="text-sm text-blue-800 dark:text-blue-300">
-            {{ t('welcome.shortcuts.description') }}
+            {{ t("welcome.shortcuts.description") }}
           </p>
         </div>
 
         <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-gray-700 dark:text-gray-300">{{ t('welcome.shortcuts.save') }}</span>
+            <span class="text-gray-700 dark:text-gray-300">{{
+              t("welcome.shortcuts.save")
+            }}</span>
             <kbd
               class="px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600"
               >Ctrl + S</kbd
@@ -1006,9 +1083,11 @@ const closeModal = () => {
 
           <div class="flex items-center justify-between">
             <div>
-              <span class="text-gray-700 dark:text-gray-300">{{ t('welcome.shortcuts.typewriterMode') }}</span>
+              <span class="text-gray-700 dark:text-gray-300">{{
+                t("welcome.shortcuts.typewriterMode")
+              }}</span>
               <p class="text-xs text-gray-500 dark:text-gray-400">
-                {{ t('welcome.shortcuts.typewriterDesc') }}
+                {{ t("welcome.shortcuts.typewriterDesc") }}
               </p>
             </div>
             <kbd
@@ -1019,9 +1098,11 @@ const closeModal = () => {
 
           <div class="flex items-center justify-between">
             <div>
-              <span class="text-gray-700 dark:text-gray-300">{{ t('welcome.shortcuts.focusMode') }}</span>
+              <span class="text-gray-700 dark:text-gray-300">{{
+                t("welcome.shortcuts.focusMode")
+              }}</span>
               <p class="text-xs text-gray-500 dark:text-gray-400">
-                {{ t('welcome.shortcuts.focusDesc') }}
+                {{ t("welcome.shortcuts.focusDesc") }}
               </p>
             </div>
             <kbd
@@ -1031,7 +1112,9 @@ const closeModal = () => {
           </div>
 
           <div class="flex items-center justify-between">
-            <span class="text-gray-700 dark:text-gray-300">{{ t('welcome.shortcuts.exitSpecialMode') }}</span>
+            <span class="text-gray-700 dark:text-gray-300">{{
+              t("welcome.shortcuts.exitSpecialMode")
+            }}</span>
             <kbd
               class="px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600"
               >Esc</kbd
@@ -1045,7 +1128,9 @@ const closeModal = () => {
     <DeleteConfirmModal
       v-model:show="showDeleteProjectModal"
       :title="t('welcome.dialog.deleteConfirm')"
-      :message="t('welcome.dialog.deleteMessage', { name: projectToDelete?.name })"
+      :message="
+        t('welcome.dialog.deleteMessage', { name: projectToDelete?.name })
+      "
       :show-keep-files="true"
       :default-keep-files="true"
       @confirm="handleConfirmDeleteProject"

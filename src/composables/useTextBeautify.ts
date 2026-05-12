@@ -22,6 +22,7 @@ export function useTextBeautify(options: UseTextBeautifyOptions) {
   const splitPreview = ref<{ original: string; split: string[] }[]>([]);
   const smartSymbolsEnabled = ref(true);
   const paragraphIndentEnabled = ref(false);
+  let indentOperationInProgress = false;
 
   const lineHeightPresets = computed(() => [
     { label: t('textBeautify.lineHeight.compact'), value: 16 },
@@ -96,11 +97,20 @@ export function useTextBeautify(options: UseTextBeautifyOptions) {
     const { doc } = state;
 
     const targetParagraphs: { pos: number; node: any }[] = [];
-    doc.nodesBetween(from, to, (node: any, pos: number) => {
-      if (node.type.name === "paragraph") {
-        targetParagraphs.push({ pos, node });
-      }
-    });
+
+    if (from === to) {
+      doc.descendants((node: any, pos: number) => {
+        if (node.type.name === "paragraph" && node.textContent.length > 0) {
+          targetParagraphs.push({ pos, node });
+        }
+      });
+    } else {
+      doc.nodesBetween(from, to, (node: any, pos: number) => {
+        if (node.type.name === "paragraph" && node.textContent.length > 0) {
+          targetParagraphs.push({ pos, node });
+        }
+      });
+    }
 
     if (targetParagraphs.length === 0) return;
 
@@ -109,14 +119,27 @@ export function useTextBeautify(options: UseTextBeautifyOptions) {
     const tr = state.tr;
     for (let i = targetParagraphs.length - 1; i >= 0; i--) {
       const { pos, node } = targetParagraphs[i];
-      const textContent = node.textContent;
 
       if (allIndented) {
-        if (textContent.startsWith(INDENT_CHAR)) {
-          tr.delete(pos + 1, pos + 1 + INDENT_CHAR.length);
+        let offset = 0;
+        let found = false;
+        for (let ci = 0; ci < node.childCount; ci++) {
+          const child = node.child(ci);
+          if (child.isText && child.text?.startsWith(INDENT_CHAR)) {
+            tr.delete(pos + 1 + offset, pos + 1 + offset + INDENT_CHAR.length);
+            found = true;
+            break;
+          }
+          offset += child.nodeSize;
+        }
+        if (!found) {
+          const textContent = node.textContent;
+          if (textContent.startsWith(INDENT_CHAR)) {
+            tr.delete(pos + 1, pos + 1 + INDENT_CHAR.length);
+          }
         }
       } else {
-        if (!textContent.startsWith(INDENT_CHAR)) {
+        if (!isParagraphIndented(node)) {
           const schema = state.schema;
           const textNode = schema.text(INDENT_CHAR);
           tr.insert(pos + 1, textNode);
@@ -125,10 +148,14 @@ export function useTextBeautify(options: UseTextBeautifyOptions) {
     }
 
     if (tr.docChanged) {
+      indentOperationInProgress = true;
       tr.scrollIntoView = false;
       view.dispatch(tr);
       paragraphIndentEnabled.value = !allIndented;
       triggerSave();
+      setTimeout(() => {
+        indentOperationInProgress = false;
+      }, 100);
     }
   };
 
@@ -321,7 +348,7 @@ export function useTextBeautify(options: UseTextBeautifyOptions) {
   watch(
     () => editor.value?.state?.doc?.content?.size,
     () => {
-      if (editor.value) {
+      if (editor.value && !indentOperationInProgress) {
         paragraphIndentEnabled.value = checkParagraphIndent();
       }
     }

@@ -18,10 +18,6 @@
   "settingsSaveFailed": "Failed to save settings",
   "writingStats": "Writing Stats",
   "viewStatsDetail": "Click here to view detailed statistics",
-  "entryConfig": "Config Page Entry",
-  "entryConfigTitle": "Config Page Entry Settings",
-  "entryConfigDescription": "Customize the entry position, trigger method, and visibility of the config page",
-  "entryConfigButton": "Config Entry",
   "windowSizeOptions": {
     "defaultLandscape": "Default Landscape (1200×800)",
     "compactLandscape": "Compact Landscape (1024×768)",

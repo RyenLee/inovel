@@ -286,5 +286,17 @@
   "peopleUnit": "people",
   "alert": {
     "openProject": "Please open a project in the editor first"
+  },
+  "validation": {
+    "required": "This field is required",
+    "characterNameRequired": "Please enter character name",
+    "characterGenderRequired": "Please select character gender",
+    "locationNameRequired": "Please enter location name",
+    "organizationNameRequired": "Please enter organization name",
+    "summaryPrefix": "Please complete the following required fields: ",
+    "fieldCharacterName": "Character Name",
+    "fieldCharacterGender": "Character Gender",
+    "fieldLocationName": "Location Name",
+    "fieldOrganizationName": "Organization Name"
   }
 }

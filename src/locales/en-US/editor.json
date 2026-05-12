@@ -6,6 +6,7 @@
   "autoSaveEnabled": "Auto Saved",
   "saveSuccess": "Saved successfully",
   "saveError": "Save failed",
+  "loadChapterFailed": "Failed to load chapter: {chapterTitle}",
   "words": "Words",
   "chars": "Chars",
   "chapter": "Chapter",
@@ -136,7 +137,9 @@
     "exited": "Exited zen mode",
     "exitButton": "Exit Zen Mode (Esc)",
     "exitFocus": "Exit Focus Mode",
-    "tooltip": "Zen Mode (Ctrl+Shift+Z)"
+    "tooltip": "Zen Mode (Ctrl+Shift+Z)",
+    "openingLastChapter": "Opening last chapter...",
+    "noChapterAvailable": "No chapters available in the current project"
   },
   "fullscreenTooltip": "Fullscreen (F11)",
   "fullscreenFailed": "Fullscreen toggle failed",
@@ -172,9 +175,15 @@
     "created": "Snapshot created",
     "gitInitAndCreated": "Git initialized, snapshot created",
     "gitInitFailed": "Git initialization failed. Please run git init manually in the project directory.",
-    "autoSaveMessage": "Auto save - {title} @ {time}",
-    "manualSnapshotMessage": "Manual snapshot @ {time}",
-    "appCloseMessage": "App close @ {time}"
+    "autoSaveMessage": "Auto save - {title} {'@'} {time}",
+    "manualSnapshotMessage": "Manual snapshot {'@'} {time}",
+    "appCloseMessage": "App close {'@'} {time}",
+    "noChapter": "Please open a chapter first",
+    "noProject": "No project is currently open",
+    "projectNotFound": "Project directory does not exist. Please check project path configuration.",
+    "permissionDenied": "Permission denied. Please check folder permissions.",
+    "createFailed": "Failed to create snapshot: {error}",
+    "unknownError": "Unknown error"
   },
   "mode": {
     "typewriterOn": "Typewriter mode enabled",
@@ -214,5 +223,10 @@
     "show": "Show Inspiration Board",
     "hide": "Hide Inspiration Board",
     "hint": "Double-click to edit, right-click to insert into editor"
+  },
+  "applyTemplate": {
+    "button": "Apply Template",
+    "noChapter": "Please select a chapter first",
+    "success": "Template applied successfully"
   }
 }

@@ -1,10 +1,9 @@
-use crate::commands::encryption::is_project_encrypted;
 use crate::commands::git_snapshot::init_git_repo;
 use crate::db::{check_project_exists, get_db_path, init_db};
 use crate::logging::operation::record_simple_operation;
 use crate::models::{
-    CreateProjectParams, MigrateResult, MigrationDetail, ProjectMeta, RollbackParams,
-    UpdateProjectParams,
+    CreateProjectParams, MigrateResult, MigrationDetail, PaginatedProjects, ProjectMeta,
+    RollbackParams, UpdateProjectParams,
 };
 use rand::RngExt;
 use rusqlite::Connection;
@@ -67,6 +66,79 @@ fn generate_unique_project_id(conn: &Connection) -> Result<String, String> {
     Err("无法生成唯一项目ID".to_string())
 }
 
+/// 项目配置文件结构
+///
+/// 统一从 project.json 读取的配置项
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+struct ProjectConfig {
+    pub name: String,
+    pub author: String,
+    pub description: String,
+    pub project_id: String,
+    pub cover_path: Option<String>,
+    pub encrypted: bool,
+    pub writing_goal: i32,
+}
+
+/// 从 project.json 读取项目配置
+///
+/// # 参数
+/// - `project_path`: 项目根目录路径
+///
+/// # 返回值
+/// 成功返回项目配置 `Ok(ProjectConfig)`，失败返回 `Err(String)`
+fn read_project_config(project_path: &std::path::Path) -> Result<ProjectConfig, String> {
+    let project_json_path = project_path.join("project.json");
+    let content = fs::read_to_string(&project_json_path)
+        .map_err(|e| format!("读取项目配置文件失败: {}", e))?;
+    let json: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| format!("解析项目配置文件失败: {}", e))?;
+
+    let name = json
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let author = json
+        .get("author")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let description = json
+        .get("description")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let project_id = json
+        .get("project_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let cover_path = json.get("cover_path").and_then(|v| v.as_str()).map(|s| {
+        let full_path = project_path.join(s);
+        full_path.to_string_lossy().to_string().replace('\\', "/")
+    });
+    let encrypted = json
+        .get("encrypted")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let writing_goal = json
+        .get("writing_goal")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(3000) as i32;
+
+    Ok(ProjectConfig {
+        name,
+        author,
+        description,
+        project_id,
+        cover_path,
+        encrypted,
+        writing_goal,
+    })
+}
+
 /// 创建新项目
 ///
 /// 创建一个新的小说项目，包括：
@@ -124,7 +196,9 @@ pub async fn create_project(
         "author": params.author,
         "description": params.description,
         "created_at": now,
-        "project_id": project_id.clone()
+        "project_id": project_id.clone(),
+        "writing_goal": 3000,
+        "encrypted": false
     });
     let project_json_path = project_folder.join("project.json");
     fs::write(
@@ -168,32 +242,61 @@ pub async fn create_project(
     })
 }
 
-/// 获取最近打开的项目列表
+/// 获取最近打开的项目列表（分页）
 ///
-/// 查询最近打开的项目（按最后打开时间倒序），最多返回20个。
+/// 查询最近打开的项目（按最后打开时间倒序），支持分页。
 ///
 /// # 参数
 /// - `app_handle`: Tauri 应用句柄
+/// - `page`: 页码（从1开始，默认1）
+/// - `page_size`: 每页项目数（默认5）
 ///
 /// # 返回值
-/// 项目列表 `Ok(Vec<ProjectMeta>)`，失败返回错误信息 `Err(String)`
+/// 分页项目列表 `Ok(PaginatedProjects)`，失败返回错误信息 `Err(String)`
 #[tauri::command]
-pub async fn get_recent_projects(app_handle: AppHandle) -> Result<Vec<ProjectMeta>, String> {
+pub async fn get_recent_projects(
+    app_handle: AppHandle,
+    page: Option<i32>,
+    page_size: Option<i32>,
+) -> Result<PaginatedProjects, String> {
+    let page = page.unwrap_or(1).max(1);
+    let page_size = page_size.unwrap_or(5).max(1).min(100);
+    let offset = (page - 1) * page_size;
+
     let db_path = get_db_path(&app_handle);
     if !db_path.exists() {
-        return Ok(vec![]);
+        return Ok(PaginatedProjects {
+            items: vec![],
+            total: 0,
+            page,
+            page_size,
+            total_pages: 0,
+        });
     }
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
     let _ = init_db(&conn);
 
+    let total: i64 = conn
+        .query_row("SELECT COUNT(*) FROM projects", [], |row| row.get(0))
+        .map_err(|e| format!("查询总数失败: {}", e))?;
+
+    let total_pages = if total == 0 {
+        0
+    } else {
+        ((total as f64) / (page_size as f64)).ceil() as i32
+    };
+
     let mut stmt = conn
-        .prepare("SELECT id, project_id, name, author, description, path, created_at, last_opened_at FROM projects ORDER BY COALESCE(last_opened_at, created_at) DESC LIMIT 20")
+        .prepare("SELECT id, project_id, name, author, description, path, created_at, last_opened_at FROM projects ORDER BY COALESCE(last_opened_at, created_at) DESC LIMIT ?1 OFFSET ?2")
         .map_err(|e| format!("查询准备失败: {}", e))?;
 
     let projects: Vec<ProjectMeta> = stmt
-        .query_map([], |row| {
+        .query_map([page_size, offset], |row| {
             let path: String = row.get(5)?;
             let project_id: String = row.get::<_, Option<String>>(1)?.unwrap_or_default();
+
+            let config = read_project_config(std::path::Path::new(&path)).ok();
+
             Ok(ProjectMeta {
                 id: row.get(0)?,
                 project_id,
@@ -204,14 +307,21 @@ pub async fn get_recent_projects(app_handle: AppHandle) -> Result<Vec<ProjectMet
                 created_at: row.get(6)?,
                 last_opened_at: row.get(7)?,
                 is_valid: check_project_exists(&path),
-                cover_path: None,
-                encrypted: false,
+                cover_path: config.as_ref().and_then(|c| c.cover_path.clone()),
+                encrypted: config.as_ref().map(|c| c.encrypted).unwrap_or(false),
             })
         })
         .map_err(|e| format!("查询执行失败: {}", e))?
         .filter_map(|r| r.ok())
         .collect();
-    Ok(projects)
+
+    Ok(PaginatedProjects {
+        items: projects,
+        total,
+        page,
+        page_size,
+        total_pages,
+    })
 }
 
 /// 打开项目
@@ -261,29 +371,11 @@ pub async fn open_project(app_handle: AppHandle, id: i64) -> Result<ProjectMeta,
         })
         .map_err(|e| format!("项目不存在: {}", e))?;
 
-    // 从 project.json 读取封面路径（相对路径转绝对路径）
-    let project_json_path = std::path::Path::new(&project.path).join("project.json");
-    let cover_path = if project_json_path.exists() {
-        let content = fs::read_to_string(&project_json_path).ok();
-        content
-            .and_then(|c| serde_json::from_str::<serde_json::Value>(&c).ok())
-            .and_then(|json| {
-                json.get("cover_path")?.as_str().map(|s| {
-                    let project_dir = std::path::Path::new(&project.path);
-                    let full_path = project_dir.join(s);
-                    full_path.to_string_lossy().to_string()
-                })
-            })
-    } else {
-        None
-    };
-
-    // 检查项目是否加密
-    let encrypted = is_project_encrypted(&PathBuf::from(&project.path));
+    let config = read_project_config(std::path::Path::new(&project.path)).ok();
 
     Ok(ProjectMeta {
-        cover_path,
-        encrypted,
+        cover_path: config.as_ref().and_then(|c| c.cover_path.clone()),
+        encrypted: config.as_ref().map(|c| c.encrypted).unwrap_or(false),
         ..project
     })
 }
@@ -340,7 +432,14 @@ pub async fn remove_project_from_list(
         "remove",
         "project",
         Some(id),
-        Some(&format!("移除项目{}", if keep_files { "(保留文件)" } else { "(删除文件)" })),
+        Some(&format!(
+            "移除项目{}",
+            if keep_files {
+                "(保留文件)"
+            } else {
+                "(删除文件)"
+            }
+        )),
         Some(id),
     );
 
@@ -382,31 +481,24 @@ pub async fn update_project(
         .map_err(|e| format!("项目不存在: {}", e))?;
     let project_json_path = std::path::Path::new(&path).join("project.json");
 
-    // 更新 project.json（保留现有字段如 cover_path）
-    let cover_path = if project_json_path.exists() {
-        let content = fs::read_to_string(&project_json_path).ok();
-        content
-            .and_then(|c| serde_json::from_str::<serde_json::Value>(&c).ok())
-            .and_then(|json| {
+    // 更新 project.json（保留现有字段如 cover_path、encrypted）
+    if project_json_path.exists() {
+        if let Ok(content) = fs::read_to_string(&project_json_path) {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
                 let mut updated = json.clone();
                 updated["name"] = serde_json::Value::String(params.name.clone());
                 updated["author"] = serde_json::Value::String(params.author.clone());
                 updated["description"] = serde_json::Value::String(params.description.clone());
-                fs::write(
+                let _ = fs::write(
                     &project_json_path,
                     serde_json::to_string_pretty(&updated).unwrap_or_default(),
-                )
-                .ok();
-                // 将相对路径转换为绝对路径
-                json.get("cover_path")?.as_str().map(|s| {
-                    let project_dir = std::path::Path::new(&path);
-                    let full_path = project_dir.join(s);
-                    full_path.to_string_lossy().to_string()
-                })
-            })
-    } else {
-        None
+                );
+            }
+        }
     };
+
+    // 使用统一方式读取配置获取 cover_path 和 encrypted
+    let final_config = read_project_config(std::path::Path::new(&path)).ok();
 
     // 查询更新后的项目信息
     let mut stmt = conn
@@ -433,7 +525,8 @@ pub async fn update_project(
         .map_err(|e| format!("查询项目失败: {}", e))?;
 
     Ok(ProjectMeta {
-        cover_path,
+        cover_path: final_config.as_ref().and_then(|c| c.cover_path.clone()),
+        encrypted: final_config.as_ref().map(|c| c.encrypted).unwrap_or(false),
         ..project
     })
 }
@@ -466,7 +559,7 @@ fn sanitize_filename(name: &str) -> String {
 ///
 /// # 参数
 /// - `app_handle`: Tauri 应用句柄
-/// - `project_id`: 项目数据库 ID
+/// - `id`: 项目数据库 ID
 /// - `image_path`: 源图片文件路径
 ///
 /// # 返回值
@@ -474,7 +567,7 @@ fn sanitize_filename(name: &str) -> String {
 #[tauri::command]
 pub async fn set_cover(
     app_handle: AppHandle,
-    project_id: i64,
+    id: i64,
     image_path: String,
 ) -> Result<String, String> {
     // 获取项目路径和书名
@@ -484,7 +577,7 @@ pub async fn set_cover(
     let (project_path, book_name): (String, String) = conn
         .query_row(
             "SELECT path, name FROM projects WHERE id = ?1",
-            [project_id],
+            [id],
             |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .map_err(|e| format!("项目不存在: {}", e))?;
@@ -516,8 +609,8 @@ pub async fn set_cover(
         fs::create_dir_all(&covers_dir).map_err(|e| format!("创建封面目录失败: {}", e))?;
     }
 
-    // 生成新的封面文件名：{书名}_cover.{扩展名}
-    let cover_filename = format!("{}_cover.{}", sanitized_name, extension);
+    // 生成封面文件名：cover.{扩展名}
+    let cover_filename = format!("cover.{}", extension);
     let new_cover_path = covers_dir.join(&cover_filename);
 
     // 读取项目配置获取旧的封面路径（用于清理旧文件）
@@ -572,8 +665,11 @@ pub async fn set_cover(
         .map_err(|e| format!("写入项目配置失败: {}", e))?;
     }
 
-    // 返回完整路径供前端使用
-    let full_cover_path = new_cover_path.to_string_lossy().to_string();
+    // 返回完整路径供前端使用（确保使用正斜杠）
+    let full_cover_path = new_cover_path
+        .to_string_lossy()
+        .to_string()
+        .replace('\\', "/");
     Ok(full_cover_path)
 }
 
@@ -1000,13 +1096,17 @@ pub async fn save_window_size(
     let project_json_path = PathBuf::from(&project_path).join("project.json");
 
     if project_json_path.exists() {
-        let content =
-            fs::read_to_string(&project_json_path).map_err(|e| format!("读取项目配置失败: {}", e))?;
+        let content = fs::read_to_string(&project_json_path)
+            .map_err(|e| format!("读取项目配置失败: {}", e))?;
         let mut json: serde_json::Value =
             serde_json::from_str(&content).map_err(|e| format!("解析项目配置失败: {}", e))?;
 
-        json["window_width"] = serde_json::Value::Number(serde_json::Number::from_f64(width).unwrap_or(serde_json::Number::from(1200)));
-        json["window_height"] = serde_json::Value::Number(serde_json::Number::from_f64(height).unwrap_or(serde_json::Number::from(800)));
+        json["window_width"] = serde_json::Value::Number(
+            serde_json::Number::from_f64(width).unwrap_or(serde_json::Number::from(1200)),
+        );
+        json["window_height"] = serde_json::Value::Number(
+            serde_json::Number::from_f64(height).unwrap_or(serde_json::Number::from(800)),
+        );
 
         fs::write(
             &project_json_path,
@@ -1042,13 +1142,17 @@ pub async fn set_window_size(
     let project_json_path = PathBuf::from(&project_path).join("project.json");
 
     if project_json_path.exists() {
-        let content =
-            fs::read_to_string(&project_json_path).map_err(|e| format!("读取项目配置失败: {}", e))?;
+        let content = fs::read_to_string(&project_json_path)
+            .map_err(|e| format!("读取项目配置失败: {}", e))?;
         let mut json: serde_json::Value =
             serde_json::from_str(&content).map_err(|e| format!("解析项目配置失败: {}", e))?;
 
-        json["window_width"] = serde_json::Value::Number(serde_json::Number::from_f64(width).unwrap_or(serde_json::Number::from(1200)));
-        json["window_height"] = serde_json::Value::Number(serde_json::Number::from_f64(height).unwrap_or(serde_json::Number::from(800)));
+        json["window_width"] = serde_json::Value::Number(
+            serde_json::Number::from_f64(width).unwrap_or(serde_json::Number::from(1200)),
+        );
+        json["window_height"] = serde_json::Value::Number(
+            serde_json::Number::from_f64(height).unwrap_or(serde_json::Number::from(800)),
+        );
 
         fs::write(
             &project_json_path,
@@ -1061,10 +1165,12 @@ pub async fn set_window_size(
     }
 
     if let Some(window) = app.get_webview_window("main") {
-        window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-            width: width as u32,
-            height: height as u32,
-        })).map_err(|e| format!("设置窗口大小失败: {}", e))?;
+        window
+            .set_size(tauri::Size::Physical(tauri::PhysicalSize {
+                width: width as u32,
+                height: height as u32,
+            }))
+            .map_err(|e| format!("设置窗口大小失败: {}", e))?;
     }
 
     Ok(())
@@ -1089,8 +1195,8 @@ pub async fn get_window_size(
     let project_json_path = PathBuf::from(&project_path).join("project.json");
 
     if project_json_path.exists() {
-        let content =
-            fs::read_to_string(&project_json_path).map_err(|e| format!("读取项目配置失败: {}", e))?;
+        let content = fs::read_to_string(&project_json_path)
+            .map_err(|e| format!("读取项目配置失败: {}", e))?;
         let json: serde_json::Value =
             serde_json::from_str(&content).map_err(|e| format!("解析项目配置失败: {}", e))?;
 

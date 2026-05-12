@@ -197,7 +197,7 @@ const isCreatingChapter = ref(false);
 const creatingChapterTimeout = ref<number | null>(null);
 
 // 实际创建章节的函数
-const doCreateChapter = async (volumeId: number, initialContent?: string) => {
+const doCreateChapter = async (volumeId: number, initialContent?: string, _mode?: string) => {
   try {
     const newChapter = await invoke<Chapter>("create_chapter", {
       projectId: Number(props.projectId),
@@ -248,10 +248,10 @@ const handleTemplateSelect = async (data: { content: string; mode: string } | st
   if (!currentVolumeIdForTemplate.value) return;
   
   // 兼容两种调用方式：从 TemplateSelector 收到对象，或直接收到字符串
-  const content = typeof data === 'string' ? data : data.content;
+  const templateData = typeof data === 'string' ? { content: data, mode: 'replace' } : data;
   
   showTemplateSelector.value = false;
-  await doCreateChapter(currentVolumeIdForTemplate.value, content);
+  await doCreateChapter(currentVolumeIdForTemplate.value, templateData.content, templateData.mode);
   currentVolumeIdForTemplate.value = null;
 };
 

@@ -1,16 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { TomlConfig, EntryConfigSection } from '../config/types';
-
-const DEFAULT_ENTRY_CONFIG: EntryConfigSection = {
-    enabled: true,
-    display_name: '配置管理',
-    icon: 'settings',
-    tooltip: '打开配置管理页面',
-    locations: ['menu_bar', 'toolbar'],
-    allowed_roles: ['admin', 'advanced'],
-    shortcut_key: 'C',
-    shortcut_modifiers: ['Ctrl', 'Shift'],
-};
+import type { TomlConfig } from '../config/types';
 
 const DEFAULT_CONFIG: Partial<TomlConfig> = {
     app: {
@@ -85,7 +74,6 @@ const DEFAULT_CONFIG: Partial<TomlConfig> = {
         api_key: '',
         secret_token: '',
     },
-    entry_config: DEFAULT_ENTRY_CONFIG,
 };
 
 type ConfigChangeListener = (config: TomlConfig) => void;
@@ -127,13 +115,6 @@ class ConfigService {
 
     public getConfig(): TomlConfig {
         return { ...this.config };
-    }
-
-    public getEntryConfig(): EntryConfigSection {
-        return {
-            ...DEFAULT_ENTRY_CONFIG,
-            ...this.config.entry_config,
-        };
     }
 
     public getAppConfig() {
@@ -227,10 +208,6 @@ class ConfigService {
                 ...DEFAULT_CONFIG.security,
                 ...config.security,
             },
-            entry_config: {
-                ...DEFAULT_ENTRY_CONFIG,
-                ...config.entry_config,
-            },
         } as TomlConfig;
     }
 
@@ -262,8 +239,4 @@ export const saveConfig = async (config: Partial<TomlConfig>): Promise<void> => 
 
 export const getConfig = (): TomlConfig => {
     return configService.getConfig();
-};
-
-export const getEntryConfig = (): EntryConfigSection => {
-    return configService.getEntryConfig();
 };

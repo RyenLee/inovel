@@ -120,7 +120,7 @@ pub fn run() {
 
             logging::init_logging_with_app(app.handle())?;
 
-            info!("应用启动中...");
+            info!("application startup...");
 
             let window_config = {
                 let config_guard = shared_config.read().unwrap();
@@ -153,7 +153,7 @@ pub fn run() {
 
             let _window = builder.build()?;
 
-            info!("应用启动完成");
+            info!("application startup completed");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

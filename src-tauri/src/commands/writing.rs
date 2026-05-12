@@ -2,11 +2,12 @@ use crate::db::{get_db_path, init_db};
 use crate::logging::operation::record_simple_operation;
 use crate::models::{FocusSession, FocusStats, WritingGoal, WritingRecord};
 use rusqlite::{Connection, params};
+use std::fs;
 use tauri::AppHandle;
 
 /// 获取写作目标
 ///
-/// 获取指定项目的每日写作目标设置。
+/// 获取指定项目的每日写作目标设置。从项目的 project.json 文件中读取。
 ///
 /// # 参数
 /// - `app_handle`: Tauri 应用句柄
@@ -21,18 +22,49 @@ pub async fn get_writing_goal(
 ) -> Result<Option<WritingGoal>, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
+
+    // 首先从数据库获取项目路径
+    let project_path: Option<String> = conn
+        .query_row(
+            "SELECT path FROM projects WHERE id = ?1",
+            [project_id],
+            |row| row.get(0),
+        )
+        .ok();
+
+    if let Some(path) = project_path {
+        let project_json_path = std::path::Path::new(&path).join("project.json");
+        if project_json_path.exists() {
+            let content = fs::read_to_string(&project_json_path)
+                .map_err(|e| format!("读取 project.json 失败: {}", e))?;
+            let project_json: serde_json::Value = serde_json::from_str(&content)
+                .map_err(|e| format!("解析 project.json 失败: {}", e))?;
+
+            if let Some(writing_goal) = project_json.get("writing_goal").and_then(|v| v.as_i64()) {
+                return Ok(Some(WritingGoal {
+                    id: 0,
+                    project_id,
+                    daily_goal: writing_goal as i32,
+                    updated_at: chrono::Utc::now().to_rfc3339(),
+                }));
+            }
+        }
+    }
+
+    // 如果 project.json 中没有写作目标，尝试从数据库读取（兼容旧数据）
     let result: Option<WritingGoal> = conn
         .query_row(
             "SELECT id, project_id, daily_goal, updated_at FROM writing_goals WHERE project_id = ?1",
             [project_id],
             |row| Ok(WritingGoal { id: row.get(0)?, project_id: row.get(1)?, daily_goal: row.get(2)?, updated_at: row.get(3)? }),
         ).ok();
+
     Ok(result)
 }
 
 /// 保存写作目标
 ///
-/// 创建或更新项目的每日写作目标。使用 INSERT OR UPDATE 语义，确保每个项目只有一条记录。
+/// 创建或更新项目的每日写作目标。将目标保存到项目的 project.json 文件中。
 ///
 /// # 参数
 /// - `app_handle`: Tauri 应用句柄
@@ -50,7 +82,47 @@ pub async fn save_writing_goal(
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
     init_db(&conn).map_err(|e| format!("数据库初始化失败: {}", e))?;
+
+    // 首先从数据库获取项目路径
+    let project_path: Option<String> = conn
+        .query_row(
+            "SELECT path FROM projects WHERE id = ?1",
+            [project_id],
+            |row| row.get(0),
+        )
+        .ok();
+
     let now = chrono::Utc::now().to_rfc3339();
+
+    if let Some(path) = project_path {
+        let project_json_path = std::path::Path::new(&path).join("project.json");
+        if project_json_path.exists() {
+            // 读取现有 project.json
+            let content = fs::read_to_string(&project_json_path)
+                .map_err(|e| format!("读取 project.json 失败: {}", e))?;
+            let mut project_json: serde_json::Value = serde_json::from_str(&content)
+                .map_err(|e| format!("解析 project.json 失败: {}", e))?;
+
+            // 更新写作目标
+            project_json["writing_goal"] = serde_json::json!(daily_goal);
+
+            // 写回 project.json
+            fs::write(
+                &project_json_path,
+                serde_json::to_string_pretty(&project_json)
+                    .map_err(|e| format!("序列化 project.json 失败: {}", e))?,
+            )
+            .map_err(|e| format!("写入 project.json 失败: {}", e))?;
+
+            tracing::info!(project_id = %project_id, daily_goal = %daily_goal, path = %path, "写作目标已保存到 project.json");
+        } else {
+            tracing::warn!(project_id = %project_id, path = %path, "project.json 不存在");
+        }
+    } else {
+        tracing::warn!(project_id = %project_id, "无法找到项目路径");
+    }
+
+    // 同时更新 writing_goals 数据库表
     conn.execute(
         "INSERT INTO writing_goals (project_id, daily_goal, updated_at) VALUES (?1, ?2, ?3)
          ON CONFLICT(project_id) DO UPDATE SET daily_goal = ?2, updated_at = ?3",
@@ -62,6 +134,7 @@ pub async fn save_writing_goal(
         [project_id],
         |row| Ok(WritingGoal { id: row.get(0)?, project_id: row.get(1)?, daily_goal: row.get(2)?, updated_at: row.get(3)? }),
     ).map_err(|e| format!("查询写作目标失败: {}", e))?;
+    tracing::info!(project_id = %project_id, daily_goal = %daily_goal, "写作目标已保存到数据库");
     Ok(result)
 }
 

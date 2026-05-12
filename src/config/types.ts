@@ -54,7 +54,6 @@ export interface TomlConfig {
   security: SecuritySection
   features: FeaturesSection
   editor: EditorSection
-  entry_config: EntryConfigSection
 }
 
 export interface AppSection {
@@ -138,31 +137,4 @@ export interface EditorSection {
   line_spacing: number
   show_line_numbers: boolean
   spell_check_enabled: boolean
-}
-
-export type EntryLocation = 'menu_bar' | 'toolbar' | 'system_tray' | 'keyboard' | 'none'
-
-export type UserRole = 'admin' | 'advanced' | 'standard' | 'guest'
-
-export interface EntryConfigSection {
-  enabled: boolean
-  display_name: string
-  icon: string
-  tooltip: string
-  locations: EntryLocation[]
-  allowed_roles: UserRole[]
-  shortcut_key: string
-  shortcut_modifiers: string[]
-}
-
-export interface EntryLocationOption {
-  value: EntryLocation
-  label: string
-  description: string
-}
-
-export interface UserRoleOption {
-  value: UserRole
-  label: string
-  description: string
 }

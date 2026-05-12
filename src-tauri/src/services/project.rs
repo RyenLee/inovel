@@ -38,10 +38,11 @@ impl ProjectService {
         let now = Utc::now().to_rfc3339();
 
         conn.execute(
-            "INSERT INTO projects (id, name, author, description, path, created_at) 
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO projects (id, project_id, name, author, description, path, created_at) 
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             (
                 id,
+                &project_id,
                 &params.name,
                 &params.author,
                 &params.description,
@@ -82,7 +83,7 @@ impl ProjectService {
     let conn = Connection::open(&db_path)?;
 
     let mut stmt = conn.prepare(
-        "SELECT id, name, author, description, path, created_at 
+        "SELECT id, project_id, name, author, description, path, created_at, last_opened_at 
              FROM projects ORDER BY created_at DESC LIMIT ?1",
     )?;
 
@@ -90,13 +91,13 @@ impl ProjectService {
         .query_map([limit], |row| {
             Ok(ProjectMeta {
                 id: row.get(0)?,
-                project_id: String::new(),
-                name: row.get(1)?,
-                author: row.get(2)?,
-                description: row.get(3)?,
-                path: row.get(4)?,
-                created_at: row.get(5)?,
-                last_opened_at: None,
+                project_id: row.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                name: row.get(2)?,
+                author: row.get(3)?,
+                description: row.get(4)?,
+                path: row.get(5)?,
+                created_at: row.get(6)?,
+                last_opened_at: row.get(7)?,
                 is_valid: true,
                 cover_path: None,
                 encrypted: false,
@@ -114,21 +115,21 @@ impl ProjectService {
 /// 
 /// # 参数
 /// - `app_handle`: Tauri 应用句柄
-/// - `project_id`: 项目数据库主键 ID
+/// - `id`: 项目数据库主键 ID
 /// 
 /// # 返回值
 /// 删除成功返回 `Ok(())`，失败返回 `AppError`
-pub fn delete_project(app_handle: &AppHandle, project_id: i64) -> Result<()> {
+pub fn delete_project(app_handle: &AppHandle, id: i64) -> Result<()> {
     let db_path = config::get_db_path(app_handle);
     let conn = Connection::open(&db_path)?;
 
-    let rows_affected = conn.execute("DELETE FROM projects WHERE id = ?1", [project_id])?;
+    let rows_affected = conn.execute("DELETE FROM projects WHERE id = ?1", [id])?;
 
     if rows_affected == 0 {
-        return Err(AppError::not_found(format!("项目 {} 不存在", project_id)));
+        return Err(AppError::not_found(format!("项目 {} 不存在", id)));
     }
 
-    info!(project_id = %project_id, "项目删除成功");
+    info!(project_id = %id, "项目删除成功");
     Ok(())
 }
 }

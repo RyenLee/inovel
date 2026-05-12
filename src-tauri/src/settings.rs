@@ -29,8 +29,6 @@ pub struct AppConfig {
     pub features: FeaturesConfig,
     #[serde(default)]
     pub editor: EditorConfig,
-    #[serde(default, rename = "entry_config")]
-    pub entry_config: EntryConfig,
 }
 
 impl Default for AppConfig {
@@ -47,7 +45,6 @@ impl Default for AppConfig {
             security: SecurityConfig::default(),
             features: FeaturesConfig::default(),
             editor: EditorConfig::default(),
-            entry_config: EntryConfig::default(),
         }
     }
 }
@@ -64,9 +61,9 @@ impl Default for AppInfoConfig {
     fn default() -> Self {
         Self {
             name: "iNovel".to_string(),
-            version: "1.1.0".to_string(),
+            version: "1.0.0".to_string(),
             environment: "development".to_string(),
-            description: "一款现代化的小说创作工具".to_string(),
+            description: "A modern novel writing tool".to_string(),
         }
     }
 }
@@ -131,34 +128,6 @@ impl Default for EditorConfig {
             line_spacing: 1.5,
             show_line_numbers: true,
             spell_check_enabled: true,
-        }
-    }
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct EntryConfig {
-    pub enabled: bool,
-    pub display_name: String,
-    pub icon: String,
-    pub tooltip: String,
-    pub locations: Vec<String>,
-    pub allowed_roles: Vec<String>,
-    pub shortcut_key: String,
-    #[serde(rename = "shortcut_modifiers")]
-    pub shortcut_modifiers: Vec<String>,
-}
-
-impl Default for EntryConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            display_name: "配置管理".to_string(),
-            icon: "settings".to_string(),
-            tooltip: "打开配置管理页面".to_string(),
-            locations: vec!["menu_bar".to_string(), "toolbar".to_string()],
-            allowed_roles: vec!["admin".to_string(), "advanced".to_string()],
-            shortcut_key: "C".to_string(),
-            shortcut_modifiers: vec!["Ctrl".to_string(), "Shift".to_string()],
         }
     }
 }
@@ -361,43 +330,43 @@ pub fn validate_config(config: &AppConfig) -> ValidationResult {
     let mut result = ValidationResult::new();
 
     if config.gzip.level > 9 {
-        result.add_error("gzip.level 必须在 0-9 范围内");
+        result.add_error("gzip.level must be in 0-9 range");
     }
 
     if config.gzip.min_size < 0 {
-        result.add_error("gzip.min_size 不能为负数");
+        result.add_error("gzip.min_size must be positive");
     }
 
     if config.cache.max_entries == 0 {
-        result.add_error("cache.max_entries 必须大于 0");
+        result.add_error("cache.max_entries must be positive");
     }
 
     if config.cache.ttl_seconds == 0 {
-        result.add_warning("cache.ttl_seconds 为 0，缓存将立即过期");
+        result.add_warning("cache.ttl_seconds must be positive, cache will expire immediately");
     }
 
     if config.pagination.default_page_size == 0 {
-        result.add_error("pagination.default_page_size 必须大于 0");
+        result.add_error("pagination.default_page_size must be positive");
     }
 
     if config.pagination.max_page_size == 0 {
-        result.add_error("pagination.max_page_size 必须大于 0");
+        result.add_error("pagination.max_page_size must be positive");
     }
 
     if config.pagination.default_page_size > config.pagination.max_page_size {
-        result.add_error("pagination.default_page_size 不能大于 pagination.max_page_size");
+        result.add_error("pagination.default_page_size must be less than pagination.max_page_size");
     }
 
     if config.request_merging.window_ms == 0 {
-        result.add_error("request_merging.window_ms 必须大于 0");
+        result.add_error("request_merging.window_ms must be positive");
     }
 
     if config.request_merging.max_batch_size == 0 {
-        result.add_error("request_merging.max_batch_size 必须大于 0");
+        result.add_error("request_merging.max_batch_size must be positive");
     }
 
     if config.api.timeout_ms == 0 {
-        result.add_warning("api.timeout_ms 为 0，可能导致无限等待");
+        result.add_warning("api.timeout_ms must be positive");
     }
 
     result
@@ -434,7 +403,7 @@ impl ConfigWatcher {
         std::thread::Builder::new()
             .name("config-watcher".to_string())
             .spawn(move || {
-                info!("配置热加载监听已启动: {:?}", config_path);
+                info!("config watcher started: {:?}", config_path);
 
                 let (tx, rx) = std::sync::mpsc::channel();
 
@@ -447,14 +416,14 @@ impl ConfigWatcher {
                 ) {
                     Ok(w) => w,
                     Err(e) => {
-                        error!("创建文件监听器失败: {}", e);
+                        error!("config watcher thread failed: {}", e);
                         running.store(false, std::sync::atomic::Ordering::SeqCst);
                         return;
                     }
                 };
 
                 if let Err(e) = watcher.watch(&config_path, notify::RecursiveMode::NonRecursive) {
-                    error!("监听配置文件失败: {}", e);
+                    error!("config watcher failed to watch config file: {}", e);
                     running.store(false, std::sync::atomic::Ordering::SeqCst);
                     return;
                 }
@@ -466,16 +435,16 @@ impl ConfigWatcher {
                                 event.kind,
                                 notify::EventKind::Modify(_) | notify::EventKind::Create(_)
                             ) {
-                                info!("检测到配置文件变化，正在重新加载...");
+                                info!("config file changed, reloading config...");
                                 match load_from_file(&config_path) {
                                     Ok(new_config) => {
                                         if let Ok(mut current) = config.write() {
                                             *current = new_config;
-                                            info!("配置已成功热加载");
+                                            info!("config reloaded successfully");
                                         }
                                     }
                                     Err(e) => {
-                                        warn!("配置重新加载失败，继续使用当前配置: {}", e);
+                                        warn!("config reload failed: {}", e);
                                     }
                                 }
                             }
@@ -489,9 +458,9 @@ impl ConfigWatcher {
                     }
                 }
 
-                info!("配置热加载监听已停止");
+                info!("config watcher stopped");
             })
-            .map_err(|e| format!("启动配置监听线程失败: {}", e))?;
+            .map_err(|e| format!("config watcher thread failed: {}", e))?;
 
         Ok(())
     }
@@ -507,44 +476,44 @@ pub fn load_config() -> (AppConfig, PathBuf) {
 
     for path in &config_paths {
         if path.exists() {
-            info!("从 {} 加载配置文件", path.display());
+            info!("loading config from {}...", path.display());
             match load_from_file(path) {
                 Ok(config) => return (config, path.clone()),
                 Err(e) => {
-                    warn!("加载配置文件失败: {}，尝试下一个路径", e);
+                    warn!("config load failed: {}", e);
                 }
             }
         }
     }
 
-    info!("未找到配置文件，使用默认配置");
+    info!("no config file found, using default config");
     (AppConfig::default(), PathBuf::from("config.toml"))
 }
 
 pub fn load_from_file(path: &PathBuf) -> Result<AppConfig, String> {
-    let content = std::fs::read_to_string(path).map_err(|e| format!("读取配置文件失败: {}", e))?;
+    let content = std::fs::read_to_string(path).map_err(|e| format!("read config file failed: {}", e))?;
 
     let config: AppConfig =
-        toml::from_str(&content).map_err(|e| format!("解析配置文件失败: {}", e))?;
+        toml::from_str(&content).map_err(|e| format!("parse config file failed: {}", e))?;
 
     let validation = validate_config(&config);
     if !validation.valid {
-        return Err(format!("配置验证失败: {}", validation.errors.join("; ")));
+        return Err(format!("config validation failed: {}", validation.errors.join("; ")));
     }
 
     for warning in &validation.warnings {
-        warn!("配置警告: {}", warning);
+        warn!("config warning: {}", warning); 
     }
 
     Ok(config)
 }
 
 pub fn save_to_file(config: &AppConfig, path: &PathBuf) -> Result<(), String> {
-    let content = toml::to_string_pretty(config).map_err(|e| format!("序列化配置失败: {}", e))?;
+    let content = toml::to_string_pretty(config).map_err(|e| format!("serialize config failed: {}", e))?;
 
-    std::fs::write(path, content).map_err(|e| format!("写入配置文件失败: {}", e))?;
+    std::fs::write(path, content).map_err(|e| format!("write config file failed: {}", e))?;
 
-    info!("配置已保存到: {}", path.display());
+    info!("config saved to: {}", path.display());
 
     sync_app_metadata(config);
 
@@ -576,16 +545,16 @@ fn sync_tauri_conf(name: &str, version: &str) {
             }
             if let Ok(new_content) = serde_json::to_string_pretty(&json) {
                 if let Err(e) = std::fs::write(&path, new_content) {
-                    warn!("同步 tauri.conf.json 失败: {}", e);
+                    warn!("sync tauri.conf.json failed: {}", e);
                 } else {
                     info!(
-                        "已同步 tauri.conf.json: productName={}, version={}",
+                        "sync tauri.conf.json: productName={}, version={}",
                         name, version
                     );
                 }
             }
         }
-        Err(e) => warn!("读取 tauri.conf.json 失败: {}", e),
+        Err(e) => warn!("read tauri.conf.json failed: {}", e),
     }
 }
 
@@ -594,7 +563,7 @@ fn sync_cargo_toml(name: &str, version: &str, description: &str) {
     let content = match std::fs::read_to_string(&path) {
         Ok(c) => c,
         Err(e) => {
-            warn!("读取 Cargo.toml 失败: {}", e);
+            warn!("read Cargo.toml failed: {}", e);
             return;
         }
     };
@@ -616,10 +585,10 @@ fn sync_cargo_toml(name: &str, version: &str, description: &str) {
 
     if new_content != content {
         if let Err(e) = std::fs::write(&path, new_content) {
-            warn!("同步 Cargo.toml 失败: {}", e);
+            warn!("sync Cargo.toml failed: {}", e);
         } else {
             info!(
-                "已同步 Cargo.toml: name={}, version={}, description={}",
+                "sync Cargo.toml: name={}, version={}, description={}",
                 package_name, version, description
             );
         }
@@ -644,16 +613,16 @@ fn sync_package_json(name: &str, version: &str) {
             }
             if let Ok(new_content) = serde_json::to_string_pretty(&json) {
                 if let Err(e) = std::fs::write(&path, new_content) {
-                    warn!("同步 package.json 失败: {}", e);
+                    warn!("sync package.json failed: {}", e);
                 } else {
                     info!(
-                        "已同步 package.json: name={}, version={}",
+                        "sync package.json: name={}, version={}",
                         package_name, version
                     );
                 }
             }
         }
-        Err(e) => warn!("读取 package.json 失败: {}", e),
+        Err(e) => warn!("read package.json failed: {}", e),
     }
 }
 
@@ -683,7 +652,7 @@ pub fn init_config() -> (SharedConfig, ConfigWatcher) {
     let (watcher, shared_config) = ConfigWatcher::new(config_path, config);
 
     if let Err(e) = watcher.start() {
-        warn!("启动配置热加载失败: {}", e);
+        warn!("start config hot reload failed failed: {}", e);
     }
 
     (shared_config, watcher)

@@ -1,6 +1,7 @@
 use crate::db::get_db_path;
 use crate::models::{
-    CreateUserTemplateParams, UpdateUserTemplateParams, UserTemplate, WritingTemplate,
+    CreateUserTemplateParams, TemplateGroup, UpdateUserTemplateParams, UserTemplate,
+    WritingTemplate,
 };
 use rusqlite::Connection;
 use serde_json;
@@ -49,10 +50,21 @@ pub async fn get_builtin_templates(app_handle: AppHandle) -> Result<Vec<WritingT
 
     let content = fs::read_to_string(&path).map_err(|e| format!("读取内置模板文件失败: {}", e))?;
 
-    let templates: Vec<WritingTemplate> =
-        serde_json::from_str(&content).map_err(|e| format!("解析内置模板失败: {}", e))?;
-
-    Ok(templates)
+    // 尝试解析新的分组格式
+    match serde_json::from_str::<Vec<TemplateGroup>>(&content) {
+        Ok(groups) => {
+            // 展平分组结构
+            let templates: Vec<WritingTemplate> =
+                groups.into_iter().flat_map(|group| group.objects).collect();
+            Ok(templates)
+        }
+        Err(_) => {
+            // 回退到旧的直接数组格式
+            let templates: Vec<WritingTemplate> =
+                serde_json::from_str(&content).map_err(|e| format!("解析内置模板失败: {}", e))?;
+            Ok(templates)
+        }
+    }
 }
 
 /// 获取用户自定义模板
@@ -73,17 +85,24 @@ pub async fn get_user_templates(
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, project_id, name, description, category, content, created_at, updated_at 
+    // 如果 project_id 为 0，查询所有用户自定义模板；否则查询指定项目和全局（project_id=0）的模板
+    let query = if project_id == 0 {
+        "SELECT id, project_id, name, description, category, content, created_at, updated_at 
          FROM user_templates 
-         WHERE project_id = ?1 
-         ORDER BY created_at DESC",
-        )
+         ORDER BY created_at DESC"
+    } else {
+        "SELECT id, project_id, name, description, category, content, created_at, updated_at 
+         FROM user_templates 
+         WHERE project_id = 0 OR project_id = ?1 
+         ORDER BY created_at DESC"
+    };
+
+    let mut stmt = conn
+        .prepare(query)
         .map_err(|e| format!("准备查询失败: {}", e))?;
 
-    let templates: Vec<UserTemplate> = stmt
-        .query_map([project_id], |row| {
+    let templates: Vec<UserTemplate> = if project_id == 0 {
+        stmt.query_map([], |row| {
             Ok(UserTemplate {
                 id: row.get(0)?,
                 project_id: row.get(1)?,
@@ -97,7 +116,24 @@ pub async fn get_user_templates(
         })
         .map_err(|e| format!("查询用户模板失败: {}", e))?
         .filter_map(|r| r.ok())
-        .collect();
+        .collect()
+    } else {
+        stmt.query_map([project_id], |row| {
+            Ok(UserTemplate {
+                id: row.get(0)?,
+                project_id: row.get(1)?,
+                name: row.get(2)?,
+                description: row.get(3)?,
+                category: row.get(4)?,
+                content: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })
+        .map_err(|e| format!("查询用户模板失败: {}", e))?
+        .filter_map(|r| r.ok())
+        .collect()
+    };
 
     Ok(templates)
 }

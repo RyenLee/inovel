@@ -7,7 +7,6 @@ import stats from './stats.json'
 import worldbuilding from './worldbuilding.json'
 import projectSettings from './projectSettings.json'
 import configManager from './configManager.json'
-import entryConfig from './entryConfig.json'
 import treeSidebar from './treeSidebar.json'
 import backup from './backup.json'
 import templateSelector from './templateSelector.json'
@@ -25,6 +24,7 @@ import outlinePanel from './outlinePanel.json'
 import exportDialog from './exportDialog.json'
 import deleteConfirm from './deleteConfirm.json'
 import textBeautify from './textBeautify.json'
+import userTemplates from './userTemplates.json'
 
 export default {
   common,
@@ -36,7 +36,6 @@ export default {
   worldbuilding,
   projectSettings,
   configManager,
-  entryConfig,
   treeSidebar,
   backup,
   templateSelector,
@@ -54,4 +53,5 @@ export default {
   exportDialog,
   deleteConfirm,
   textBeautify,
+  userTemplates,
 }

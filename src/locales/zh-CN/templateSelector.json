@@ -1,7 +1,7 @@
 {
   "title": "选择写作模板",
   "categories": {
-    "all": "全部",
+    "custom": "自定义",
     "chapter": "章节",
     "illustrated": "图文",
     "dialogue": "对话",
@@ -9,9 +9,11 @@
   },
   "insertMode": {
     "replace": "替换内容",
-    "insert": "插入内容",
+    "append": "追加内容",
+    "merge": "智能合并",
     "replaceTooltip": "清空当前内容，使用模板",
-    "insertTooltip": "在当前光标位置插入模板",
+    "appendTooltip": "在现有内容后追加模板",
+    "mergeTooltip": "保留用户编辑，智能补充新内容",
     "modeLabel": "模式：{mode}"
   },
   "badges": {
@@ -23,7 +25,8 @@
   "reload": "重新加载",
   "cancel": "取消",
   "useReplace": "使用模板替换",
-  "useInsert": "插入模板内容",
+  "useAppend": "追加模板内容",
+  "useMerge": "智能合并模板",
   "messages": {
     "loadFailed": "加载模板失败",
     "loadFailedRetry": "加载模板失败，请重试"
