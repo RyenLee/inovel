@@ -23,7 +23,7 @@ pub mod utils;
 use tauri::Manager;
 use tracing::info;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
@@ -261,6 +261,14 @@ pub fn run() {
             commands::encryption::change_project_password,
             commands::encryption::reencrypt_project,
             commands::encryption::is_project_encrypted_command,
+            commands::encryption::get_global_encryption_status,
+            commands::encryption::enable_global_encryption,
+            commands::encryption::disable_global_encryption,
+            commands::encryption::change_global_password,
+            commands::encryption::verify_global_password,
+            commands::encryption::get_language_list,
+            commands::encryption::get_locale,
+            commands::encryption::set_locale,
             commands::inspiration::create_inspiration_item,
             commands::inspiration::update_inspiration_item,
             commands::inspiration::delete_inspiration_item,

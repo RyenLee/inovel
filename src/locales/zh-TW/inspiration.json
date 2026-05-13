@@ -1,0 +1,31 @@
+{
+  "columns": {
+    "inspiration": "靈感",
+    "dialogue": "對白",
+    "scene": "場景"
+  },
+  "deleteColumn": "刪除列",
+  "addItem": "添加条目",
+  "doubleClickToEdit": "雙擊編輯...",
+  "editPlaceholder": "輸入靈感內容...",
+  "save": "儲存",
+  "insertToEditor": "插入到編輯器",
+  "edit": "編輯",
+  "delete": "刪除",
+  "confirmDelete": "確認刪除",
+  "deleteItemConfirm": "確定要刪除這個靈感条目嗎？",
+  "cancel": "取消",
+  "deleted": "已刪除",
+  "insertedToEditor": "已插入到編輯器",
+  "enterColumnName": "請輸入列名稱",
+  "columnExists": "該列已存在",
+  "columnAdded": "已添加新列",
+  "defaultColumnCannotDelete": "預設列不能刪除",
+  "deleteColumnConfirm": "確定要刪除\"{name}\"列嗎？該列下的所有內容也會被刪除。",
+  "columnDeleted": "已刪除列",
+  "messages": {
+    "createFailed": "建立条目失敗",
+    "updateFailed": "更新条目失敗",
+    "deleteFailed": "刪除条目失敗"
+  }
+}

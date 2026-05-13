@@ -40,6 +40,7 @@
     "saveFailed": "Save failed"
   },
   "encryption": {
+    "incorrectPassword": "Incorrect password",
     "status": {
       "title": "Encryption Status",
       "encrypted": "Encrypted",
@@ -79,9 +80,11 @@
       "description": "Disabling encryption will decrypt all project files. Password confirmation required.",
       "password": "Password",
       "passwordPlaceholder": "Enter password",
+      "passwordRequired": "Please enter password",
       "button": "Disable Encryption",
       "success": "Project decrypted, encryption disabled",
-      "failed": "Failed to disable encryption: {error}"
+      "failed": "Failed to disable encryption: {error}",
+      "progress": "Decrypting: {current} / {total} ({file})"
     }
   },
   "project": "Project"

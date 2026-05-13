@@ -1,0 +1,10 @@
+{
+  "title": "大綱檢視",
+  "noChapters": "暫無章節",
+  "chapterCount": "{count}章",
+  "deleteVolume": "刪除卷",
+  "deleteVolumeConfirm": "確定刪除\"{name}\"及其所有章節？",
+  "wordCount": "{count}字",
+  "summaryPlaceholder": "輸入章節摘要...",
+  "clickToAddSummary": "點擊添加摘要..."
+}

@@ -16,7 +16,7 @@ use tauri::AppHandle;
 ///
 /// # 返回值
 /// 成功返回添加的敏感词记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn add_sensitive_word(
     app_handle: AppHandle,
     project_id: i64,
@@ -67,7 +67,7 @@ pub async fn add_sensitive_word(
 ///
 /// # 返回值
 /// 成功返回 Ok(())，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn remove_sensitive_word(
     app_handle: AppHandle,
     project_id: i64,
@@ -95,7 +95,7 @@ pub async fn remove_sensitive_word(
 ///
 /// # 返回值
 /// 成功返回敏感词列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_sensitive_words(
     app_handle: AppHandle,
     project_id: i64,
@@ -134,7 +134,7 @@ pub async fn list_sensitive_words(
 ///
 /// # 返回值
 /// 成功返回成功导入的敏感词列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn import_sensitive_words(
     app_handle: AppHandle,
     project_id: i64,
@@ -190,7 +190,7 @@ pub async fn import_sensitive_words(
 ///
 /// # 返回值
 /// 成功返回匹配结果列表（包含敏感词和起止位置），失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn scan_sensitive_words(
     app_handle: AppHandle,
     project_id: i64,

@@ -43,7 +43,7 @@ export const useTemplateStore = defineStore("template", () => {
     isLoading.value = true;
     try {
       const templates = await invoke<UserTemplate[]>("get_user_templates", {
-        projectId,
+        project_id: projectId,
       });
       userTemplates.value = templates;
     } catch (error) {
@@ -58,7 +58,7 @@ export const useTemplateStore = defineStore("template", () => {
     try {
       const [builtin, user] = await invoke<[WritingTemplate[], UserTemplate[]]>(
         "get_all_templates",
-        { projectId }
+        { project_id: projectId }
       );
       builtinTemplates.value = builtin;
       userTemplates.value = user;
@@ -99,7 +99,7 @@ export const useTemplateStore = defineStore("template", () => {
   ) {
     try {
       const template = await invoke<UserTemplate>("update_user_template", {
-        templateId,
+        template_id: templateId,
         params,
       });
       const index = userTemplates.value.findIndex(t => t.id === templateId);
@@ -116,7 +116,7 @@ export const useTemplateStore = defineStore("template", () => {
   async function deleteUserTemplate(templateId: number) {
     try {
       await invoke("delete_user_template", {
-        templateId,
+        template_id: templateId,
       });
       userTemplates.value = userTemplates.value.filter(t => t.id !== templateId);
     } catch (error) {

@@ -40,7 +40,7 @@ fn get_builtin_templates_path(app: &AppHandle) -> PathBuf {
 ///
 /// # 返回值
 /// 成功返回内置模板列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_builtin_templates(app_handle: AppHandle) -> Result<Vec<WritingTemplate>, String> {
     let path = get_builtin_templates_path(&app_handle);
 
@@ -77,7 +77,7 @@ pub async fn get_builtin_templates(app_handle: AppHandle) -> Result<Vec<WritingT
 ///
 /// # 返回值
 /// 成功返回用户模板列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_user_templates(
     app_handle: AppHandle,
     project_id: i64,
@@ -148,7 +148,7 @@ pub async fn get_user_templates(
 ///
 /// # 返回值
 /// 成功返回创建的模板记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn save_user_template(
     app_handle: AppHandle,
     params: CreateUserTemplateParams,
@@ -197,7 +197,7 @@ pub async fn save_user_template(
 ///
 /// # 返回值
 /// 成功返回更新后的模板记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_user_template(
     app_handle: AppHandle,
     template_id: i64,
@@ -290,7 +290,7 @@ pub async fn update_user_template(
 ///
 /// # 返回值
 /// 成功返回 Ok(())，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_user_template(app_handle: AppHandle, template_id: i64) -> Result<(), String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -316,7 +316,7 @@ pub async fn delete_user_template(app_handle: AppHandle, template_id: i64) -> Re
 ///
 /// # 返回值
 /// 成功返回元组（内置模板列表，用户模板列表），失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_all_templates(
     app_handle: AppHandle,
     project_id: i64,

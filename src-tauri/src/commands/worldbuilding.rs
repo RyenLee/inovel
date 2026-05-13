@@ -20,7 +20,7 @@ use tauri::AppHandle;
 ///
 /// # 返回值
 /// 成功返回创建的角色记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_character(app_handle: AppHandle, params: CreateCharacterParams) -> Result<Character, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -57,7 +57,7 @@ pub async fn create_character(app_handle: AppHandle, params: CreateCharacterPara
 ///
 /// # 返回值
 /// 成功返回更新后的角色记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_character(app_handle: AppHandle, character_id: i64, params: UpdateCharacterParams) -> Result<Character, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -99,7 +99,7 @@ pub async fn update_character(app_handle: AppHandle, character_id: i64, params: 
 ///
 /// # 返回值
 /// 成功返回 Ok(())，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_character(app_handle: AppHandle, character_id: i64) -> Result<(), String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -128,7 +128,7 @@ pub async fn delete_character(app_handle: AppHandle, character_id: i64) -> Resul
 ///
 /// # 返回值
 /// 成功返回角色列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_characters(app_handle: AppHandle, project_id: i64) -> Result<Vec<Character>, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -156,7 +156,7 @@ pub async fn list_characters(app_handle: AppHandle, project_id: i64) -> Result<V
 ///
 /// # 返回值
 /// 成功返回创建的地点记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_location(app_handle: AppHandle, params: CreateLocationParams) -> Result<Location, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -182,7 +182,7 @@ pub async fn create_location(app_handle: AppHandle, params: CreateLocationParams
 ///
 /// # 返回值
 /// 成功返回更新后的地点记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_location(app_handle: AppHandle, location_id: i64, params: UpdateLocationParams) -> Result<Location, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -213,7 +213,7 @@ pub async fn update_location(app_handle: AppHandle, location_id: i64, params: Up
 ///
 /// # 返回值
 /// 成功返回 Ok(())，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_location(app_handle: AppHandle, location_id: i64) -> Result<(), String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -231,7 +231,7 @@ pub async fn delete_location(app_handle: AppHandle, location_id: i64) -> Result<
 ///
 /// # 返回值
 /// 成功返回地点列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_locations(app_handle: AppHandle, project_id: i64) -> Result<Vec<Location>, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -255,7 +255,7 @@ pub async fn list_locations(app_handle: AppHandle, project_id: i64) -> Result<Ve
 ///
 /// # 返回值
 /// 成功返回创建的组织记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_organization(app_handle: AppHandle, params: CreateOrganizationParams) -> Result<Organization, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -281,7 +281,7 @@ pub async fn create_organization(app_handle: AppHandle, params: CreateOrganizati
 ///
 /// # 返回值
 /// 成功返回更新后的组织记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_organization(app_handle: AppHandle, organization_id: i64, params: UpdateOrganizationParams) -> Result<Organization, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -312,7 +312,7 @@ pub async fn update_organization(app_handle: AppHandle, organization_id: i64, pa
 ///
 /// # 返回值
 /// 成功返回 Ok(())，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_organization(app_handle: AppHandle, organization_id: i64) -> Result<(), String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -330,7 +330,7 @@ pub async fn delete_organization(app_handle: AppHandle, organization_id: i64) ->
 ///
 /// # 返回值
 /// 成功返回组织列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_organizations(app_handle: AppHandle, project_id: i64) -> Result<Vec<Organization>, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;

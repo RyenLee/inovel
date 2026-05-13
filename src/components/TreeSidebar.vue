@@ -2,7 +2,16 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useMessage } from "naive-ui";
-import { NTree, NIcon, NButton, NDropdown, NInput, NPopconfirm, NEmpty, NSelect } from "naive-ui";
+import {
+  NTree,
+  NIcon,
+  NButton,
+  NDropdown,
+  NInput,
+  NPopconfirm,
+  NEmpty,
+  NSelect,
+} from "naive-ui";
 import {
   ChevronRight,
   ChevronDown,
@@ -18,7 +27,12 @@ import {
 import draggable from "vuedraggable";
 import DeleteConfirmModal from "./DeleteConfirmModal.vue";
 import TemplateSelector from "./TemplateSelector.vue";
-import { CHAPTER_STATUS_OPTIONS, getStatusColor, getStatusLabel, type ChapterStatus } from "../types/chapter";
+import {
+  CHAPTER_STATUS_OPTIONS,
+  getStatusColor,
+  getStatusLabel,
+  type ChapterStatus,
+} from "../types/chapter";
 import { useLocale } from "../i18n/composables/useLocale";
 
 const { t } = useLocale();
@@ -64,7 +78,7 @@ const expandedVolumes = ref<number[]>([]);
 const selectedChapterId = ref<number | null>(null);
 
 // Status filter
-const statusFilter = ref<ChapterStatus | 'all'>('all');
+const statusFilter = ref<ChapterStatus | "all">("all");
 const showStatusFilter = ref(false);
 
 // 模板选择器状态
@@ -72,28 +86,44 @@ const showTemplateSelector = ref(false);
 const currentVolumeIdForTemplate = ref<number | null>(null);
 
 const statusFilterOptions = computed(() => {
-  const base: Array<{ label: string; value: string; color?: string }> = [{ label: t('treeSidebar.allChapters'), value: 'all' }];
+  const base: Array<{ label: string; value: string; color?: string }> = [
+    { label: t("treeSidebar.allChapters"), value: "all" },
+  ];
   const hardcoded: Array<{ label: string; value: string; color: string }> = [
-    { label: t('treeSidebar.status.outline'), value: 'outline', color: '#9CA3AF' },
-    { label: t('treeSidebar.status.draft'), value: 'draft', color: '#F59E0B' },
-    { label: t('treeSidebar.status.revised'), value: 'revised', color: '#3B82F6' },
-    { label: t('treeSidebar.status.final'), value: 'final', color: '#10B981' },
-    { label: t('treeSidebar.status.abandoned'), value: 'abandoned', color: '#EF4444' },
+    {
+      label: t("treeSidebar.status.outline"),
+      value: "outline",
+      color: "#9CA3AF",
+    },
+    { label: t("treeSidebar.status.draft"), value: "draft", color: "#F59E0B" },
+    {
+      label: t("treeSidebar.status.revised"),
+      value: "revised",
+      color: "#3B82F6",
+    },
+    { label: t("treeSidebar.status.final"), value: "final", color: "#10B981" },
+    {
+      label: t("treeSidebar.status.abandoned"),
+      value: "abandoned",
+      color: "#EF4444",
+    },
   ];
   return [...base, ...hardcoded];
 });
 
 // Filtered volumes based on status filter
 const filteredVolumes = computed(() => {
-  if (statusFilter.value === 'all') {
+  if (statusFilter.value === "all") {
     return volumes.value;
   }
   return volumes.value
-    .map(volume => ({
+    .map((volume) => ({
       ...volume,
-      chapters: volume.chapters.filter(chapter => chapter.status === statusFilter.value),
+      chapters: volume.chapters.filter(
+        (chapter) => chapter.status === statusFilter.value
+      ),
     }))
-    .filter(volume => volume.chapters.length > 0);
+    .filter((volume) => volume.chapters.length > 0);
 });
 
 // Context menu state
@@ -112,13 +142,16 @@ const editingChapterTitle = ref("");
 
 // Status edit state
 const editingChapterStatusId = ref<number | null>(null);
-const editingChapterStatus = ref<ChapterStatus>('draft');
+const editingChapterStatus = ref<ChapterStatus>("draft");
 
 // Update chapter status
-const updateChapterStatus = async (chapterId: number, newStatus: ChapterStatus) => {
+const updateChapterStatus = async (
+  chapterId: number,
+  newStatus: ChapterStatus
+) => {
   try {
     await invoke("update_chapter_status", {
-      chapterId,
+      chapter_id: chapterId,
       status: newStatus,
     });
     for (const volume of volumes.value) {
@@ -128,10 +161,12 @@ const updateChapterStatus = async (chapterId: number, newStatus: ChapterStatus) 
         break;
       }
     }
-    message.success(t('treeSidebar.statusUpdated') + `: ${getStatusLabel(newStatus)}`);
+    message.success(
+      t("treeSidebar.statusUpdated") + `: ${getStatusLabel(newStatus)}`
+    );
   } catch (error) {
-    console.error(t('treeSidebar.updateStatusFailed') + ":", error);
-    message.error(t('treeSidebar.updateStatusFailed'));
+    console.error(t("treeSidebar.updateStatusFailed") + ":", error);
+    message.error(t("treeSidebar.updateStatusFailed"));
   }
 };
 
@@ -144,7 +179,10 @@ const startEditChapterStatus = (chapter: Chapter) => {
 // Confirm status edit
 const confirmEditChapterStatus = () => {
   if (editingChapterStatusId.value !== null) {
-    updateChapterStatus(editingChapterStatusId.value, editingChapterStatus.value);
+    updateChapterStatus(
+      editingChapterStatusId.value,
+      editingChapterStatus.value
+    );
   }
   editingChapterStatusId.value = null;
 };
@@ -165,11 +203,11 @@ const loadChapterTree = async () => {
   isLoading.value = true;
   try {
     const tree = await invoke<VolumeWithChapters[]>("get_chapter_tree", {
-      projectId: Number(props.projectId),
+      project_id: Number(props.projectId),
     });
     volumes.value = tree;
   } catch (error) {
-    console.error(t('treeSidebar.loadTreeFailed') + ":", error);
+    console.error(t("treeSidebar.loadTreeFailed") + ":", error);
   } finally {
     isLoading.value = false;
   }
@@ -179,8 +217,8 @@ const loadChapterTree = async () => {
 const createVolume = async () => {
   try {
     const newVolume = await invoke<VolumeWithChapters>("create_volume", {
-      projectId: Number(props.projectId),
-      name: t('treeSidebar.newVolume'),
+      project_id: Number(props.projectId),
+      name: t("treeSidebar.newVolume"),
     });
     // 后端返回的 Volume 缺少 chapters 数组，需要补充
     newVolume.chapters = [];
@@ -188,7 +226,7 @@ const createVolume = async () => {
     expandedVolumes.value.push(newVolume.id);
     startEditVolume(newVolume.id, newVolume.name);
   } catch (error) {
-    console.error(t('treeSidebar.createVolumeFailed') + ":", error);
+    console.error(t("treeSidebar.createVolumeFailed") + ":", error);
   }
 };
 
@@ -197,13 +235,17 @@ const isCreatingChapter = ref(false);
 const creatingChapterTimeout = ref<number | null>(null);
 
 // 实际创建章节的函数
-const doCreateChapter = async (volumeId: number, initialContent?: string, _mode?: string) => {
+const doCreateChapter = async (
+  volumeId: number,
+  initialContent?: string,
+  _mode?: string
+) => {
   try {
     const newChapter = await invoke<Chapter>("create_chapter", {
-      projectId: Number(props.projectId),
-      volumeId,
-      title: t('treeSidebar.newChapter'),
-      initialContent: initialContent || null,
+      project_id: Number(props.projectId),
+      volume_id: volumeId,
+      title: t("treeSidebar.newChapter"),
+      initial_content: initialContent || null,
     });
     const volume = volumes.value.find((v) => v.id === volumeId);
     if (volume) {
@@ -214,7 +256,7 @@ const doCreateChapter = async (volumeId: number, initialContent?: string, _mode?
     // 然后开始编辑标题
     startEditChapter(newChapter.id, newChapter.title);
   } catch (error) {
-    console.error(t('treeSidebar.createChapterFailed') + ":", error);
+    console.error(t("treeSidebar.createChapterFailed") + ":", error);
   }
 };
 
@@ -224,15 +266,15 @@ const createChapter = (volumeId: number) => {
     clearTimeout(creatingChapterTimeout.value);
     creatingChapterTimeout.value = null;
   }
-  
+
   // Prevent multiple simultaneous chapter creation
   if (isCreatingChapter.value) {
     return;
   }
-  
+
   // Set a brief lock to prevent rapid re-triggers
   isCreatingChapter.value = true;
-  
+
   // Small delay to allow any double-click browser event to be filtered
   creatingChapterTimeout.value = window.setTimeout(() => {
     // 显示模板选择器
@@ -244,14 +286,21 @@ const createChapter = (volumeId: number) => {
 };
 
 // 处理模板选择
-const handleTemplateSelect = async (data: { content: string; mode: string } | string) => {
+const handleTemplateSelect = async (
+  data: { content: string; mode: string } | string
+) => {
   if (!currentVolumeIdForTemplate.value) return;
-  
+
   // 兼容两种调用方式：从 TemplateSelector 收到对象，或直接收到字符串
-  const templateData = typeof data === 'string' ? { content: data, mode: 'replace' } : data;
-  
+  const templateData =
+    typeof data === "string" ? { content: data, mode: "replace" } : data;
+
   showTemplateSelector.value = false;
-  await doCreateChapter(currentVolumeIdForTemplate.value, templateData.content, templateData.mode);
+  await doCreateChapter(
+    currentVolumeIdForTemplate.value,
+    templateData.content,
+    templateData.mode
+  );
   currentVolumeIdForTemplate.value = null;
 };
 
@@ -265,15 +314,15 @@ const handleTemplateSelectorClose = () => {
 const updateVolumeName = async (volumeId: number, newName: string) => {
   try {
     await invoke("update_volume_name", {
-      volumeId,
-      newName,
+      volume_id: volumeId,
+      new_name: newName,
     });
     const volume = volumes.value.find((v) => v.id === volumeId);
     if (volume) {
       volume.name = newName;
     }
   } catch (error) {
-    console.error(t('treeSidebar.updateVolumeNameFailed') + ":", error);
+    console.error(t("treeSidebar.updateVolumeNameFailed") + ":", error);
   }
 };
 
@@ -281,8 +330,8 @@ const updateVolumeName = async (volumeId: number, newName: string) => {
 const updateChapterTitle = async (chapterId: number, newTitle: string) => {
   try {
     await invoke("update_chapter_title", {
-      chapterId,
-      newTitle,
+      chapter_id: chapterId,
+      new_title: newTitle,
     });
     for (const volume of volumes.value) {
       const chapter = volume.chapters.find((c) => c.id === chapterId);
@@ -292,36 +341,36 @@ const updateChapterTitle = async (chapterId: number, newTitle: string) => {
       }
     }
   } catch (error) {
-    console.error(t('treeSidebar.updateChapterTitleFailed') + ":", error);
+    console.error(t("treeSidebar.updateChapterTitleFailed") + ":", error);
   }
 };
 
 // Delete volume - 直接删除，不保留文件
 const deleteVolume = async (volumeId: number) => {
   try {
-    await invoke("delete_volume", { volumeId });
+    await invoke("delete_volume", { volume_id: volumeId });
     volumes.value = volumes.value.filter((v) => v.id !== volumeId);
-    message.success(t('treeSidebar.volumeDeleted'));
+    message.success(t("treeSidebar.volumeDeleted"));
   } catch (error) {
-    console.error(t('treeSidebar.deleteVolumeFailed') + ":", error);
-    message.error(t('treeSidebar.deleteVolumeFailed'));
+    console.error(t("treeSidebar.deleteVolumeFailed") + ":", error);
+    message.error(t("treeSidebar.deleteVolumeFailed"));
   }
 };
 
 // Delete chapter - 直接删除，不保留文件
 const deleteChapter = async (chapterId: number) => {
   try {
-    await invoke("delete_chapter", { chapterId, keepFile: false });
+    await invoke("delete_chapter", { chapter_id: chapterId, keep_file: false });
     for (const volume of volumes.value) {
       volume.chapters = volume.chapters.filter((c) => c.id !== chapterId);
     }
     if (selectedChapterId.value === chapterId) {
       selectedChapterId.value = null;
     }
-    message.success(t('treeSidebar.chapterDeleted'));
+    message.success(t("treeSidebar.chapterDeleted"));
   } catch (error) {
-    console.error(t('treeSidebar.deleteChapterFailed') + ":", error);
-    message.error(t('treeSidebar.deleteChapterFailed'));
+    console.error(t("treeSidebar.deleteChapterFailed") + ":", error);
+    message.error(t("treeSidebar.deleteChapterFailed"));
   }
 };
 
@@ -349,17 +398,26 @@ const handleConfirmDeleteVolume = async () => {
 const handleConfirmDeleteChapter = async (keepFile: boolean) => {
   if (!chapterToDelete.value) return;
   try {
-    await invoke("delete_chapter", { chapterId: chapterToDelete.value.id, keepFile });
+    await invoke("delete_chapter", {
+      chapter_id: chapterToDelete.value.id,
+      keep_file: keepFile,
+    });
     for (const volume of volumes.value) {
-      volume.chapters = volume.chapters.filter((c) => c.id !== chapterToDelete.value!.id);
+      volume.chapters = volume.chapters.filter(
+        (c) => c.id !== chapterToDelete.value!.id
+      );
     }
     if (selectedChapterId.value === chapterToDelete.value.id) {
       selectedChapterId.value = null;
     }
-    message.success(keepFile ? t('treeSidebar.chapterRemoved') : t('treeSidebar.chapterDeleted'));
+    message.success(
+      keepFile
+        ? t("treeSidebar.chapterRemoved")
+        : t("treeSidebar.chapterDeleted")
+    );
   } catch (error) {
-    console.error(t('treeSidebar.deleteChapterFailed') + ":", error);
-    message.error(t('treeSidebar.deleteChapterFailed'));
+    console.error(t("treeSidebar.deleteChapterFailed") + ":", error);
+    message.error(t("treeSidebar.deleteChapterFailed"));
   }
   showDeleteChapterModal.value = false;
   chapterToDelete.value = null;
@@ -370,11 +428,11 @@ const onVolumeReorder = async () => {
   try {
     const orderedIds = volumes.value.map((v) => v.id);
     await invoke("reorder_volumes", {
-      projectId: Number(props.projectId),
-      orderedIds,
+      project_id: Number(props.projectId),
+      ordered_ids: orderedIds,
     });
   } catch (error) {
-    console.error(t('treeSidebar.reorderVolumesFailed') + ":", error);
+    console.error(t("treeSidebar.reorderVolumesFailed") + ":", error);
     loadChapterTree();
   }
 };
@@ -386,18 +444,26 @@ const onChapterReorder = async (volumeId: number) => {
     if (volume) {
       const orderedIds = volume.chapters.map((c) => c.id);
       await invoke("reorder_chapters", {
-        volumeId,
-        orderedIds,
+        volume_id: volumeId,
+        ordered_ids: orderedIds,
       });
     }
   } catch (error) {
-    console.error(t('treeSidebar.reorderChaptersFailed') + ":", error);
+    console.error(t("treeSidebar.reorderChaptersFailed") + ":", error);
     loadChapterTree();
   }
 };
 
 // Handle chapter added from another volume (cross-volume drag)
-const onChapterAdd = async (evt: { item: HTMLElement; from: HTMLElement; to: HTMLElement; newIndex: number }, targetVolumeId: number) => {
+const onChapterAdd = async (
+  evt: {
+    item: HTMLElement;
+    from: HTMLElement;
+    to: HTMLElement;
+    newIndex: number;
+  },
+  targetVolumeId: number
+) => {
   try {
     const targetVolume = volumes.value.find((v) => v.id === targetVolumeId);
     if (!targetVolume || evt.newIndex >= targetVolume.chapters.length) return;
@@ -407,9 +473,9 @@ const onChapterAdd = async (evt: { item: HTMLElement; from: HTMLElement; to: HTM
 
     if (sourceVolumeId !== targetVolumeId) {
       await invoke("move_chapter_to_volume", {
-        chapterId: movedChapter.id,
-        targetVolumeId,
-        sortOrder: evt.newIndex,
+        chapter_id: movedChapter.id,
+        target_volume_id: targetVolumeId,
+        sort_order: evt.newIndex,
       });
       movedChapter.volume_id = targetVolumeId;
 
@@ -418,8 +484,8 @@ const onChapterAdd = async (evt: { item: HTMLElement; from: HTMLElement; to: HTM
         const sourceOrderedIds = sourceVolume.chapters.map((c) => c.id);
         if (sourceOrderedIds.length > 0) {
           await invoke("reorder_chapters", {
-            volumeId: sourceVolumeId,
-            orderedIds: sourceOrderedIds,
+            volume_id: sourceVolumeId,
+            ordered_ids: sourceOrderedIds,
           });
         }
       }
@@ -427,11 +493,11 @@ const onChapterAdd = async (evt: { item: HTMLElement; from: HTMLElement; to: HTM
 
     const orderedIds = targetVolume.chapters.map((c) => c.id);
     await invoke("reorder_chapters", {
-      volumeId: targetVolumeId,
-      orderedIds,
+      volume_id: targetVolumeId,
+      ordered_ids: orderedIds,
     });
   } catch (error) {
-    console.error(t('treeSidebar.moveChapterFailed') + ":", error);
+    console.error(t("treeSidebar.moveChapterFailed") + ":", error);
     loadChapterTree();
   }
 };
@@ -453,7 +519,12 @@ const selectChapter = (chapter: Chapter) => {
 };
 
 // Context menu handlers
-const showContextMenu = (event: MouseEvent, type: "volume" | "chapter" | "empty", volumeId?: number, chapterId?: number) => {
+const showContextMenu = (
+  event: MouseEvent,
+  type: "volume" | "chapter" | "empty",
+  volumeId?: number,
+  chapterId?: number
+) => {
   event.preventDefault();
   contextMenuVisible.value = true;
   contextMenuX.value = event.clientX;
@@ -469,29 +540,37 @@ const hideContextMenu = () => {
 
 // Context menu actions
 const contextMenuOptions = computed(() => {
-  if (contextMenuType.value === "volume" && contextMenuVolumeId.value !== null) {
+  if (
+    contextMenuType.value === "volume" &&
+    contextMenuVolumeId.value !== null
+  ) {
     return [
       {
-        label: t('treeSidebar.addChapter'),
+        label: t("treeSidebar.addChapter"),
         key: "add-chapter",
         icon: () => null,
       },
       {
-        label: t('treeSidebar.rename'),
+        label: t("treeSidebar.rename"),
         key: "rename",
         icon: () => null,
       },
       {
-        label: t('treeSidebar.delete'),
+        label: t("treeSidebar.delete"),
         key: "delete",
         icon: () => null,
       },
     ];
-  } else if (contextMenuType.value === "chapter" && contextMenuChapterId.value !== null) {
+  } else if (
+    contextMenuType.value === "chapter" &&
+    contextMenuChapterId.value !== null
+  ) {
     // Get current chapter status for menu
-    let currentStatus: ChapterStatus = 'draft';
+    let currentStatus: ChapterStatus = "draft";
     for (const volume of volumes.value) {
-      const chapter = volume.chapters.find((c) => c.id === contextMenuChapterId.value);
+      const chapter = volume.chapters.find(
+        (c) => c.id === contextMenuChapterId.value
+      );
       if (chapter) {
         currentStatus = chapter.status;
         break;
@@ -499,7 +578,7 @@ const contextMenuOptions = computed(() => {
     }
 
     // Build status submenu
-    const statusOptions = CHAPTER_STATUS_OPTIONS.map(opt => ({
+    const statusOptions = CHAPTER_STATUS_OPTIONS.map((opt) => ({
       label: opt.label,
       key: `status-${opt.value}`,
       icon: () => null,
@@ -508,18 +587,18 @@ const contextMenuOptions = computed(() => {
 
     return [
       {
-        label: t('treeSidebar.changeStatus'),
+        label: t("treeSidebar.changeStatus"),
         key: "change-status",
         icon: () => null,
         children: statusOptions,
       },
       {
-        label: t('treeSidebar.rename'),
+        label: t("treeSidebar.rename"),
         key: "rename",
         icon: () => null,
       },
       {
-        label: t('treeSidebar.delete'),
+        label: t("treeSidebar.delete"),
         key: "delete",
         icon: () => null,
       },
@@ -527,7 +606,7 @@ const contextMenuOptions = computed(() => {
   } else {
     return [
       {
-        label: t('treeSidebar.addVolume'),
+        label: t("treeSidebar.addVolume"),
         key: "add-volume",
         icon: () => null,
       },
@@ -539,8 +618,8 @@ const handleContextMenuSelect = async (key: string) => {
   hideContextMenu();
 
   // Handle status change
-  if (key.startsWith('status-')) {
-    const newStatus = key.replace('status-', '') as ChapterStatus;
+  if (key.startsWith("status-")) {
+    const newStatus = key.replace("status-", "") as ChapterStatus;
     if (contextMenuChapterId.value !== null) {
       await updateChapterStatus(contextMenuChapterId.value, newStatus);
     }
@@ -560,14 +639,24 @@ const handleContextMenuSelect = async (key: string) => {
       // Open status dropdown
       break;
     case "rename":
-      if (contextMenuType.value === "volume" && contextMenuVolumeId.value !== null) {
-        const volume = volumes.value.find((v) => v.id === contextMenuVolumeId.value);
+      if (
+        contextMenuType.value === "volume" &&
+        contextMenuVolumeId.value !== null
+      ) {
+        const volume = volumes.value.find(
+          (v) => v.id === contextMenuVolumeId.value
+        );
         if (volume) {
           startEditVolume(volume.id, volume.name);
         }
-      } else if (contextMenuType.value === "chapter" && contextMenuChapterId.value !== null) {
+      } else if (
+        contextMenuType.value === "chapter" &&
+        contextMenuChapterId.value !== null
+      ) {
         for (const volume of volumes.value) {
-          const chapter = volume.chapters.find((c) => c.id === contextMenuChapterId.value);
+          const chapter = volume.chapters.find(
+            (c) => c.id === contextMenuChapterId.value
+          );
           if (chapter) {
             startEditChapter(chapter.id, chapter.title);
             break;
@@ -576,14 +665,24 @@ const handleContextMenuSelect = async (key: string) => {
       }
       break;
     case "delete":
-      if (contextMenuType.value === "volume" && contextMenuVolumeId.value !== null) {
-        const volume = volumes.value.find((v) => v.id === contextMenuVolumeId.value);
+      if (
+        contextMenuType.value === "volume" &&
+        contextMenuVolumeId.value !== null
+      ) {
+        const volume = volumes.value.find(
+          (v) => v.id === contextMenuVolumeId.value
+        );
         if (volume) {
           openDeleteVolumeModal(volume);
         }
-      } else if (contextMenuType.value === "chapter" && contextMenuChapterId.value !== null) {
+      } else if (
+        contextMenuType.value === "chapter" &&
+        contextMenuChapterId.value !== null
+      ) {
         for (const volume of volumes.value) {
-          const chapter = volume.chapters.find((c) => c.id === contextMenuChapterId.value);
+          const chapter = volume.chapters.find(
+            (c) => c.id === contextMenuChapterId.value
+          );
           if (chapter) {
             openDeleteChapterModal({ id: chapter.id, title: chapter.title });
             break;
@@ -615,7 +714,10 @@ const startEditChapter = (chapterId: number, currentTitle: string) => {
 
 const finishEditChapter = () => {
   if (editingChapterId.value !== null && editingChapterTitle.value.trim()) {
-    updateChapterTitle(editingChapterId.value, editingChapterTitle.value.trim());
+    updateChapterTitle(
+      editingChapterId.value,
+      editingChapterTitle.value.trim()
+    );
   }
   editingChapterId.value = null;
   editingChapterTitle.value = "";
@@ -645,11 +747,20 @@ onMounted(async () => {
     @click="hideContextMenu"
   >
     <!-- Header -->
-    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ t('treeSidebar.title') }}</h2>
+    <div
+      class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700"
+    >
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200">
+        {{ t("treeSidebar.title") }}
+      </h2>
       <div class="flex items-center gap-2">
         <!-- Status Filter -->
-        <NButton size="tiny" quaternary @click="showStatusFilter = !showStatusFilter" :type="statusFilter !== 'all' ? 'primary' : undefined">
+        <NButton
+          size="tiny"
+          quaternary
+          @click="showStatusFilter = !showStatusFilter"
+          :type="statusFilter !== 'all' ? 'primary' : undefined"
+        >
           <template #icon>
             <Filter class="w-4 h-4" />
           </template>
@@ -663,16 +774,21 @@ onMounted(async () => {
     </div>
 
     <!-- Status Filter Bar -->
-    <div v-if="showStatusFilter" class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+    <div
+      v-if="showStatusFilter"
+      class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+    >
       <div class="flex items-center gap-2 flex-wrap">
-        <span class="text-xs text-gray-500">{{ t('treeSidebar.filter') }}</span>
+        <span class="text-xs text-gray-500">{{ t("treeSidebar.filter") }}</span>
         <button
           v-for="opt in statusFilterOptions"
           :key="opt.value"
           class="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full transition-colors"
-          :class="statusFilter === opt.value
-            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
+          :class="
+            statusFilter === opt.value
+              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+          "
           @click="statusFilter = opt.value as ChapterStatus | 'all'"
         >
           <span
@@ -687,10 +803,21 @@ onMounted(async () => {
 
     <!-- Tree Content -->
     <div class="flex-1 overflow-y-auto p-2">
-      <NEmpty v-if="!isLoading && filteredVolumes.length === 0" :description="t('treeSidebar.noChapters')" class="py-8">
+      <NEmpty
+        v-if="!isLoading && filteredVolumes.length === 0"
+        :description="t('treeSidebar.noChapters')"
+        class="py-8"
+      >
         <template #extra>
-          <NButton v-if="volumes.length === 0" size="small" @click="createVolume">{{ t('treeSidebar.createFirstVolume') }}</NButton>
-          <span v-else class="text-sm text-gray-500">{{ t('treeSidebar.noMatchingChapters') }}</span>
+          <NButton
+            v-if="volumes.length === 0"
+            size="small"
+            @click="createVolume"
+            >{{ t("treeSidebar.createFirstVolume") }}</NButton
+          >
+          <span v-else class="text-sm text-gray-500">{{
+            t("treeSidebar.noMatchingChapters")
+          }}</span>
         </template>
       </NEmpty>
 
@@ -715,15 +842,21 @@ onMounted(async () => {
               @contextmenu="showContextMenu($event, 'volume', volume.id)"
               @click="toggleVolume(volume.id)"
             >
-              <GripVertical class="w-3.5 h-3.5 text-gray-400 opacity-40 group-hover:opacity-100 cursor-grab volume-handle transition-opacity" />
-              
+              <GripVertical
+                class="w-3.5 h-3.5 text-gray-400 opacity-40 group-hover:opacity-100 cursor-grab volume-handle transition-opacity"
+              />
+
               <component
-                :is="expandedVolumes.includes(volume.id) ? ChevronDown : ChevronRight"
+                :is="
+                  expandedVolumes.includes(volume.id)
+                    ? ChevronDown
+                    : ChevronRight
+                "
                 class="w-4 h-4 text-gray-500 shrink-0"
               />
-              
+
               <FolderOpen class="w-4 h-4 text-blue-500 shrink-0" />
-              
+
               <!-- Volume name (editable) -->
               <template v-if="editingVolumeId === volume.id">
                 <NInput
@@ -747,7 +880,9 @@ onMounted(async () => {
               </template>
 
               <!-- Volume actions -->
-              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+              <div
+                class="flex items-center gap-1 opacity-0 group-hover:opacity-100"
+              >
                 <button
                   class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                   @click.stop="createChapter(volume.id)"
@@ -766,7 +901,10 @@ onMounted(async () => {
             </div>
 
             <!-- Chapters -->
-            <div v-if="expandedVolumes.includes(volume.id)" class="ml-4 mt-1 space-y-0.5">
+            <div
+              v-if="expandedVolumes.includes(volume.id)"
+              class="ml-4 mt-1 space-y-0.5"
+            >
               <draggable
                 v-model="volume.chapters"
                 item-key="id"
@@ -783,19 +921,32 @@ onMounted(async () => {
                 <template #item="{ element: chapter }">
                   <div
                     class="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                    :class="{ 'bg-blue-50 dark:bg-blue-900/30': selectedChapterId === chapter.id }"
-                    @contextmenu="showContextMenu($event, 'chapter', volume.id, chapter.id)"
+                    :class="{
+                      'bg-blue-50 dark:bg-blue-900/30':
+                        selectedChapterId === chapter.id,
+                    }"
+                    @contextmenu="
+                      showContextMenu($event, 'chapter', volume.id, chapter.id)
+                    "
                     @click="selectChapter(chapter)"
                   >
-                    <GripVertical class="w-3.5 h-3.5 text-gray-400 opacity-40 group-hover:opacity-100 cursor-grab chapter-handle transition-opacity" />
-                    
+                    <GripVertical
+                      class="w-3.5 h-3.5 text-gray-400 opacity-40 group-hover:opacity-100 cursor-grab chapter-handle transition-opacity"
+                    />
+
                     <FileText class="w-4 h-4 text-gray-400 shrink-0" />
 
                     <!-- Status indicator dot -->
                     <span
                       class="w-2 h-2 rounded-full shrink-0 cursor-pointer hover:scale-125 transition-transform"
-                      :style="{ backgroundColor: getStatusColor(chapter.status) }"
-                      :title="t('treeSidebar.statusTitle', { status: getStatusLabel(chapter.status) })"
+                      :style="{
+                        backgroundColor: getStatusColor(chapter.status),
+                      }"
+                      :title="
+                        t('treeSidebar.statusTitle', {
+                          status: getStatusLabel(chapter.status),
+                        })
+                      "
                       @click.stop="startEditChapterStatus(chapter)"
                     ></span>
 
@@ -815,7 +966,9 @@ onMounted(async () => {
                     <template v-else>
                       <span
                         class="flex-1 text-sm text-gray-600 dark:text-gray-300 truncate"
-                        @dblclick.stop="startEditChapter(chapter.id, chapter.title)"
+                        @dblclick.stop="
+                          startEditChapter(chapter.id, chapter.title)
+                        "
                       >
                         {{ chapter.title }}
                       </span>
@@ -823,15 +976,24 @@ onMounted(async () => {
 
                     <!-- Word count -->
                     <span class="text-xs text-gray-400">
-                      {{ chapter.word_count_cache }}{{ t('treeSidebar.wordCountSuffix') }}
+                      {{ chapter.word_count_cache
+                      }}{{ t("treeSidebar.wordCountSuffix") }}
                     </span>
 
                     <!-- Status edit dropdown -->
-                    <div v-if="editingChapterStatusId === chapter.id" class="relative">
+                    <div
+                      v-if="editingChapterStatusId === chapter.id"
+                      class="relative"
+                    >
                       <NSelect
                         v-model:value="editingChapterStatus"
                         size="tiny"
-                        :options="CHAPTER_STATUS_OPTIONS.map(o => ({ label: o.label, value: o.value }))"
+                        :options="
+                          CHAPTER_STATUS_OPTIONS.map((o) => ({
+                            label: o.label,
+                            value: o.value,
+                          }))
+                        "
                         class="w-20"
                         autofocus
                         @click.stop
@@ -849,7 +1011,7 @@ onMounted(async () => {
                 @click="createChapter(volume.id)"
               >
                 <Plus class="w-4 h-4" />
-                {{ t('treeSidebar.addChapter') }}
+                {{ t("treeSidebar.addChapter") }}
               </button>
             </div>
           </div>
@@ -866,24 +1028,41 @@ onMounted(async () => {
               @click="toggleVolume(volume.id)"
             >
               <component
-                :is="expandedVolumes.includes(volume.id) ? ChevronDown : ChevronRight"
+                :is="
+                  expandedVolumes.includes(volume.id)
+                    ? ChevronDown
+                    : ChevronRight
+                "
                 class="w-4 h-4 text-gray-500 shrink-0"
               />
               <FolderOpen class="w-4 h-4 text-blue-500 shrink-0" />
-              <span class="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
+              <span
+                class="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200 truncate"
+              >
                 {{ volume.name }}
               </span>
-              <span class="text-xs text-gray-400">{{ volume.chapters.length }}{{ t('treeSidebar.chapterCountSuffix') }}</span>
+              <span class="text-xs text-gray-400"
+                >{{ volume.chapters.length
+                }}{{ t("treeSidebar.chapterCountSuffix") }}</span
+              >
             </div>
 
             <!-- Chapters -->
-            <div v-if="expandedVolumes.includes(volume.id)" class="ml-4 mt-1 space-y-0.5">
+            <div
+              v-if="expandedVolumes.includes(volume.id)"
+              class="ml-4 mt-1 space-y-0.5"
+            >
               <div
                 v-for="chapter in volume.chapters"
                 :key="chapter.id"
                 class="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                :class="{ 'bg-blue-50 dark:bg-blue-900/30': selectedChapterId === chapter.id }"
-                @contextmenu="showContextMenu($event, 'chapter', volume.id, chapter.id)"
+                :class="{
+                  'bg-blue-50 dark:bg-blue-900/30':
+                    selectedChapterId === chapter.id,
+                }"
+                @contextmenu="
+                  showContextMenu($event, 'chapter', volume.id, chapter.id)
+                "
                 @click="selectChapter(chapter)"
               >
                 <FileText class="w-4 h-4 text-gray-400 shrink-0" />
@@ -892,24 +1071,39 @@ onMounted(async () => {
                 <span
                   class="w-2 h-2 rounded-full shrink-0 cursor-pointer hover:scale-125 transition-transform"
                   :style="{ backgroundColor: getStatusColor(chapter.status) }"
-                  :title="t('treeSidebar.statusTitle', { status: getStatusLabel(chapter.status) })"
+                  :title="
+                    t('treeSidebar.statusTitle', {
+                      status: getStatusLabel(chapter.status),
+                    })
+                  "
                   @click.stop="startEditChapterStatus(chapter)"
                 ></span>
 
-                <span class="flex-1 text-sm text-gray-600 dark:text-gray-300 truncate">
+                <span
+                  class="flex-1 text-sm text-gray-600 dark:text-gray-300 truncate"
+                >
                   {{ chapter.title }}
                 </span>
 
                 <span class="text-xs text-gray-400">
-                  {{ chapter.word_count_cache }}{{ t('treeSidebar.wordCountSuffix') }}
+                  {{ chapter.word_count_cache
+                  }}{{ t("treeSidebar.wordCountSuffix") }}
                 </span>
 
                 <!-- Status edit dropdown -->
-                <div v-if="editingChapterStatusId === chapter.id" class="relative">
+                <div
+                  v-if="editingChapterStatusId === chapter.id"
+                  class="relative"
+                >
                   <NSelect
                     v-model:value="editingChapterStatus"
                     size="tiny"
-                    :options="CHAPTER_STATUS_OPTIONS.map(o => ({ label: o.label, value: o.value }))"
+                    :options="
+                      CHAPTER_STATUS_OPTIONS.map((o) => ({
+                        label: o.label,
+                        value: o.value,
+                      }))
+                    "
                     class="w-20"
                     autofocus
                     @click.stop
@@ -931,7 +1125,7 @@ onMounted(async () => {
         @contextmenu="showContextMenu($event, 'empty')"
       >
         <Plus class="w-4 h-4" />
-        {{ t('treeSidebar.addVolume') }}
+        {{ t("treeSidebar.addVolume") }}
       </button>
     </div>
 
@@ -950,7 +1144,9 @@ onMounted(async () => {
     <DeleteConfirmModal
       v-model:show="showDeleteVolumeModal"
       :title="t('treeSidebar.deleteVolumeTitle')"
-      :message="t('treeSidebar.deleteVolumeMessage', { name: volumeToDelete?.name })"
+      :message="
+        t('treeSidebar.deleteVolumeMessage', { name: volumeToDelete?.name })
+      "
       :confirm-text="t('treeSidebar.delete')"
       @confirm="handleConfirmDeleteVolume"
     />
@@ -959,22 +1155,24 @@ onMounted(async () => {
     <DeleteConfirmModal
       v-model:show="showDeleteChapterModal"
       :title="t('treeSidebar.deleteChapterTitle')"
-      :message="t('treeSidebar.deleteChapterMessage', { title: chapterToDelete?.title })"
+      :message="
+        t('treeSidebar.deleteChapterMessage', { title: chapterToDelete?.title })
+      "
       :confirm-text="t('treeSidebar.delete')"
       :show-keep-files="true"
       :default-keep-files="false"
       @confirm="handleConfirmDeleteChapter"
     />
-    </div>
-    
-    <!-- 模板选择器 -->
-    <TemplateSelector
-      v-model:show="showTemplateSelector"
-      :project-id="Number(projectId)"
-      @select="handleTemplateSelect"
-      @update:show="handleTemplateSelectorClose"
-    />
-  </template>
+  </div>
+
+  <!-- 模板选择器 -->
+  <TemplateSelector
+    v-model:show="showTemplateSelector"
+    :project-id="Number(projectId)"
+    @select="handleTemplateSelect"
+    @update:show="handleTemplateSelectorClose"
+  />
+</template>
 
 <style scoped>
 .drag-ghost {

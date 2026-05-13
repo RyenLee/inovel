@@ -25,3 +25,15 @@ export interface ChangePasswordParams {
   new_password: string;
   confirm_password: string;
 }
+
+// 禁用加密参数
+export interface DisableEncryptionParams {
+  project_path: string;
+  password: string;
+}
+
+// 验证密码参数
+export interface VerifyPasswordParams {
+  project_path: string;
+  password: string;
+}

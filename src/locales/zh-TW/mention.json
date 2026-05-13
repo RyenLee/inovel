@@ -1,0 +1,16 @@
+{
+  "types": {
+    "character": "人物",
+    "location": "地點",
+    "organization": "組織"
+  },
+  "labels": {
+    "gender": "性別",
+    "age": "年齡",
+    "personality": "性格",
+    "type": "類型",
+    "leader": "首領"
+  },
+  "clickToView": "點擊查看詳情",
+  "noResults": "無匹配結果"
+}

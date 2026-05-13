@@ -1,0 +1,61 @@
+{
+  "title": "自訂模板管理",
+  "open": "模板管理",
+  "newTemplate": "新建模板",
+  "editTemplate": "編輯模板",
+  "templateName": "模板名稱",
+  "templateDescription": "模板描述",
+  "templateCategory": "模板分類",
+  "templateContent": "模板內容",
+  "placeholder": {
+    "name": "請輸入模板名稱",
+    "description": "請輸入模板描述",
+    "category": "請選擇分類",
+    "content": "請輸入模板內容（支援Markdown）"
+  },
+  "buttons": {
+    "create": "新建",
+    "save": "儲存",
+    "cancel": "取消",
+    "delete": "刪除",
+    "edit": "編輯",
+    "preview": "預覽"
+  },
+  "confirm": {
+    "deleteTitle": "確認刪除",
+    "deleteMessage": "確定要刪除模板 \"{name}\" 嗎？此操作不可復原。"
+  },
+  "messages": {
+    "saveSuccess": "模板儲存成功！",
+    "updateSuccess": "模板更新成功！",
+    "deleteSuccess": "模板刪除成功！",
+    "saveError": "模板儲存失敗",
+    "updateError": "模板更新失敗",
+    "deleteError": "模板刪除失敗",
+    "loadError": "載入模板失敗",
+    "emptyList": "暫無自訂模板，點擊上方按鈕建立新模板",
+    "nameRequired": "請輸入模板名稱",
+    "contentRequired": "請輸入模板內容"
+  },
+  "table": {
+    "name": "名稱",
+    "description": "描述",
+    "category": "分類",
+    "createdAt": "建立時間",
+    "updatedAt": "更新時間",
+    "actions": "操作"
+  },
+  "modal": {
+    "createTitle": "建立新模板",
+    "editTitle": "編輯模板",
+    "previewTitle": "預覽模板",
+    "createSubtitle": "填寫以下資訊建立一個新的自訂寫作模板",
+    "editSubtitle": "修改模板資訊，儲存後將更新模板內容",
+    "previewSubtitle": "查看模板的完整內容和渲染效果"
+  },
+  "help": {
+    "name": "給模板起一個清晰的名稱，便於後續識別和使用",
+    "description": "簡短描述模板的用途和特點，幫助快速了解",
+    "content": "支援 Markdown 語法，可包含標題、列表、引用等格式"
+  }
+}

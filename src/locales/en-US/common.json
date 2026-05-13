@@ -1,4 +1,7 @@
 {
+  "app": {
+    "name": "iNovel"
+  },
   "action": {
     "save": "Save",
     "cancel": "Cancel",

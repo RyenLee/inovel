@@ -4,7 +4,7 @@ use crate::logging::operation::{self, OperationLogFilter, RecordOperationParams}
 use std::collections::HashMap;
 use tauri::AppHandle;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn record_operation_log(
     app_handle: AppHandle,
     params: RecordOperationParams,
@@ -12,7 +12,7 @@ pub async fn record_operation_log(
     operation::record_operation(&app_handle, params)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn query_operation_logs(
     app_handle: AppHandle,
     filter: Option<OperationLogFilter>,
@@ -23,7 +23,7 @@ pub async fn query_operation_logs(
     )
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_operation_stats(
     app_handle: AppHandle,
     days: Option<u32>,
@@ -31,7 +31,7 @@ pub async fn get_operation_stats(
     operation::get_operation_stats(&app_handle, days.unwrap_or(30))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_error_logs(
     app_handle: AppHandle,
 ) -> Result<Vec<String>, String> {
@@ -53,7 +53,7 @@ pub async fn get_error_logs(
     Ok(contents)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn clear_error_logs(
     app_handle: AppHandle,
 ) -> Result<(), String> {
@@ -68,7 +68,7 @@ pub async fn clear_error_logs(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_enum_dictionary(
     app_handle: AppHandle,
     category: Option<String>,

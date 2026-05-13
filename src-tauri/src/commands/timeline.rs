@@ -13,7 +13,7 @@ use tauri::AppHandle;
 ///
 /// # 返回值
 /// 成功返回创建的事件记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_event(
     app_handle: AppHandle,
     params: CreateEventParams,
@@ -50,7 +50,7 @@ pub async fn create_event(
 ///
 /// # 返回值
 /// 成功返回更新后的事件记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_event(
     app_handle: AppHandle,
     event_id: i64,
@@ -83,7 +83,7 @@ pub async fn update_event(
 ///
 /// # 返回值
 /// 成功返回 Ok(())，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_event(app_handle: AppHandle, event_id: i64) -> Result<(), String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -102,7 +102,7 @@ pub async fn delete_event(app_handle: AppHandle, event_id: i64) -> Result<(), St
 ///
 /// # 返回值
 /// 成功返回事件列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_events(app_handle: AppHandle, project_id: i64) -> Result<Vec<Event>, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;

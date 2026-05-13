@@ -75,12 +75,14 @@ fn log_operation(
 ///
 /// # 返回值
 /// 转义后的安全文件名
-fn escape_filename(name: &str) -> String {
-    name.replace('/', "_")
-        .replace('\\', "_")
-        .replace(':', "_")
-        .replace('*', "_")
-        .replace('?', "_")
+fn escape_filename(_name: &str) -> String {
+    // name.replace('/', "_")
+    //     .replace('\\', "_")
+    //     .replace(':', "_")
+    //     .replace('*', "_")
+    //     .replace('?', "_");
+    // 重新生成备份文件名
+    "backup".to_string()
 }
 
 /// 过滤目录遍历结果，排除不需要备份的文件和目录
@@ -97,6 +99,9 @@ fn escape_filename(name: &str) -> String {
 fn walkdir_filter(entry: &walkdir::DirEntry, exclude_exports: bool) -> bool {
     let path_str = entry.path().to_string_lossy();
     if path_str.contains(".git") {
+        return false;
+    }
+    if path_str.contains("backups") {
         return false;
     }
     if exclude_exports && path_str.contains("exports") {
@@ -194,7 +199,7 @@ fn save_backup_record(
 }
 
 /// 创建全量备份
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn backup_project(
     app_handle: AppHandle,
     project_id: i64,
@@ -298,7 +303,7 @@ pub fn backup_project(
 }
 
 /// 创建增量备份：仅打包自上次备份以来变更的文件
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn create_incremental_backup(
     app_handle: AppHandle,
     project_id: i64,
@@ -334,12 +339,20 @@ pub fn create_incremental_backup(
 
     // 自动提交工作目录的变更（确保增量备份能检测到变更）
     let repo = open_or_init_repo(&project_path)?;
-    let mut index = repo.index().map_err(|e| format!("获取 index 失败: {}", e))?;
-    index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None)
+    let mut index = repo
+        .index()
+        .map_err(|e| format!("获取 index 失败: {}", e))?;
+    index
+        .add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None)
         .map_err(|e| format!("添加文件到暂存区失败: {}", e))?;
-    let tree_oid = index.write_tree().map_err(|e| format!("写入 tree 失败: {}", e))?;
-    let tree = repo.find_tree(tree_oid).map_err(|e| format!("查找 tree 失败: {}", e))?;
-    let sig = Signature::now("inovel", "inovel@local").map_err(|e| format!("创建签名失败: {}", e))?;
+    let tree_oid = index
+        .write_tree()
+        .map_err(|e| format!("写入 tree 失败: {}", e))?;
+    let tree = repo
+        .find_tree(tree_oid)
+        .map_err(|e| format!("查找 tree 失败: {}", e))?;
+    let sig =
+        Signature::now("inovel", "inovel@local").map_err(|e| format!("创建签名失败: {}", e))?;
 
     let parent = match repo.head() {
         Ok(h) => h.target().and_then(|o| repo.find_commit(o).ok()),
@@ -347,12 +360,20 @@ pub fn create_incremental_backup(
     };
     let parents: Vec<&git2::Commit> = parent.iter().collect();
 
-    let current_oid = repo.commit(Some("HEAD"), &sig, &sig, "自动提交：增量备份前保存变更", &tree, &parents)
+    let current_oid = repo
+        .commit(
+            Some("HEAD"),
+            &sig,
+            &sig,
+            "自动提交：增量备份前保存变更",
+            &tree,
+            &parents,
+        )
         .map_err(|e| format!("自动提交失败: {}", e))?;
     let current_commit = Some(current_oid.to_string());
 
     // 如果没有历史备份或无法获取 commit，退化为全量备份
-    let changed_files: Vec<PathBuf> = if let (Some(base), Some(head)) =
+    let mut changed_files: Vec<PathBuf> = if let (Some(base), Some(head)) =
         (&last_commit, &current_commit)
     {
         if base != head {
@@ -375,8 +396,7 @@ pub fn create_incremental_backup(
                         repo.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), None)
                     {
                         let _ = diff.print(DiffFormat::Patch, |delta, _, _| {
-                            let path =
-                                delta.new_file().path().or_else(|| delta.old_file().path());
+                            let path = delta.new_file().path().or_else(|| delta.old_file().path());
                             if let Some(p) = path {
                                 let full = project_path.join(p);
                                 if full.exists() && full.is_file() {
@@ -384,8 +404,9 @@ pub fn create_incremental_backup(
                                     let passes = if exclude_exports {
                                         !path_str.contains("exports")
                                             && !path_str.contains(".git")
+                                            && !path_str.contains("backups")
                                     } else {
-                                        !path_str.contains(".git")
+                                        !path_str.contains(".git") && !path_str.contains("backups")
                                     };
                                     if passes {
                                         changed.push(full);
@@ -427,6 +448,9 @@ pub fn create_incremental_backup(
         changed_files = changed_files.len(),
         "变更文件数量"
     );
+
+    changed_files.sort();
+    changed_files.dedup();
 
     if changed_files.is_empty() {
         warn!(project_id, "没有变更文件");
@@ -527,7 +551,7 @@ pub fn create_incremental_backup(
 }
 
 /// 列出项目的所有备份记录
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn list_backups(app_handle: AppHandle, project_id: i64) -> Result<Vec<BackupRecord>, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -561,7 +585,7 @@ pub fn list_backups(app_handle: AppHandle, project_id: i64) -> Result<Vec<Backup
 }
 
 /// 获取备份操作日志
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn get_backup_logs(
     app_handle: AppHandle,
     project_id: i64,
@@ -598,7 +622,7 @@ pub fn get_backup_logs(
 }
 
 /// 恢复备份：从 ZIP 文件恢复到项目目录
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn restore_backup(
     app_handle: AppHandle,
     project_id: i64,
@@ -752,7 +776,7 @@ pub fn restore_backup(
 }
 
 /// 删除备份记录（不删除文件）
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn delete_backup_record(
     app_handle: AppHandle,
     project_id: i64,
@@ -781,7 +805,7 @@ pub fn delete_backup_record(
 }
 
 /// 获取最近的备份统计摘要
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn get_backup_stats(app_handle: AppHandle, project_id: i64) -> Result<BackupStats, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;

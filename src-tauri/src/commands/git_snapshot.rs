@@ -98,7 +98,7 @@ pub fn init_git_repo_with_ignore(
 ///
 /// # 返回值
 /// 成功返回 Ok(())，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn init_project_git(
     app_handle: AppHandle,
     project_id: i64,
@@ -155,7 +155,7 @@ pub(crate) fn open_or_init_repo(project_path: &std::path::Path) -> Result<Reposi
 ///
 /// # 返回值
 /// 成功返回快照信息（包含哈希、消息、日期），失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_snapshot(
     app_handle: AppHandle,
     project_id: i64,
@@ -212,7 +212,7 @@ pub async fn create_snapshot(
 ///
 /// # 返回值
 /// 成功返回快照列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_snapshots(
     app_handle: AppHandle,
     project_id: i64,
@@ -256,7 +256,7 @@ pub async fn get_snapshots(
 ///
 /// # 返回值
 /// 成功返回 Ok(())，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn restore_snapshot(
     app_handle: AppHandle,
     project_id: i64,
@@ -308,7 +308,7 @@ pub async fn restore_snapshot(
 ///
 /// # 返回值
 /// 成功返回差异内容（标准 diff 格式），失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_snapshot_diff(
     app_handle: AppHandle,
     project_id: i64,

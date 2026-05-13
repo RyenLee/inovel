@@ -40,7 +40,7 @@ const loadWords = async () => {
   isLoading.value = true;
   try {
     words.value = await invoke("list_sensitive_words", {
-      projectId: props.projectId,
+      project_id: props.projectId,
     });
   } catch (error) {
     console.error("加载敏感词失败:", error);
@@ -62,7 +62,7 @@ const addWord = async () => {
   if (!word) return;
   try {
     await invoke("add_sensitive_word", {
-      projectId: props.projectId,
+      project_id: props.projectId,
       word,
     });
     message.success(t('sensitiveWords.messages.added', { word }));
@@ -77,7 +77,7 @@ const addWord = async () => {
 const removeWord = async (word: string) => {
   try {
     await invoke("remove_sensitive_word", {
-      projectId: props.projectId,
+      project_id: props.projectId,
       word,
     });
     await loadWords();
@@ -104,8 +104,8 @@ const handleDrop = async (e: DragEvent) => {
     // Tauri 环境下使用 dialog 获取真实路径更合适，
     // 此处直接读取文件内容传给后端
     await invoke("import_sensitive_words", {
-      projectId: props.projectId,
-      filePath: "", // 不传文件路径，改用内容导入
+      project_id: props.projectId,
+      file_path: "", // 不传文件路径，改用内容导入
     });
     message.success(t('sensitiveWords.messages.imported', { name: file.name }))
     await loadWords();
@@ -134,7 +134,7 @@ const handleImportClick = async () => {
       for (const word of lines) {
         try {
           await invoke("add_sensitive_word", {
-            projectId: props.projectId,
+            project_id: props.projectId,
             word,
           });
           count++;

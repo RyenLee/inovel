@@ -85,13 +85,9 @@ impl Default for SecurityConfig {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct FeaturesConfig {
-    #[serde(rename = "auto_save_enabled")]
     pub auto_save_enabled: bool,
-    #[serde(rename = "sync_enabled")]
     pub sync_enabled: bool,
-    #[serde(rename = "writing_stats_enabled")]
     pub writing_stats_enabled: bool,
-    #[serde(rename = "inspiration_board_enabled")]
     pub inspiration_board_enabled: bool,
 }
 
@@ -108,15 +104,10 @@ impl Default for FeaturesConfig {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EditorConfig {
-    #[serde(rename = "default_font_size")]
     pub default_font_size: u32,
-    #[serde(rename = "default_font")]
     pub default_font: String,
-    #[serde(rename = "line_spacing")]
     pub line_spacing: f64,
-    #[serde(rename = "show_line_numbers")]
     pub show_line_numbers: bool,
-    #[serde(rename = "spell_check_enabled")]
     pub spell_check_enabled: bool,
 }
 
@@ -491,25 +482,30 @@ pub fn load_config() -> (AppConfig, PathBuf) {
 }
 
 pub fn load_from_file(path: &PathBuf) -> Result<AppConfig, String> {
-    let content = std::fs::read_to_string(path).map_err(|e| format!("read config file failed: {}", e))?;
+    let content =
+        std::fs::read_to_string(path).map_err(|e| format!("read config file failed: {}", e))?;
 
     let config: AppConfig =
         toml::from_str(&content).map_err(|e| format!("parse config file failed: {}", e))?;
 
     let validation = validate_config(&config);
     if !validation.valid {
-        return Err(format!("config validation failed: {}", validation.errors.join("; ")));
+        return Err(format!(
+            "config validation failed: {}",
+            validation.errors.join("; ")
+        ));
     }
 
     for warning in &validation.warnings {
-        warn!("config warning: {}", warning); 
+        warn!("config warning: {}", warning);
     }
 
     Ok(config)
 }
 
 pub fn save_to_file(config: &AppConfig, path: &PathBuf) -> Result<(), String> {
-    let content = toml::to_string_pretty(config).map_err(|e| format!("serialize config failed: {}", e))?;
+    let content =
+        toml::to_string_pretty(config).map_err(|e| format!("serialize config failed: {}", e))?;
 
     std::fs::write(path, content).map_err(|e| format!("write config file failed: {}", e))?;
 

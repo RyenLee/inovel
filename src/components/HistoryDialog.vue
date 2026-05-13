@@ -44,7 +44,7 @@ watch(() => props.show, (v) => { if (v) loadSnapshots() })
 const loadSnapshots = async () => {
   loading.value = true
   try {
-    snapshots.value = await invoke<Snapshot[]>('get_snapshots', { projectId: props.projectId })
+    snapshots.value = await invoke<Snapshot[]>('get_snapshots', { project_id: props.projectId })
   } catch (e) {
     console.error('加载版本失败:', e)
     message.warning(t('history.messages.noHistoryWarning'))
@@ -90,9 +90,9 @@ async function loadDiff() {
   showDiffPanel.value = true
   try {
     diffResult.value = await invoke<string>('get_snapshot_diff', {
-      projectId: props.projectId,
-      fromHash: selectedA.value,
-      toHash: selectedB.value,
+      project_id: props.projectId,
+      from_hash: selectedA.value,
+      to_hash: selectedB.value,
     })
   } catch (e) {
     diffResult.value = t('history.messages.diffLoadFailed', { error: String(e) })
@@ -135,7 +135,7 @@ function backToList() {
 const doRestore = async (hash: string) => {
   restoring.value = true
   try {
-    await invoke('restore_snapshot', { projectId: props.projectId, commitHash: hash })
+    await invoke('restore_snapshot', { project_id: props.projectId, commit_hash: hash })
     message.success(t('history.messages.restoreSuccess'))
     emit('restore', '')
     emit('update:show', false)

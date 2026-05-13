@@ -54,11 +54,11 @@ const loadStats = async () => {
   try {
     const [records, statusCounts] = await Promise.all([
       invoke<WritingRecord[]>("get_writing_stats", {
-        projectId: projectId.value,
+        project_id: projectId.value,
         days: 30,
       }),
       invoke<ChapterStatusCount[]>("get_chapter_status_counts", {
-        projectId: projectId.value,
+        project_id: projectId.value,
       }),
     ]);
     writingRecords.value = records;

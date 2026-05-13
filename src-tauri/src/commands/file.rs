@@ -10,7 +10,7 @@ use std::path::PathBuf;
 ///
 /// # 返回值
 /// 成功返回文件内容，失败返回错误信息（包括文件不存在、路径不是文件、文件过大等）
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn read_text_file(file_path: String) -> Result<String, String> {
     let path = PathBuf::from(&file_path);
 
@@ -47,7 +47,7 @@ pub async fn read_text_file(file_path: String) -> Result<String, String> {
 ///
 /// # 返回值
 /// 存在返回 true，不存在返回 false
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn check_file_exists(file_path: String) -> Result<bool, String> {
     let path = PathBuf::from(&file_path);
     Ok(path.exists())
@@ -60,7 +60,7 @@ pub async fn check_file_exists(file_path: String) -> Result<bool, String> {
 ///
 /// # 返回值
 /// 成功返回文件大小（字节），失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_file_size(file_path: String) -> Result<u64, String> {
     let path = PathBuf::from(&file_path);
     let metadata = fs::metadata(&path).map_err(|e| format!("获取文件信息失败: {}", e))?;

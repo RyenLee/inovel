@@ -38,8 +38,8 @@ export function useWordCount(options: UseWordCountOptions) {
       if (chapterIdRef.value && wordCount.value >= 0) {
         try {
           await invoke("update_chapter_word_count", {
-            chapterId: chapterIdRef.value,
-            wordCount: wordCount.value,
+            chapter_id: chapterIdRef.value,
+            word_count: wordCount.value,
           });
           onWordCountUpdated?.(wordCount.value);
         } catch (error) {

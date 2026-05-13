@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import {
   NConfigProvider,
   NMessageProvider,
@@ -15,17 +15,22 @@ import { useTheme } from "./composables/useTheme";
 import { useGlobalShortcuts } from "./composables/useGlobalShortcuts";
 import { lightThemeConfig, darkThemeConfig } from "./composables/themeConfig";
 import { useLocale } from "./i18n/composables/useLocale";
+import { useI18n } from "vue-i18n";
+import GlobalPasswordOverlay from "./components/GlobalPasswordOverlay.vue";
 
+const { t } = useI18n();
 const { isDark, toggleDark, theme } = useTheme();
 const { isZhCN } = useLocale();
 
-// Initialize global shortcuts
 useGlobalShortcuts();
+
+onMounted(() => {
+  document.title = t("common.app.name");
+});
 
 const naiveLocale = computed(() => isZhCN.value ? zhCN : enUS);
 const naiveDateLocale = computed(() => isZhCN.value ? dateZhCN : dateEnUS);
 
-// 主题覆盖配置
 const themeOverrides = computed(() => isDark.value ? darkThemeConfig : lightThemeConfig);
 
 defineExpose({ toggleDark, isDark });
@@ -36,6 +41,7 @@ defineExpose({ toggleDark, isDark });
     <n-loading-bar-provider>
       <n-dialog-provider>
         <n-message-provider>
+          <GlobalPasswordOverlay />
           <RouterView />
         </n-message-provider>
       </n-dialog-provider>

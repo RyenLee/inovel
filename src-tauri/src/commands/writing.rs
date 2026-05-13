@@ -15,7 +15,7 @@ use tauri::AppHandle;
 ///
 /// # 返回值
 /// 成功返回写作目标（可能为 None），失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_writing_goal(
     app_handle: AppHandle,
     project_id: i64,
@@ -73,7 +73,7 @@ pub async fn get_writing_goal(
 ///
 /// # 返回值
 /// 成功返回保存的写作目标，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn save_writing_goal(
     app_handle: AppHandle,
     project_id: i64,
@@ -149,7 +149,7 @@ pub async fn save_writing_goal(
 ///
 /// # 返回值
 /// 成功返回写作记录列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_writing_stats(
     app_handle: AppHandle,
     project_id: i64,
@@ -205,7 +205,7 @@ pub async fn get_writing_stats(
 ///
 /// # 返回值
 /// 成功返回写作记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn upsert_writing_record(
     app_handle: AppHandle,
     project_id: i64,
@@ -239,7 +239,7 @@ pub async fn upsert_writing_record(
 ///
 /// # 返回值
 /// 成功返回今日写作记录（可能为 None），失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_today_words(
     app_handle: AppHandle,
     project_id: i64,
@@ -272,7 +272,7 @@ pub async fn get_today_words(
 ///
 /// # 返回值
 /// 成功返回专注会话记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn record_focus_session(
     app_handle: AppHandle,
     project_id: i64,
@@ -330,7 +330,7 @@ pub async fn record_focus_session(
 ///
 /// # 返回值
 /// 成功返回专注会话列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_focus_sessions(
     app_handle: AppHandle,
     project_id: i64,
@@ -396,7 +396,7 @@ pub async fn get_focus_sessions(
 ///
 /// # 返回值
 /// 成功返回统计数据（包含总会话数、总时长、完成数等），失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_focus_stats(
     app_handle: AppHandle,
     project_id: i64,

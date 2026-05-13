@@ -13,7 +13,7 @@ use tauri::AppHandle;
 ///
 /// # 返回值
 /// 成功返回创建的关系记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_relationship(app_handle: AppHandle, params: CreateRelationshipParams) -> Result<Relationship, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -36,7 +36,7 @@ pub async fn create_relationship(app_handle: AppHandle, params: CreateRelationsh
 ///
 /// # 返回值
 /// 成功返回更新后的关系记录，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_relationship(app_handle: AppHandle, relationship_id: i64, params: UpdateRelationshipParams) -> Result<Relationship, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -57,7 +57,7 @@ pub async fn update_relationship(app_handle: AppHandle, relationship_id: i64, pa
 ///
 /// # 返回值
 /// 成功返回 Ok(())，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_relationship(app_handle: AppHandle, relationship_id: i64) -> Result<(), String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -73,7 +73,7 @@ pub async fn delete_relationship(app_handle: AppHandle, relationship_id: i64) ->
 ///
 /// # 返回值
 /// 成功返回关系列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_relationships(app_handle: AppHandle, project_id: i64) -> Result<Vec<Relationship>, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;

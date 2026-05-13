@@ -1,0 +1,44 @@
+{
+  "title": "專案管理",
+  "tabs": {
+    "create": "建立備份",
+    "history": "備份歷史",
+    "logs": "操作日誌"
+  },
+  "backupInfo": {
+    "fullDesc": "全量備份：打包整個專案目錄（始終排除 .git，可選排除 exports）。",
+    "incrDesc": "增量備份：僅打包自上次備份以來變更的檔案，體積更小，速度更快。"
+  },
+  "fullBackup": "全量備份",
+  "incrementalBackup": "增量備份",
+  "excludeExports": "排除 exports 目錄",
+  "description": "備份描述（可選）",
+  "descriptionPlaceholder": "例如：完成第三章初稿",
+  "stats": {
+    "totalBackups": "總備份數",
+    "totalSize": "總占用空間",
+    "incrementalCount": "增量備份"
+  },
+  "backingUp": "備份中...",
+  "createFullBackup": "建立全量備份",
+  "createIncrementalBackup": "建立增量備份",
+  "openFolder": "打開目錄",
+  "noBackups": "暫無備份記錄",
+  "noLogs": "暫無操作日誌",
+  "full": "全量",
+  "incremental": "增量",
+  "restore": "恢復",
+  "showLess": "收起（僅顯示最新{limit}條）",
+  "showAll": "查看全部（共{total}條）",
+  "messages": {
+    "loadFailed": "載入備份數據失敗",
+    "backupSuccess": "備份建立成功：{path}",
+    "restoreConfirm": "確定要恢復此備份嗎？\n{description}\n備份時間：{time}\n\n當前專案將被覆蓋，請確保已做好重要數據備份。",
+    "restoreSuccess": "恢復成功，請刷新頁面查看最新內容",
+    "restoreFailed": "恢復失敗: {error}",
+    "deleteConfirm": "確定要刪除此備份記錄嗎？\n檔案不會被物理刪除，僅刪除記錄。",
+    "deleteSuccess": "備份記錄已刪除",
+    "deleteFailed": "刪除失敗: {error}",
+    "openFolderFailed": "無法打開資料夾"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "lineHeight": {
+    "compact": "緊湊",
+    "standard": "標準",
+    "loose": "寬鬆",
+    "extraLoose": "特寬"
+  },
+  "menu": {
+    "paragraphIndent": "段落縮排",
+    "paperEffect": "信紙效果",
+    "lineHeightSettings": "行間距設置",
+    "paragraphSplit": "段落拆分"
+  }
+}

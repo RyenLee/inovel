@@ -1,0 +1,10 @@
+{
+  "title": "確認刪除",
+  "message": "確定要刪除嗎？此操作不可撤銷。",
+  "confirmText": "刪除",
+  "cancelText": "取消",
+  "confirmInputLabel": "請輸入以下內容以確認：",
+  "keepFiles": "保留本機檔案",
+  "keepFilesOn": "僅從列表移除，資料夾保留",
+  "keepFilesOff": "同時刪除資料夾和數據"
+}

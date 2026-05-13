@@ -1,0 +1,18 @@
+{
+  "title": "敏感詞管理",
+  "addPlaceholder": "輸入敏感詞後按回車添加",
+  "add": "添加",
+  "importHint": "點擊選擇 .txt 檔案匯入，或拖放檔案到此处",
+  "importSubHint": "每行一個敏感詞",
+  "noWords": "暫無敏感詞",
+  "messages": {
+    "loadFailed": "載入敏感詞失敗",
+    "added": "已添加: {word}",
+    "addFailed": "添加失敗，可能已存在",
+    "deleteFailed": "刪除失敗",
+    "onlyTxt": "僅支援 .txt 檔案",
+    "imported": "已匯入 {name}",
+    "importFailed": "匯入失敗",
+    "importComplete": "匯入完成，新增 {count} 個敏感詞"
+  }
+}

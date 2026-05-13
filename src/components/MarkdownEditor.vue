@@ -303,9 +303,9 @@ const selectImageForImg = async (img: HTMLImageElement) => {
     const base64Data = btoa(binary);
     const fileName = path.replace(/\\/g, "/").split("/").pop() || "image.png";
     const newPath = await invoke<string>("save_image", {
-      projectId: props.projectId,
-      fileName,
-      fileData: base64Data,
+      project_id: props.projectId,
+      file_name: fileName,
+      file_data: base64Data,
     });
     img.src = newPath;
     if (editor.value) {

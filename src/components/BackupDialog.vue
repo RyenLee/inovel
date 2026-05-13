@@ -99,9 +99,9 @@ async function loadData() {
   isLoading.value = true;
   try {
     const [b, l, s] = await Promise.all([
-      invoke<BackupRecord[]>("list_backups", { projectId: props.projectId }),
-      invoke<BackupLogEntry[]>("get_backup_logs", { projectId: props.projectId, limit: 50 }),
-      invoke<BackupStats>("get_backup_stats", { projectId: props.projectId }),
+      invoke<BackupRecord[]>("list_backups", { project_id: props.projectId }),
+      invoke<BackupLogEntry[]>("get_backup_logs", { project_id: props.projectId, limit: 50 }),
+      invoke<BackupStats>("get_backup_stats", { project_id: props.projectId }),
     ]);
     backups.value = b;
     // Sort logs by created_at descending (newest first)
@@ -129,14 +129,14 @@ async function doBackup() {
     let path: string;
     if (isFullBackup.value) {
       path = await invoke<string>("backup_project", {
-        projectId: props.projectId,
-        excludeExports: excludeExports.value,
+        project_id: props.projectId,
+        exclude_exports: excludeExports.value,
         description: backupDescription.value || null,
       });
     } else {
       path = await invoke<string>("create_incremental_backup", {
-        projectId: props.projectId,
-        excludeExports: excludeExports.value,
+        project_id: props.projectId,
+        exclude_exports: excludeExports.value,
         description: backupDescription.value || null,
       });
     }
@@ -157,8 +157,8 @@ async function restoreBackup(backup: BackupRecord) {
 
   try {
     await invoke("restore_backup", {
-      projectId: props.projectId,
-      backupId: backup.id,
+      project_id: props.projectId,
+      backup_id: backup.id,
     });
     message.success(t('backup.messages.restoreSuccess'));
     await loadData();
@@ -173,8 +173,8 @@ async function deleteBackup(backup: BackupRecord) {
   }
   try {
     await invoke("delete_backup_record", {
-      projectId: props.projectId,
-      backupId: backup.id,
+      project_id: props.projectId,
+      backup_id: backup.id,
     });
     message.success(t('backup.messages.deleteSuccess'));
     await loadData();
@@ -185,7 +185,7 @@ async function deleteBackup(backup: BackupRecord) {
 
 async function openBackupFolder() {
   try {
-    await invoke("open_folder_in_explorer", { projectId: props.projectId });
+    await invoke("open_folder_in_explorer", { project_id: props.projectId });
   } catch {
     message.error(t('backup.messages.openFolderFailed'));
   }

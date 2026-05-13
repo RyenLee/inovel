@@ -99,7 +99,7 @@ const loadBoard = async () => {
     const data = await invoke<{ columns: ColumnInfo[] }>(
       "get_inspiration_board",
       {
-        projectId: props.projectId,
+        project_id: props.projectId,
         locale: getLocale(),
       }
     );
@@ -127,8 +127,7 @@ const saveAllItems = async () => {
 
   try {
     await invoke("reorder_inspiration_items", {
-      projectId: props.projectId,
-      updates,
+      updates: updates,
     });
   } catch (error) {
     console.error("保存排序失败:", error);
@@ -165,7 +164,7 @@ const updateItem = async (itemId: number) => {
 
   try {
     await invoke("update_inspiration_item", {
-      itemId,
+      item_id: itemId,
       params: {
         content: editingContent.value,
       },
@@ -187,7 +186,7 @@ const deleteItem = async (itemId: number) => {
     negativeText: t("inspiration.cancel"),
     onPositiveClick: async () => {
       try {
-        await invoke("delete_inspiration_item", { itemId });
+        await invoke("delete_inspiration_item", { item_id: itemId });
 
         columns.value.forEach((col) => {
           col.items = col.items.filter((item) => item.id !== itemId);

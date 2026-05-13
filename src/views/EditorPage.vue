@@ -515,7 +515,7 @@ const handleInsertName = (name: string) => {
 const loadChapterTree = async () => {
   try {
     const tree = await invoke<VolumeWithChapters[]>("get_chapter_tree", {
-      projectId: Number(projectId.value),
+      project_id: Number(projectId.value),
     });
     chapterTree.value = tree;
   } catch (error) {
@@ -529,7 +529,7 @@ const loadWritingGoal = async () => {
     const goal = await invoke<{ daily_goal: number } | null>(
       "get_writing_goal",
       {
-        projectId: Number(projectId.value),
+        project_id: Number(projectId.value),
       }
     );
     if (goal) {
@@ -547,7 +547,7 @@ const loadTodayRecord = async () => {
       total_words: number;
       duration: number;
     } | null>("get_today_words", {
-      projectId: Number(projectId.value),
+      project_id: Number(projectId.value),
     });
     if (record) {
       todayWords.value = record.total_words;
@@ -568,8 +568,8 @@ const loadChapterContentByPath = async (chapterId: number): Promise<string> => {
 
   try {
     const content = await invoke<string>("get_chapter_content", {
-      projectId: String(projectId.value),
-      chapterId: String(chapterId),
+      project_id: String(projectId.value),
+      chapter_id: String(chapterId),
     });
 
     if (content === undefined || content === null) {
@@ -594,8 +594,8 @@ const saveChapter = async (autoCreateSnapshot: boolean = true) => {
     const contentToSave = editorRef.value?.getHTML() ?? currentContent.value;
 
     await invoke("save_chapter_content", {
-      projectId: String(projectId.value),
-      chapterId: String(currentChapter.value.id),
+      project_id: String(projectId.value),
+      chapter_id: String(currentChapter.value.id),
       content: contentToSave,
     });
     // Auto-commit to git after save
@@ -607,7 +607,7 @@ const saveChapter = async (autoCreateSnapshot: boolean = true) => {
           time: now,
         });
         await invoke("create_snapshot", {
-          projectId: Number(projectId.value),
+          project_id: Number(projectId.value),
           message: commitMessage,
         });
       } catch (_e) {
@@ -619,8 +619,8 @@ const saveChapter = async (autoCreateSnapshot: boolean = true) => {
 
     // 更新字数到数据库
     await invoke("update_chapter_word_count", {
-      chapterId: currentChapter.value.id,
-      wordCount: finalWordCount,
+      chapter_id: currentChapter.value.id,
+      word_count: finalWordCount,
     });
 
     // 同步更新章节树中的缓存（避免重新加载导致的闪烁）
@@ -677,7 +677,7 @@ const manualSnapshot = async () => {
 
     console.log("准备创建快照，消息:", commitMessage);
     const result = await invoke("create_snapshot", {
-      projectId: Number(projectId.value),
+      project_id: Number(projectId.value),
       message: commitMessage,
     });
 
@@ -717,8 +717,8 @@ const upsertWritingRecord = async (currentChapterWords: number) => {
     writingDuration.value += 0.5;
 
     await invoke("upsert_writing_record", {
-      projectId: Number(projectId.value),
-      totalWords: todayInitialWords.value + newWords,
+      project_id: Number(projectId.value),
+      total_words: todayInitialWords.value + newWords,
       duration: Math.floor(writingDuration.value),
     });
 
@@ -876,7 +876,6 @@ onMounted(async () => {
   await loadWritingGoal();
   await loadTodayRecord();
 
-  // 预加载世界观数据，确保@引用功能在编辑器打开后即可正常使用
   if (projectId.value) {
     const worldbuildingStore = useWorldbuildingStore();
     await worldbuildingStore.loadAll(Number(projectId.value));
@@ -902,16 +901,30 @@ onUnmounted(async () => {
   if (unlistenWindowResize.value) {
     unlistenWindowResize.value();
   }
-  // Auto-commit on close
+
   try {
     const now = new Date().toLocaleString();
     const commitMessage = formatSnapshotMessage("appClose", { time: now });
     await invoke("create_snapshot", {
-      projectId: Number(projectId.value),
+      project_id: Number(projectId.value),
       message: commitMessage,
     });
   } catch {
     /* ok */
+  }
+
+  if (
+    projectStore.currentProject?.encrypted &&
+    projectStore.encryptionPassword
+  ) {
+    try {
+      await invoke("reencrypt_project", {
+        project_path: projectStore.currentProject.path,
+        password: projectStore.encryptionPassword,
+      });
+    } catch {
+      /* ok */
+    }
   }
 });
 

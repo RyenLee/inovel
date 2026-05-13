@@ -167,7 +167,7 @@ export const useWorldbuildingStore = defineStore('worldbuilding', {
     // Character actions
     async loadCharacters(projectId: number) {
       try {
-        this.characters = await invoke<Character[]>('list_characters', { projectId })
+        this.characters = await invoke<Character[]>('list_characters', { project_id: projectId })
       } catch (error) {
         console.error('加载角色列表失败:', error)
         this.characters = []
@@ -187,7 +187,7 @@ export const useWorldbuildingStore = defineStore('worldbuilding', {
 
     async updateCharacter(characterId: number, params: UpdateCharacterParams): Promise<Character | null> {
       try {
-        const character = await invoke<Character>('update_character', { characterId, params })
+        const character = await invoke<Character>('update_character', { character_id: characterId, params })
         const index = this.characters.findIndex(c => c.id === characterId)
         if (index !== -1) {
           this.characters[index] = character
@@ -201,7 +201,7 @@ export const useWorldbuildingStore = defineStore('worldbuilding', {
 
     async deleteCharacter(characterId: number): Promise<boolean> {
       try {
-        await invoke('delete_character', { characterId })
+        await invoke('delete_character', { character_id: characterId })
         this.characters = this.characters.filter(c => c.id !== characterId)
         return true
       } catch (error) {
@@ -213,7 +213,7 @@ export const useWorldbuildingStore = defineStore('worldbuilding', {
     // Location actions
     async loadLocations(projectId: number) {
       try {
-        this.locations = await invoke<Location[]>('list_locations', { projectId })
+        this.locations = await invoke<Location[]>('list_locations', { project_id: projectId })
       } catch (error) {
         console.error('加载地点列表失败:', error)
         this.locations = []
@@ -233,7 +233,7 @@ export const useWorldbuildingStore = defineStore('worldbuilding', {
 
     async updateLocation(locationId: number, params: UpdateLocationParams): Promise<Location | null> {
       try {
-        const location = await invoke<Location>('update_location', { locationId, params })
+        const location = await invoke<Location>('update_location', { location_id: locationId, params })
         const index = this.locations.findIndex(l => l.id === locationId)
         if (index !== -1) {
           this.locations[index] = location
@@ -247,7 +247,7 @@ export const useWorldbuildingStore = defineStore('worldbuilding', {
 
     async deleteLocation(locationId: number): Promise<boolean> {
       try {
-        await invoke('delete_location', { locationId })
+        await invoke('delete_location', { location_id: locationId })
         this.locations = this.locations.filter(l => l.id !== locationId)
         return true
       } catch (error) {
@@ -259,7 +259,7 @@ export const useWorldbuildingStore = defineStore('worldbuilding', {
     // Organization actions
     async loadOrganizations(projectId: number) {
       try {
-        this.organizations = await invoke<Organization[]>('list_organizations', { projectId })
+        this.organizations = await invoke<Organization[]>('list_organizations', { project_id: projectId })
       } catch (error) {
         console.error('加载组织列表失败:', error)
         this.organizations = []
@@ -279,7 +279,7 @@ export const useWorldbuildingStore = defineStore('worldbuilding', {
 
     async updateOrganization(organizationId: number, params: UpdateOrganizationParams): Promise<Organization | null> {
       try {
-        const organization = await invoke<Organization>('update_organization', { organizationId, params })
+        const organization = await invoke<Organization>('update_organization', { organization_id: organizationId, params })
         const index = this.organizations.findIndex(o => o.id === organizationId)
         if (index !== -1) {
           this.organizations[index] = organization
@@ -293,7 +293,7 @@ export const useWorldbuildingStore = defineStore('worldbuilding', {
 
     async deleteOrganization(organizationId: number): Promise<boolean> {
       try {
-        await invoke('delete_organization', { organizationId })
+        await invoke('delete_organization', { organization_id: organizationId })
         this.organizations = this.organizations.filter(o => o.id !== organizationId)
         return true
       } catch (error) {

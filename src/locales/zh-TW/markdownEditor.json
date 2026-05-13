@@ -1,0 +1,49 @@
+{
+  "toolbar": {
+    "bold": "加粗 (Ctrl+B)",
+    "italic": "斜體 (Ctrl+I)",
+    "heading1": "一級標題",
+    "heading2": "二級標題",
+    "heading3": "三級標題",
+    "bulletList": "無序列表",
+    "orderedList": "有序列表",
+    "blockquote": "引用",
+    "horizontalRule": "分隔線",
+    "history": "版本歷史",
+    "snapshot": "建立快照",
+    "template": "打開模板庫",
+    "nameGenerator": "名稱生成",
+    "importText": "匯入文字檔案 (.txt)"
+  },
+  "lineHeight": {
+    "title": "行間距",
+    "compact": "緊湊",
+    "loose": "寬鬆",
+    "current": "當前行高：{height}px"
+  },
+  "statusBar": {
+    "chapterWordCount": "本章字數：",
+    "volumeWordCount": "本卷字數：",
+    "totalWordCount": "全書字數：",
+    "typewriterMode": "打字機模式",
+    "focusMode": "聚焦模式"
+  },
+  "splitDialog": {
+    "title": "段落拆分",
+    "threshold": "拆分閾值：",
+    "characters": "字元",
+    "refreshPreview": "重新整理預覽",
+    "original": "原文（{length} 字）：",
+    "splitResult": "拆分後（{count} 段）：",
+    "segment": "段{index}",
+    "noParagraphs": "當前沒有超過閾值的段落",
+    "confirmSplit": "確認拆分"
+  },
+  "imageDialog": {
+    "title": "選擇圖片"
+  },
+  "messages": {
+    "editorNotInitialized": "編輯器實例未初始化",
+    "applyTemplateFailed": "套用模板失敗:"
+  }
+}

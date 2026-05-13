@@ -66,7 +66,7 @@ const loadChapterTree = async () => {
   isLoading.value = true;
   try {
     const tree = await invoke<VolumeWithChapters[]>("get_chapter_tree", {
-      projectId: Number(props.projectId),
+      project_id: Number(props.projectId),
     });
     volumes.value = tree;
     // Auto expand all volumes
@@ -121,8 +121,8 @@ const finishEditSummary = async () => {
   if (currentChapter && currentChapter.summary !== newSummary) {
     try {
       await invoke("update_chapter_summary", {
-        chapterId,
-        newSummary,
+        chapter_id: chapterId,
+        new_summary: newSummary,
       });
       currentChapter.summary = newSummary;
       emit("update");
@@ -149,7 +149,7 @@ const handleSummaryKeydown = (event: KeyboardEvent) => {
 // Delete chapter
 const deleteChapter = async (chapterId: number) => {
   try {
-    await invoke("delete_chapter", { chapterId });
+    await invoke("delete_chapter", { chapter_id: chapterId });
     for (const volume of volumes.value) {
       volume.chapters = volume.chapters.filter((c) => c.id !== chapterId);
     }
@@ -162,7 +162,7 @@ const deleteChapter = async (chapterId: number) => {
 // Delete volume
 const deleteVolume = async (volumeId: number) => {
   try {
-    await invoke("delete_volume", { volumeId });
+    await invoke("delete_volume", { volume_id: volumeId });
     volumes.value = volumes.value.filter((v) => v.id !== volumeId);
     emit("update");
   } catch (error) {
@@ -178,8 +178,8 @@ const onChapterDragEnd = async (volumeId: number) => {
   try {
     const orderedIds = volume.chapters.map((c) => c.id);
     await invoke("reorder_chapters", {
-      volumeId,
-      orderedIds,
+      volume_id: volumeId,
+      ordered_ids: orderedIds,
     });
     emit("update");
   } catch (error) {
@@ -193,8 +193,8 @@ const onVolumeDragEnd = async () => {
   try {
     const orderedIds = volumes.value.map((v) => v.id);
     await invoke("reorder_volumes", {
-      projectId: Number(props.projectId),
-      orderedIds,
+      project_id: Number(props.projectId),
+      ordered_ids: orderedIds,
     });
     emit("update");
   } catch (error) {

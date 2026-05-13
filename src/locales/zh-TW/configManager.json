@@ -1,0 +1,107 @@
+{
+  "title": "配置管理",
+  "currentVersion": "當前版本",
+  "saveAll": "儲存所有配置",
+  "export": "匯出配置",
+  "reset": "重置配置",
+  "reload": "重新載入",
+  "testClick": "測試點擊",
+  "loading": "載入中...",
+  "arrayPlaceholder": "多個值用逗號分隔",
+  "categories": {
+    "app": { "label": "應用配置", "description": "應用基本資訊" },
+    "api": { "label": "API配置", "description": "介面相關配置" },
+    "window": { "label": "視窗配置", "description": "視窗尺寸設置" },
+    "editor": { "label": "編輯器配置", "description": "編輯器相關設置" },
+    "features": { "label": "功能開關", "description": "功能特性配置" },
+    "performance": { "label": "效能配置", "description": "效能監控設置" },
+    "cache": { "label": "快取配置", "description": "快取相關設置" },
+    "gzip": { "label": "Gzip配置", "description": "壓縮相關設置" },
+    "pagination": { "label": "分頁配置", "description": "分頁參數設置" },
+    "requestMerging": { "label": "請求合併", "description": "請求合併配置" },
+    "security": { "label": "安全配置", "description": "敏感配置項" }
+  },
+  "fields": {
+    "app": {
+      "name": "應用名稱",
+      "version": "應用版本號",
+      "environment": "執行環境",
+      "description": "應用描述"
+    },
+    "api": {
+      "base_url": "API基礎位址",
+      "timeout_ms": "API逾時時間(毫秒)",
+      "max_retries": "最大重試次數"
+    },
+    "window": {
+      "default_width": "預設視窗寬度",
+      "default_height": "預設視窗高度",
+      "min_width": "最小視窗寬度",
+      "min_height": "最小視窗高度",
+      "max_width": "最大視窗寬度",
+      "max_height": "最大視窗高度",
+      "resizable": "允許調整大小"
+    },
+    "editor": {
+      "default_font_size": "預設字型大小",
+      "default_font": "預設字型",
+      "line_spacing": "行間距",
+      "show_line_numbers": "顯示行號",
+      "spell_check_enabled": "拼寫檢查"
+    },
+    "features": {
+      "auto_save_enabled": "自動儲存開關",
+      "sync_enabled": "雲同步開關",
+      "writing_stats_enabled": "寫作統計開關",
+      "inspiration_board_enabled": "靈感面板開關"
+    },
+    "performance": {
+      "monitoring_enabled": "效能監控",
+      "slow_request_threshold_ms": "慢請求閾值(毫秒)",
+      "log_payload_size": "記錄請求大小"
+    },
+    "cache": {
+      "enabled": "啟用快取",
+      "max_entries": "最大快取條目",
+      "ttl_seconds": "快取過期時間(秒)",
+      "cached_commands": "快取命令列表"
+    },
+    "gzip": {
+      "enabled": "啟用Gzip壓縮",
+      "level": "壓縮級別(0-9)",
+      "min_size": "最小壓縮閾值(位元組)",
+      "compress_types": "壓縮MIME類型"
+    },
+    "pagination": {
+      "default_page_size": "預設每頁條數",
+      "max_page_size": "最大每頁條數"
+    },
+    "requestMerging": {
+      "enabled": "啟用請求合併",
+      "window_ms": "合併視窗時間(毫秒)",
+      "max_batch_size": "最大批次大小"
+    },
+    "security": {
+      "api_key": "API金鑰",
+      "secret_token": "安全令牌"
+    }
+  },
+  "messages": {
+    "loadFallback": "配置檔案不存在或讀取失敗，已使用預設配置",
+    "loadSuccess": "配置載入成功",
+    "loadFailed": "載入配置失敗",
+    "noConfig": "沒有可儲存的配置",
+    "saveSuccess": "所有配置儲存成功",
+    "saveFailed": "儲存配置失敗",
+    "exportSuccess": "配置匯出成功",
+    "exportFailed": "匯出失敗",
+    "resetConfirm": "確定要重置所有配置嗎？此操作不可撤銷！",
+    "resetSuccess": "配置已重置為預設值",
+    "resetFailed": "重置失敗",
+    "reloadSuccess": "配置重新載入成功",
+    "reloadFailed": "重新載入失敗",
+    "testSuccess": "按鈕點擊測試成功",
+    "tomlFile": "TOML檔案",
+    "unknownError": "未知錯誤"
+  }
+}

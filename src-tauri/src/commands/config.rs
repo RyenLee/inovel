@@ -32,13 +32,13 @@ fn get_default_config_path(app: &tauri::AppHandle) -> std::path::PathBuf {
     std::path::PathBuf::from("src-tauri/resources/default_config.toml")
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn read_toml_config(config: State<'_, SharedConfig>) -> Result<AppConfig, String> {
     let cfg = config.read().map_err(|e| format!("读取配置失败: {}", e))?;
     Ok(cfg.clone())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn write_toml_config(
     new_config: AppConfig,
     config: State<'_, SharedConfig>,
@@ -65,7 +65,7 @@ pub async fn write_toml_config(
     Ok(cfg.clone())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reset_to_default_config(
     app: tauri::AppHandle,
     config: State<'_, SharedConfig>,
@@ -93,7 +93,7 @@ pub async fn reset_to_default_config(
     Ok(default_config)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn get_config() -> Result<super::super::config_manager::model::AppConfig, String> {
     let manager = CONFIG_MANAGER
         .lock()
@@ -101,7 +101,7 @@ pub fn get_config() -> Result<super::super::config_manager::model::AppConfig, St
     Ok(manager.get_config())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn get_config_value(
     key: &str,
 ) -> Result<Option<super::super::config_manager::model::ConfigValue>, String> {
@@ -111,7 +111,7 @@ pub fn get_config_value(
     Ok(manager.get_value(key))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn get_config_by_category(category: &str) -> Result<Vec<ConfigItem>, String> {
     let manager = CONFIG_MANAGER
         .lock()
@@ -119,7 +119,7 @@ pub fn get_config_by_category(category: &str) -> Result<Vec<ConfigItem>, String>
     Ok(manager.get_values_by_category(category))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn set_config_value(key: &str, value: &str, encrypted: bool) -> Result<bool, String> {
     let mut manager = CONFIG_MANAGER
         .lock()
@@ -127,7 +127,7 @@ pub fn set_config_value(key: &str, value: &str, encrypted: bool) -> Result<bool,
     Ok(manager.set_value(key, value, encrypted))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn set_config_values(
     values: HashMap<String, String>,
 ) -> Result<super::super::config_manager::api::ConfigUpdateResult, String> {
@@ -137,7 +137,7 @@ pub fn set_config_values(
     Ok(manager.set_values(values))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn update_app_version(new_version: &str) -> Result<bool, String> {
     let mut manager = CONFIG_MANAGER
         .lock()
@@ -145,7 +145,7 @@ pub fn update_app_version(new_version: &str) -> Result<bool, String> {
     Ok(manager.update_version(new_version))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn reload_config() -> Result<bool, String> {
     let mut manager = CONFIG_MANAGER
         .lock()
@@ -153,7 +153,7 @@ pub fn reload_config() -> Result<bool, String> {
     Ok(manager.reload())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn export_config(
     path: &str,
 ) -> Result<super::super::config_manager::api::ExportResult, String> {
@@ -163,7 +163,7 @@ pub fn export_config(
     Ok(manager.export(path))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn import_config(
     path: &str,
 ) -> Result<super::super::config_manager::api::ConfigQueryResult, String> {
@@ -173,7 +173,7 @@ pub fn import_config(
     Ok(manager.import(path))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn reset_config() -> Result<super::super::config_manager::api::ConfigQueryResult, String> {
     let mut manager = CONFIG_MANAGER
         .lock()
@@ -181,7 +181,7 @@ pub fn reset_config() -> Result<super::super::config_manager::api::ConfigQueryRe
     Ok(manager.reset())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn get_config_history(
     page: usize,
     page_size: usize,
@@ -192,7 +192,7 @@ pub fn get_config_history(
     Ok(manager.get_history(page, page_size))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn rollback_config(
     history_id: &str,
 ) -> Result<super::super::config_manager::api::ConfigQueryResult, String> {

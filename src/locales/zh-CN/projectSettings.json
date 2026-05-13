@@ -40,6 +40,7 @@
     "saveFailed": "保存失败"
   },
   "encryption": {
+    "incorrectPassword": "密码错误",
     "status": {
       "title": "加密状态",
       "encrypted": "已加密",
@@ -79,9 +80,11 @@
       "description": "关闭加密将解密所有项目文件。需要输入密码确认。",
       "password": "密码",
       "passwordPlaceholder": "请输入密码",
+      "passwordRequired": "请输入密码",
       "button": "关闭加密",
       "success": "项目已解密，加密已关闭",
-      "failed": "关闭加密失败: {error}"
+      "failed": "关闭加密失败: {error}",
+      "progress": "正在解密: {current} / {total} ({file})"
     }
   },
   "project": "项目"

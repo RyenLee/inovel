@@ -58,11 +58,11 @@ const loadData = async () => {
   isLoading.value = true
   try {
     // Load events
-    const eventList = await invoke<Event[]>('list_events', { projectId: props.projectId })
+    const eventList = await invoke<Event[]>('list_events', { project_id: props.projectId })
     events.value = eventList
 
     // Load chapters for selection
-    const chapterTree = await invoke<any[]>('get_chapter_tree', { projectId: props.projectId })
+    const chapterTree = await invoke<any[]>('get_chapter_tree', { project_id: props.projectId })
     chapters.value = flattenChapters(chapterTree)
   } catch (error) {
     console.error('Failed to load data:', error)
@@ -141,7 +141,7 @@ const saveEvent = async () => {
     if (isEditing.value && currentEvent.value.id) {
       // Update existing
       const updated = await invoke<Event>('update_event', {
-        eventId: currentEvent.value.id,
+        event_id: currentEvent.value.id,
         params: {
           title: currentEvent.value.title,
           story_time: storyTimeStr,
@@ -178,7 +178,7 @@ const saveEvent = async () => {
 // Delete event
 const deleteEvent = async (eventId: number) => {
   try {
-    await invoke('delete_event', { eventId })
+    await invoke('delete_event', { event_id: eventId })
     events.value = events.value.filter(e => e.id !== eventId)
     message.success(t('timeline.messages.eventDeleted'))
   } catch (error) {

@@ -629,6 +629,33 @@ pub struct ChangePasswordParams {
     pub confirm_password: String,
 }
 
+/// 启用全局加密参数
+#[derive(Debug, Deserialize)]
+pub struct EnableGlobalEncryptionParams {
+    pub password: String,
+    pub confirm_password: String,
+}
+
+/// 禁用全局加密参数
+#[derive(Debug, Deserialize)]
+pub struct DisableGlobalEncryptionParams {
+    pub password: String,
+}
+
+/// 修改全局密码参数
+#[derive(Debug, Deserialize)]
+pub struct ChangeGlobalPasswordParams {
+    pub old_password: String,
+    pub new_password: String,
+    pub confirm_password: String,
+}
+
+/// 验证全局密码参数
+#[derive(Debug, Deserialize)]
+pub struct VerifyGlobalPasswordParams {
+    pub password: String,
+}
+
 // ==================== 番茄钟相关数据结构 ====================
 
 /// 专注会话记录

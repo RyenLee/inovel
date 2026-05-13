@@ -1,0 +1,91 @@
+{
+  "title": "專案設置",
+  "tabs": {
+    "basic": "基本設置",
+    "security": "安全性"
+  },
+  "cover": {
+    "title": "封面圖片",
+    "alt": "專案封面",
+    "changeButton": "更換封面",
+    "formatHint": "支援 JPG、PNG 格式",
+    "updated": "封面已更新",
+    "changeFailed": "更換封面失敗: {error}",
+    "selectTitle": "選擇封面圖片"
+  },
+  "projectInfo": {
+    "title": "專案資訊",
+    "projectId": "專案ID",
+    "projectIdPlaceholder": "專案ID",
+    "projectIdReadonly": "不可修改",
+    "name": "書名",
+    "namePlaceholder": "請輸入書名",
+    "nameRequired": "請輸入書名",
+    "author": "筆名",
+    "authorPlaceholder": "請輸入作者筆名",
+    "description": "簡介",
+    "descriptionPlaceholder": "請輸入小說簡介",
+    "path": "儲存路徑",
+    "saveButton": "儲存專案資訊",
+    "saved": "專案資訊已儲存",
+    "saveFailed": "儲存失敗: {error}"
+  },
+  "writingGoal": {
+    "title": "寫作目標",
+    "dailyGoal": "每日字數目標",
+    "unit": "字/天",
+    "feedback": "設置此專案的每日寫作目標，將覆蓋全域設置",
+    "saveButton": "儲存目標",
+    "saved": "每日目標已儲存",
+    "saveFailed": "儲存失敗"
+  },
+  "encryption": {
+    "incorrectPassword": "密碼錯誤",
+    "status": {
+      "title": "加密狀態",
+      "encrypted": "已加密",
+      "notEncrypted": "未加密",
+      "encryptedDesc": "專案檔案已加密儲存",
+      "notEncryptedDesc": "專案檔案未加密"
+    },
+    "enable": {
+      "title": "啟用加密",
+      "password": "設置密碼",
+      "passwordPlaceholder": "請輸入密碼（至少8位）",
+      "confirmPassword": "確認密碼",
+      "confirmPasswordPlaceholder": "請再次輸入密碼",
+      "button": "啟用加密",
+      "passwordMismatch": "兩次輸入的密碼不一致",
+      "passwordTooShort": "密碼長度至少 8 位",
+      "success": "專案已加密",
+      "failed": "加密失敗: {error}",
+      "progress": "正在加密: {current} / {total} ({file})"
+    },
+    "change": {
+      "title": "修改密碼",
+      "oldPassword": "原密碼",
+      "oldPasswordPlaceholder": "請輸入原密碼",
+      "newPassword": "新密碼",
+      "newPasswordPlaceholder": "請輸入新密碼（至少8位）",
+      "confirmNewPassword": "確認新密碼",
+      "confirmNewPasswordPlaceholder": "請再次輸入新密碼",
+      "button": "修改密碼",
+      "passwordMismatch": "兩次輸入的新密碼不一致",
+      "passwordTooShort": "新密碼長度至少 8 位",
+      "success": "密碼已修改",
+      "failed": "修改密碼失敗: {error}"
+    },
+    "disable": {
+      "title": "關閉加密",
+      "description": "關閉加密將解密所有專案檔案。需要輸入密碼確認。",
+      "password": "密碼",
+      "passwordPlaceholder": "請輸入密碼",
+      "passwordRequired": "請輸入密碼",
+      "button": "關閉加密",
+      "success": "專案已解密，加密已關閉",
+      "failed": "關閉加密失敗: {error}",
+      "progress": "正在解密: {current} / {total} ({file})"
+    }
+  },
+  "project": "專案"
+}

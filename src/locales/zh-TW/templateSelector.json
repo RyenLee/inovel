@@ -1,0 +1,34 @@
+{
+  "title": "選擇寫作模板",
+  "categories": {
+    "custom": "自訂",
+    "chapter": "章節",
+    "illustrated": "圖文",
+    "dialogue": "對話",
+    "structured": "結構化"
+  },
+  "insertMode": {
+    "replace": "替換內容",
+    "append": "追加內容",
+    "merge": "智慧合併",
+    "replaceTooltip": "清空當前內容，使用模板",
+    "appendTooltip": "在現有內容後追加模板",
+    "mergeTooltip": "保留使用者編輯，智慧補充新內容",
+    "modeLabel": "模式：{mode}"
+  },
+  "badges": {
+    "builtin": "內建",
+    "custom": "自訂"
+  },
+  "loading": "載入模板中...",
+  "noTemplates": "暫無模板，請稍後重試",
+  "reload": "重新載入",
+  "cancel": "取消",
+  "useReplace": "使用模板替換",
+  "useAppend": "追加模板內容",
+  "useMerge": "智慧合併模板",
+  "messages": {
+    "loadFailed": "載入模板失敗",
+    "loadFailedRetry": "載入模板失敗，請重試"
+  }
+}

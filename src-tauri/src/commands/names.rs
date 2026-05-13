@@ -64,7 +64,7 @@ fn load_names_database() -> NamesDatabase {
 ///
 /// # 返回值
 /// 生成的随机名称列表
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn generate_names(category: String, gender: Option<String>, count: u32) -> Vec<String> {
     let mut rng = rand::rng();
     let count = count.min(100) as usize;

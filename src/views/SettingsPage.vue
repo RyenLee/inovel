@@ -16,8 +16,10 @@ import {
   NDivider,
   NResult,
   NSelect,
+  NSwitch,
+  NModal,
 } from "naive-ui";
-import { ArrowLeft, Save, Languages } from "lucide-vue-next";
+import { ArrowLeft, Save, Languages, Shield } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import { useProjectStore } from "../stores/project";
 import { useLocale } from "../i18n/composables/useLocale";
@@ -36,10 +38,12 @@ const selectedLocale = computed({
   set: (val: AppLocale) => switchLocale(val),
 });
 
-const localeSelectOptions = availableLocales.map((l) => ({
-  label: l.label,
-  value: l.value,
-}));
+const localeSelectOptions = computed(() =>
+  availableLocales.value.map((l: { value: string; label: string }) => ({
+    label: l.label,
+    value: l.value,
+  }))
+);
 
 const autoSaveInterval = ref(1);
 
@@ -85,10 +89,42 @@ const autoSaveIntervalOptions = computed(() => [
 
 const LOCAL_STORAGE_KEY = "inovel_settings";
 
+const globalEncryptionEnabled = ref(false);
+const isEncryptionLoading = ref(false);
+
+const showEnableDialog = ref(false);
+const showDisableDialog = ref(false);
+const showChangePasswordDialog = ref(false);
+
+const enablePassword = ref("");
+const enableConfirmPassword = ref("");
+const disablePassword = ref("");
+const changeOldPassword = ref("");
+const changeNewPassword = ref("");
+const changeConfirmPassword = ref("");
+
+const isEnabling = ref(false);
+const isDisabling = ref(false);
+const isChangingPassword = ref(false);
+
 onMounted(async () => {
   await loadSettings();
   await loadProjectInfo();
+  await loadEncryptionStatus();
 });
+
+const loadEncryptionStatus = async () => {
+  isEncryptionLoading.value = true;
+  try {
+    globalEncryptionEnabled.value = await invoke<boolean>(
+      "get_global_encryption_status"
+    );
+  } catch (error) {
+    console.error("Failed to load encryption status:", error);
+  } finally {
+    isEncryptionLoading.value = false;
+  }
+};
 
 const loadProjectInfo = async () => {
   try {
@@ -101,7 +137,7 @@ const loadProjectInfo = async () => {
       const windowSizeResult = await invoke<[number, number] | null>(
         "get_window_size",
         {
-          projectId: lastProject.id,
+          project_id: lastProject.id,
         }
       );
       if (windowSizeResult) {
@@ -148,7 +184,7 @@ const saveAllSettings = async () => {
     ) {
       const [width, height] = windowSize.value.split("x").map(Number);
       await invoke("set_window_size", {
-        projectId: currentProjectId.value,
+        project_id: currentProjectId.value,
         width,
         height,
       });
@@ -165,6 +201,131 @@ const saveAllSettings = async () => {
 
 const goBack = () => {
   router.push("/");
+};
+
+const handleEncryptionToggle = (value: boolean) => {
+  if (value) {
+    showEnableDialog.value = true;
+  } else {
+    showDisableDialog.value = true;
+  }
+};
+
+const handleEnableEncryption = async () => {
+  if (!enablePassword.value || !enableConfirmPassword.value) {
+    message.warning(t("settings.encryption.passwordRequired"));
+    return;
+  }
+  if (enablePassword.value.length < 8) {
+    message.warning(t("settings.encryption.passwordTooShort"));
+    return;
+  }
+  if (enablePassword.value !== enableConfirmPassword.value) {
+    message.warning(t("settings.encryption.passwordMismatch"));
+    return;
+  }
+
+  isEnabling.value = true;
+  try {
+    await invoke("enable_global_encryption", {
+      params: {
+        password: enablePassword.value,
+        confirm_password: enableConfirmPassword.value,
+      },
+    });
+    globalEncryptionEnabled.value = true;
+    showEnableDialog.value = false;
+    enablePassword.value = "";
+    enableConfirmPassword.value = "";
+    message.success(t("settings.encryption.enableSuccess"));
+  } catch (error) {
+    console.error("Failed to enable encryption:", error);
+    message.error(String(error));
+    globalEncryptionEnabled.value = false;
+  } finally {
+    isEnabling.value = false;
+  }
+};
+
+const handleDisableEncryption = async () => {
+  if (!disablePassword.value) {
+    message.warning(t("settings.encryption.passwordRequired"));
+    return;
+  }
+
+  isDisabling.value = true;
+  try {
+    await invoke("disable_global_encryption", {
+      params: {
+        password: disablePassword.value,
+      },
+    });
+    globalEncryptionEnabled.value = false;
+    showDisableDialog.value = false;
+    disablePassword.value = "";
+    message.success(t("settings.encryption.disableSuccess"));
+  } catch (error) {
+    console.error("Failed to disable encryption:", error);
+    message.error(String(error));
+  } finally {
+    isDisabling.value = false;
+  }
+};
+
+const handleChangePassword = async () => {
+  if (!changeOldPassword.value || !changeNewPassword.value) {
+    message.warning(t("settings.encryption.passwordRequired"));
+    return;
+  }
+  if (changeNewPassword.value.length < 8) {
+    message.warning(t("settings.encryption.passwordTooShort"));
+    return;
+  }
+  if (changeNewPassword.value !== changeConfirmPassword.value) {
+    message.warning(t("settings.encryption.passwordMismatch"));
+    return;
+  }
+
+  isChangingPassword.value = true;
+  try {
+    await invoke("change_global_password", {
+      params: {
+        old_password: changeOldPassword.value,
+        new_password: changeNewPassword.value,
+        confirm_password: changeConfirmPassword.value,
+      },
+    });
+    showChangePasswordDialog.value = false;
+    changeOldPassword.value = "";
+    changeNewPassword.value = "";
+    changeConfirmPassword.value = "";
+    message.success(t("settings.encryption.changePasswordSuccess"));
+  } catch (error) {
+    console.error("Failed to change password:", error);
+    message.error(String(error));
+  } finally {
+    isChangingPassword.value = false;
+  }
+};
+
+const cancelEnableDialog = () => {
+  showEnableDialog.value = false;
+  enablePassword.value = "";
+  enableConfirmPassword.value = "";
+  globalEncryptionEnabled.value = false;
+};
+
+const cancelDisableDialog = () => {
+  showDisableDialog.value = false;
+  disablePassword.value = "";
+  globalEncryptionEnabled.value = true;
+};
+
+const cancelChangePasswordDialog = () => {
+  showChangePasswordDialog.value = false;
+  changeOldPassword.value = "";
+  changeNewPassword.value = "";
+  changeConfirmPassword.value = "";
 };
 </script>
 
@@ -220,6 +381,64 @@ const goBack = () => {
                 />
               </n-form-item>
             </n-form>
+          </n-card>
+        </n-gi>
+
+        <!-- Global Encryption Settings -->
+        <n-gi>
+          <n-card hoverable class="settings-card">
+            <template #header>
+              <div class="flex items-center gap-2">
+                <n-icon :size="18"><Shield /></n-icon>
+                <span>{{ t("settings.encryption.title") }}</span>
+              </div>
+            </template>
+            <div v-if="isEncryptionLoading" class="flex justify-center py-4">
+              <n-spin size="small" />
+            </div>
+            <div v-else class="encryption-content">
+              <div class="encryption-status">
+                <div
+                  class="status-indicator"
+                  :class="{ active: globalEncryptionEnabled }"
+                >
+                  <div class="status-dot"></div>
+                  <span class="status-text">
+                    {{
+                      globalEncryptionEnabled
+                        ? t("settings.encryption.enabled")
+                        : t("settings.encryption.disabled")
+                    }}
+                  </span>
+                </div>
+                <p class="encryption-description">
+                  {{ t("settings.encryption.description") }}
+                </p>
+              </div>
+              <div class="encryption-actions">
+                <n-switch
+                  :value="globalEncryptionEnabled"
+                  @update:value="handleEncryptionToggle"
+                  :loading="isEncryptionLoading"
+                />
+              </div>
+              <div v-if="globalEncryptionEnabled" class="encryption-extra">
+                <n-divider />
+                <div class="password-change-section">
+                  <span class="password-hint">{{
+                    t("settings.encryption.changePassword")
+                  }}</span>
+                  <n-button
+                    type="warning"
+                    ghost
+                    size="small"
+                    @click="showChangePasswordDialog = true"
+                  >
+                    {{ t("settings.encryption.changePasswordButton") }}
+                  </n-button>
+                </div>
+              </div>
+            </div>
           </n-card>
         </n-gi>
 
@@ -338,6 +557,129 @@ const goBack = () => {
         </n-gi>
       </n-grid>
     </main>
+
+    <!-- Enable Encryption Dialog -->
+    <n-modal
+      v-model:show="showEnableDialog"
+      preset="card"
+      :title="t('settings.encryption.enableTitle')"
+      style="max-width: 420px"
+    >
+      <n-form label-placement="top">
+        <n-form-item :label="t('settings.encryption.newPassword')">
+          <n-input
+            v-model:value="enablePassword"
+            type="password"
+            :placeholder="t('settings.encryption.passwordPlaceholder')"
+            show-password-on="click"
+          />
+        </n-form-item>
+        <n-form-item :label="t('settings.encryption.confirmPassword')">
+          <n-input
+            v-model:value="enableConfirmPassword"
+            type="password"
+            :placeholder="t('settings.encryption.confirmPasswordPlaceholder')"
+            show-password-on="click"
+          />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="cancelEnableDialog">{{
+            t("settings.encryption.cancel")
+          }}</n-button>
+          <n-button
+            type="primary"
+            @click="handleEnableEncryption"
+            :loading="isEnabling"
+          >
+            {{ t("settings.encryption.confirm") }}
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- Disable Encryption Dialog -->
+    <n-modal
+      v-model:show="showDisableDialog"
+      preset="card"
+      :title="t('settings.encryption.disableTitle')"
+      style="max-width: 420px"
+    >
+      <n-form label-placement="top">
+        <n-form-item :label="t('settings.encryption.currentPassword')">
+          <n-input
+            v-model:value="disablePassword"
+            type="password"
+            :placeholder="t('settings.encryption.currentPasswordPlaceholder')"
+            show-password-on="click"
+          />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="cancelDisableDialog">{{
+            t("settings.encryption.cancel")
+          }}</n-button>
+          <n-button
+            type="primary"
+            @click="handleDisableEncryption"
+            :loading="isDisabling"
+          >
+            {{ t("settings.encryption.confirm") }}
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- Change Password Dialog -->
+    <n-modal
+      v-model:show="showChangePasswordDialog"
+      preset="card"
+      :title="t('settings.encryption.changePasswordTitle')"
+      style="max-width: 420px"
+    >
+      <n-form label-placement="top">
+        <n-form-item :label="t('settings.encryption.oldPassword')">
+          <n-input
+            v-model:value="changeOldPassword"
+            type="password"
+            :placeholder="t('settings.encryption.oldPasswordPlaceholder')"
+            show-password-on="click"
+          />
+        </n-form-item>
+        <n-form-item :label="t('settings.encryption.newPassword')">
+          <n-input
+            v-model:value="changeNewPassword"
+            type="password"
+            :placeholder="t('settings.encryption.passwordPlaceholder')"
+            show-password-on="click"
+          />
+        </n-form-item>
+        <n-form-item :label="t('settings.encryption.confirmPassword')">
+          <n-input
+            v-model:value="changeConfirmPassword"
+            type="password"
+            :placeholder="t('settings.encryption.confirmPasswordPlaceholder')"
+            show-password-on="click"
+          />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="cancelChangePasswordDialog">{{
+            t("settings.encryption.cancel")
+          }}</n-button>
+          <n-button
+            type="primary"
+            @click="handleChangePassword"
+            :loading="isChangingPassword"
+          >
+            {{ t("settings.encryption.confirm") }}
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -358,6 +700,74 @@ const goBack = () => {
 
 .settings-form-item {
   width: 100%;
+}
+
+.encryption-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.encryption-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d9d9d9;
+  transition: background 0.3s;
+}
+
+.status-indicator.active .status-dot {
+  background: #18a058;
+  box-shadow: 0 0 8px rgba(24, 160, 88, 0.5);
+}
+
+.status-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+}
+
+.status-indicator.active .status-text {
+  color: #18a058;
+}
+
+.encryption-description {
+  margin: 0;
+  font-size: 13px;
+  color: #999;
+  line-height: 1.5;
+}
+
+.encryption-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.encryption-extra {
+  padding-top: 8px;
+}
+
+.password-change-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.password-hint {
+  font-size: 13px;
+  color: #666;
 }
 
 @media (max-width: 640px) {

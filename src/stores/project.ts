@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import type { EncryptionProgress, EncryptProjectParams, DecryptProjectParams, ChangePasswordParams } from "../types/encryption";
+import type { EncryptionProgress, EncryptProjectParams, DecryptProjectParams, ChangePasswordParams, DisableEncryptionParams, VerifyPasswordParams } from "../types/encryption";
 
 export interface ProjectMeta {
   id: number;
@@ -78,6 +78,7 @@ export const useProjectStore = defineStore("project", () => {
   const isEncrypted = ref(false);
   const isDecrypting = ref(false);
   const decryptProgress = ref<EncryptionProgress | null>(null);
+  const encryptionPassword = ref<string>("");
 
   async function fetchRecentProjects(page: number = 1) {
     isLoading.value = true;
@@ -148,7 +149,7 @@ export const useProjectStore = defineStore("project", () => {
 
   async function removeProjectFromList(id: number, keepFiles: boolean = true): Promise<boolean> {
     try {
-      await invoke("remove_project_from_list", { id, keepFiles });
+      await invoke("remove_project_from_list", { id, keep_files: keepFiles });
       recentProjects.value = recentProjects.value.filter(p => p.id !== id);
       return true;
     } catch (e) {
@@ -208,6 +209,7 @@ export const useProjectStore = defineStore("project", () => {
     try {
       const decryptedPath = await invoke<string>("decrypt_project", { params });
       isEncrypted.value = false;
+      encryptionPassword.value = params.password;
       return decryptedPath;
     } catch (e) {
       error.value = String(e);
@@ -219,9 +221,9 @@ export const useProjectStore = defineStore("project", () => {
   }
 
   /** 验证密码 */
-  async function verifyPassword(params: DecryptProjectParams): Promise<boolean> {
+  async function verifyPassword(params: VerifyPasswordParams): Promise<boolean> {
     try {
-      return await invoke<boolean>("verify_project_password", { project_path: params.project_path, password: params.password });
+      return await invoke<boolean>("verify_project_password", { params });
     } catch (e) {
       console.error("Failed to verify password:", e);
       return false;
@@ -256,7 +258,7 @@ export const useProjectStore = defineStore("project", () => {
   /** 检查项目是否已加密 */
   async function isProjectEncrypted(projectPath: string): Promise<boolean> {
     try {
-      return await invoke<boolean>("is_project_encrypted_command", { projectPath });
+      return await invoke<boolean>("is_project_encrypted_command", { project_path: projectPath });
     } catch (e) {
       console.error("Failed to check if project is encrypted:", e);
       return false;
@@ -342,6 +344,7 @@ export const useProjectStore = defineStore("project", () => {
     isEncrypted,
     isDecrypting,
     decryptProgress,
+    encryptionPassword,
     encryptProject,
     decryptProject,
     verifyPassword,

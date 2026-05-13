@@ -80,6 +80,8 @@ const goToTemplates = () => {
 // 删除确认弹窗状态
 const showDeleteProjectModal = ref(false);
 const projectToDelete = ref<ProjectMeta | null>(null);
+const showDeletePasswordModal = ref(false);
+const deletePassword = ref("");
 
 // 解密相关
 const showDecryptModal = ref(false);
@@ -138,7 +140,7 @@ const loadStats = async () => {
     const records = await invoke<
       { date: string; total_words: number; duration: number }[]
     >("get_writing_stats", {
-      projectId: 0,
+      project_id: 0,
       days: 30,
     });
     writingRecords.value = records;
@@ -356,6 +358,39 @@ const handleOpenProject = async (project: ProjectMeta) => {
   }
 };
 
+const handleDecryptAndOpen = async () => {
+  if (!projectToDecrypt.value) return;
+  if (!decryptPassword.value) {
+    message.warning(t("projectSettings.encryption.disable.passwordRequired"));
+    return;
+  }
+
+  const projectId = projectToDecrypt.value.id;
+
+  try {
+    const decryptedPath = await projectStore.decryptProject({
+      project_path: projectToDecrypt.value.path,
+      password: decryptPassword.value,
+    });
+
+    const result = await projectStore.openProject(projectId);
+    if (result.success) {
+      showDecryptModal.value = false;
+      decryptPassword.value = "";
+      router.push(`/editor/${projectId}`);
+      projectToDecrypt.value = null;
+    }
+  } catch (e) {
+    message.error(t("projectSettings.encryption.disable.failed", { error: String(e) }));
+  }
+};
+
+const cancelDecrypt = () => {
+  showDecryptModal.value = false;
+  decryptPassword.value = "";
+  projectToDecrypt.value = null;
+};
+
 // 打开删除项目确认弹窗
 const openDeleteProjectModal = (project: ProjectMeta, event: Event) => {
   event.stopPropagation();
@@ -365,6 +400,18 @@ const openDeleteProjectModal = (project: ProjectMeta, event: Event) => {
 
 // 确认删除项目
 const handleConfirmDeleteProject = async (keepFiles: boolean) => {
+  if (!projectToDelete.value) return;
+
+  if (projectToDelete.value.encrypted && !keepFiles) {
+    showDeleteProjectModal.value = false;
+    showDeletePasswordModal.value = true;
+    return;
+  }
+
+  await doDeleteProject(keepFiles);
+};
+
+const doDeleteProject = async (keepFiles: boolean) => {
   if (!projectToDelete.value) return;
 
   const success = await projectStore.removeProjectFromList(
@@ -383,7 +430,34 @@ const handleConfirmDeleteProject = async (keepFiles: boolean) => {
   }
 
   showDeleteProjectModal.value = false;
+  showDeletePasswordModal.value = false;
+  deletePassword.value = "";
   projectToDelete.value = null;
+};
+
+const handleDeleteWithPassword = async () => {
+  if (!projectToDelete.value || !deletePassword.value) return;
+
+  try {
+    const verified = await projectStore.verifyPassword({
+      project_path: projectToDelete.value.path,
+      password: deletePassword.value,
+    });
+
+    if (!verified) {
+      message.error(t("projectSettings.encryption.disable.failed", { error: t("projectSettings.encryption.incorrectPassword") }));
+      return;
+    }
+
+    await doDeleteProject(false);
+  } catch (e) {
+    message.error(t("projectSettings.encryption.disable.failed", { error: String(e) }));
+  }
+};
+
+const cancelDeletePassword = () => {
+  showDeletePasswordModal.value = false;
+  deletePassword.value = "";
 };
 
 // 取消删除
@@ -1122,6 +1196,77 @@ const closeModal = () => {
           </div>
         </div>
       </div>
+    </n-modal>
+
+    <!-- 解密项目弹窗 -->
+    <n-modal
+      v-model:show="showDecryptModal"
+      preset="card"
+      :title="t('projectSettings.encryption.disable.title')"
+      style="width: 420px"
+      :mask-closable="false"
+    >
+      <n-form label-placement="top">
+        <n-form-item :label="t('projectSettings.encryption.disable.password')">
+          <n-input
+            v-model:value="decryptPassword"
+            type="password"
+            :placeholder="t('projectSettings.encryption.disable.passwordPlaceholder')"
+            show-password-on="mousedown"
+            @keyup.enter="handleDecryptAndOpen"
+          />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="cancelDecrypt" :disabled="projectStore.isDecrypting">
+            {{ t("common.action.cancel") }}
+          </n-button>
+          <n-button
+            type="primary"
+            @click="handleDecryptAndOpen"
+            :loading="projectStore.isDecrypting"
+            :disabled="!decryptPassword"
+          >
+            {{ t("welcome.open") }}
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- 删除加密项目密码验证弹窗 -->
+    <n-modal
+      v-model:show="showDeletePasswordModal"
+      preset="card"
+      :title="t('projectSettings.encryption.disable.title')"
+      style="width: 420px"
+      :mask-closable="false"
+    >
+      <n-form label-placement="top">
+        <n-form-item :label="t('projectSettings.encryption.disable.password')">
+          <n-input
+            v-model:value="deletePassword"
+            type="password"
+            :placeholder="t('projectSettings.encryption.disable.passwordPlaceholder')"
+            show-password-on="mousedown"
+            @keyup.enter="handleDeleteWithPassword"
+          />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="cancelDeletePassword">
+            {{ t("common.action.cancel") }}
+          </n-button>
+          <n-button
+            type="error"
+            @click="handleDeleteWithPassword"
+            :disabled="!deletePassword"
+          >
+            {{ t("welcome.dialog.deleteConfirm") }}
+          </n-button>
+        </n-space>
+      </template>
     </n-modal>
 
     <!-- 删除项目确认弹窗 -->

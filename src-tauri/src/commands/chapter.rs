@@ -20,7 +20,7 @@ use tauri::AppHandle;
 ///
 /// # 返回值
 /// 成功返回相对路径（如 "media/1234567890_12345.png"），失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn save_image(
     app_handle: AppHandle,
     project_id: i64,
@@ -74,7 +74,7 @@ pub async fn save_image(
 ///
 /// # 返回值
 /// 成功返回创建的卷信息，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_volume(
     app_handle: AppHandle,
     project_id: i64,
@@ -121,7 +121,7 @@ pub async fn create_volume(
 ///
 /// # 返回值
 /// 成功返回创建的章节信息，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_chapter(
     app_handle: AppHandle,
     project_id: i64,
@@ -208,7 +208,7 @@ pub async fn create_chapter(
 ///
 /// # 返回值
 /// 成功返回 Ok(()), 失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_volume_name(
     app_handle: AppHandle,
     volume_id: i64,
@@ -244,7 +244,7 @@ pub async fn update_volume_name(
 ///
 /// # 返回值
 /// 成功返回 Ok(()), 失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_chapter_title(
     app_handle: AppHandle,
     chapter_id: i64,
@@ -283,7 +283,7 @@ pub async fn update_chapter_title(
 ///
 /// # 返回值
 /// 成功返回 Ok(()), 失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_chapter_word_count(
     app_handle: AppHandle,
     chapter_id: i64,
@@ -308,7 +308,7 @@ pub async fn update_chapter_word_count(
 ///
 /// # 返回值
 /// 成功返回 Ok(()), 失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_chapter_summary(
     app_handle: AppHandle,
     chapter_id: i64,
@@ -334,7 +334,7 @@ pub async fn update_chapter_summary(
 ///
 /// # 返回值
 /// 成功返回 Ok(()), 失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_volume(app_handle: AppHandle, volume_id: i64) -> Result<(), String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -361,7 +361,7 @@ pub async fn delete_volume(app_handle: AppHandle, volume_id: i64) -> Result<(), 
 /// # 参数
 /// - `chapter_id`: 章节数据库 ID
 /// - `keep_file`: 是否保留本地文件（默认 false，删除文件）
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_chapter(
     app_handle: AppHandle,
     chapter_id: i64,
@@ -418,7 +418,7 @@ pub async fn delete_chapter(
 ///
 /// # 返回值
 /// 成功返回 Ok(()), 失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reorder_volumes(
     app_handle: AppHandle,
     project_id: i64,
@@ -447,7 +447,7 @@ pub async fn reorder_volumes(
 ///
 /// # 返回值
 /// 成功返回 Ok(()), 失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reorder_chapters(
     app_handle: AppHandle,
     volume_id: i64,
@@ -477,7 +477,7 @@ pub async fn reorder_chapters(
 ///
 /// # 返回值
 /// 成功返回 Ok(()), 失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn move_chapter_to_volume(
     app_handle: AppHandle,
     chapter_id: i64,
@@ -516,7 +516,7 @@ pub async fn move_chapter_to_volume(
 ///
 /// # 返回值
 /// 成功返回卷及其章节的树形结构列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_chapter_tree(
     app_handle: AppHandle,
     project_id: i64,
@@ -585,7 +585,7 @@ pub async fn get_chapter_tree(
 ///
 /// # 返回值
 /// 成功返回章节内容，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_chapter_content(
     app_handle: AppHandle,
     _project_id: String,
@@ -635,7 +635,7 @@ pub async fn get_chapter_content(
 ///
 /// # 返回值
 /// 成功返回 Ok(()), 失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn save_chapter_content(
     _app_handle: AppHandle,
     _project_id: String,
@@ -694,7 +694,7 @@ pub async fn save_chapter_content(
 ///
 /// # 返回值
 /// 成功返回 Ok(()), 失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_chapter_status(
     app_handle: AppHandle,
     chapter_id: i64,
@@ -741,7 +741,7 @@ pub async fn update_chapter_status(
 ///
 /// # 返回值
 /// 成功返回状态统计列表，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_chapter_status_counts(
     app_handle: AppHandle,
     project_id: i64,

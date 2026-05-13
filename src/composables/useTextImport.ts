@@ -86,7 +86,7 @@ export function useTextImport() {
 
     state.value.isReading = true;
 
-    const content = await invoke<string>("read_text_file", { filePath: path });
+    const content = await invoke<string>("read_text_file", { file_path: path });
 
       if (!content || content.trim().length === 0) {
         state.value.error = "文件内容为空（仅包含空白字符）";
@@ -95,7 +95,7 @@ export function useTextImport() {
       }
 
       // 获取文件大小
-      const fileSize = await invoke<number>("get_file_size", { filePath: path });
+      const fileSize = await invoke<number>("get_file_size", { file_path: path });
 
       const encoding = detectEncoding(content);
 

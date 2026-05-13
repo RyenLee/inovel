@@ -448,10 +448,10 @@ const handleSessionComplete = async () => {
     }
     
     await invoke("record_focus_session", {
-      projectId: props.projectId,
-      sessionType: completedType,
-      durationMinutes: duration,
-      startedAt,
+      project_id: props.projectId,
+      session_type: completedType,
+      duration_minutes: duration,
+      started_at: startedAt,
       completed: true,
     });
     

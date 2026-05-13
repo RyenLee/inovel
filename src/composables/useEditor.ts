@@ -144,7 +144,7 @@ export function useEditorComposable(options: UseEditorOptions) {
         if (!projectIdRef.value || !editorInstance) return;
         try {
             const matches: SensitiveMatch[] = await invoke("scan_sensitive_words", {
-                projectId: projectIdRef.value,
+                project_id: projectIdRef.value,
                 content: text,
             });
             const decorations = buildDecorations(editorInstance.state.doc, matches);
@@ -165,7 +165,7 @@ export function useEditorComposable(options: UseEditorOptions) {
             if (!projectIdRef.value || !editorInstance) return;
             try {
                 const matches: SensitiveMatch[] = await invoke("scan_sensitive_words", {
-                    projectId: projectIdRef.value,
+                    project_id: projectIdRef.value,
                     content: text,
                 });
                 const decorations = buildDecorations(editorInstance.state.doc, matches);

@@ -396,22 +396,18 @@ const goBack = () => {
             <template v-if="panelMode === 'preview'">
               <div class="space-y-6 animate-fade-in">
                 <div class="space-y-2">
-                  <n-text
-                    depth="3"
-                    class="text-xs font-medium uppercase tracking-wide"
-                    >{{ t("userTemplates.templateName") }}</n-text
-                  >
+                  <label class="field-label">{{
+                    t("userTemplates.templateName")
+                  }}</label>
                   <n-text strong class="block text-base">{{
                     formData.name
                   }}</n-text>
                 </div>
 
                 <div v-if="formData.description" class="space-y-2">
-                  <n-text
-                    depth="3"
-                    class="text-xs font-medium uppercase tracking-wide"
-                    >{{ t("userTemplates.templateDescription") }}</n-text
-                  >
+                  <label class="field-label">{{
+                    t("userTemplates.templateDescription")
+                  }}</label>
                   <n-text depth="2" class="block text-sm">{{
                     formData.description
                   }}</n-text>
@@ -420,11 +416,9 @@ const goBack = () => {
                 <div class="border-t border-gray-200 dark:border-gray-700" />
 
                 <div class="space-y-2">
-                  <n-text
-                    depth="3"
-                    class="text-xs font-medium uppercase tracking-wide"
-                    >{{ t("userTemplates.templateContent") }}</n-text
-                  >
+                  <label class="field-label">{{
+                    t("userTemplates.templateContent")
+                  }}</label>
                   <div
                     class="preview-content rounded-lg p-5 bg-gray-50 dark:bg-gray-700/50 leading-relaxed border border-gray-100 dark:border-gray-600"
                     v-html="markdownToHtml(formData.content)"
@@ -434,63 +428,44 @@ const goBack = () => {
             </template>
 
             <template v-else>
-              <n-form
-                :model="formData"
-                label-placement="top"
-                size="large"
-                class="panel-form animate-fade-in"
-              >
-                <n-form-item
-                  :label="t('userTemplates.templateName')"
-                  path="name"
-                >
+              <div class="panel-form animate-fade-in space-y-5">
+                <div class="form-field">
+                  <label class="field-label">{{
+                    t("userTemplates.templateName")
+                  }}</label>
                   <n-input
                     v-model:value="formData.name"
                     :placeholder="t('userTemplates.placeholder.name')"
                     maxlength="100"
                     show-count
                   />
-                  <template #feedback>
-                    <span class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {{ t("userTemplates.help.name") }}
-                    </span>
-                  </template>
-                </n-form-item>
+                </div>
 
-                <n-form-item
-                  :label="t('userTemplates.templateDescription')"
-                  path="description"
-                >
+                <div class="form-field">
+                  <label class="field-label">{{
+                    t("userTemplates.templateDescription")
+                  }}</label>
                   <n-input
                     v-model:value="formData.description"
                     :placeholder="t('userTemplates.placeholder.description')"
                     maxlength="200"
                     show-count
                   />
-                  <template #feedback>
-                    <span class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {{ t("userTemplates.help.description") }}
-                    </span>
-                  </template>
-                </n-form-item>
+                </div>
 
-                <n-form-item
-                  :label="t('userTemplates.templateContent')"
-                  path="content"
-                >
+                <div class="form-field flex-1 flex flex-col">
+                  <label class="field-label">{{
+                    t("userTemplates.templateContent")
+                  }}</label>
                   <n-input
                     v-model:value="formData.content"
                     :placeholder="t('userTemplates.placeholder.content')"
                     type="textarea"
                     :rows="18"
+                    class="flex-1"
                   />
-                  <template #feedback>
-                    <span class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {{ t("userTemplates.help.content") }}
-                    </span>
-                  </template>
-                </n-form-item>
-              </n-form>
+                </div>
+              </div>
             </template>
           </div>
 
@@ -537,6 +512,26 @@ const goBack = () => {
 
 .panel-form {
   --n-feedback-padding: 8px 0 0 0;
+}
+
+.field-label {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+  background: #f3f4f6;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  letter-spacing: 0.025em;
+  border: 1px solid #e5e7eb;
+}
+
+:deep(.dark) .field-label {
+  color: #f9fafb;
+  background: #374151;
+  border-color: #4b5563;
 }
 
 .panel-form:deep(.n-form-item) {

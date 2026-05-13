@@ -155,7 +155,7 @@ fn read_project_config(project_path: &std::path::Path) -> Result<ProjectConfig, 
 ///
 /// # 返回值
 /// 创建成功返回项目元数据 `Ok(ProjectMeta)`，失败返回错误信息 `Err(String)`
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_project(
     app_handle: AppHandle,
     params: CreateProjectParams,
@@ -253,7 +253,7 @@ pub async fn create_project(
 ///
 /// # 返回值
 /// 分页项目列表 `Ok(PaginatedProjects)`，失败返回错误信息 `Err(String)`
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_recent_projects(
     app_handle: AppHandle,
     page: Option<i32>,
@@ -334,7 +334,7 @@ pub async fn get_recent_projects(
 ///
 /// # 返回值
 /// 项目元数据 `Ok(ProjectMeta)`，失败返回错误信息 `Err(String)`
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn open_project(app_handle: AppHandle, id: i64) -> Result<ProjectMeta, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(&db_path).map_err(|e| format!("数据库连接失败: {}", e))?;
@@ -391,7 +391,7 @@ pub async fn open_project(app_handle: AppHandle, id: i64) -> Result<ProjectMeta,
 ///
 /// # 返回值
 /// 成功返回 `Ok(())`，失败返回错误信息 `Err(String)`
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn remove_project_from_list(
     app_handle: AppHandle,
     id: i64,
@@ -457,7 +457,7 @@ pub async fn remove_project_from_list(
 ///
 /// # 返回值
 /// 更新后的项目元数据 `Ok(ProjectMeta)`，失败返回错误信息 `Err(String)`
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_project(
     app_handle: AppHandle,
     id: i64,
@@ -564,7 +564,7 @@ fn sanitize_filename(name: &str) -> String {
 ///
 /// # 返回值
 /// 封面文件的完整路径 `Ok(String)`，失败返回错误信息 `Err(String)`
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn set_cover(
     app_handle: AppHandle,
     id: i64,
@@ -682,7 +682,7 @@ pub async fn set_cover(
 ///
 /// # 返回值
 /// 待迁移项目数量 `Ok(i32)`，失败返回错误信息 `Err(String)`
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn check_migration_needed(app_handle: AppHandle) -> Result<i32, String> {
     let db_path = get_db_path(&app_handle);
     if !db_path.exists() {
@@ -795,7 +795,7 @@ fn verify_git_repo(repo_path: &PathBuf) -> bool {
 ///
 /// # 返回值
 /// 返回 MigrateResult，包含迁移详情和备份路径
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn migrate_existing_projects(
     app_handle: AppHandle,
     dry_run: Option<bool>,
@@ -1075,7 +1075,7 @@ pub async fn migrate_existing_projects(
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn save_window_size(
     app_handle: AppHandle,
     project_id: i64,
@@ -1121,7 +1121,7 @@ pub async fn save_window_size(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn set_window_size(
     app: tauri::AppHandle,
     project_id: i64,
@@ -1176,7 +1176,7 @@ pub async fn set_window_size(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_window_size(
     app_handle: AppHandle,
     project_id: i64,
@@ -1213,7 +1213,7 @@ pub async fn get_window_size(
 
 /// 回滚迁移：将已迁移的项目恢复为旧路径
 /// 如果 params.project_ids 为空（None），则回滚所有已迁移的项目
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn rollback_migration(
     app_handle: AppHandle,
     params: Option<RollbackParams>,

@@ -1,0 +1,49 @@
+{
+  "title": "人物關係圖譜",
+  "stats": "{charCount}人 / {edgeCount}條關係",
+  "addRelation": "添加關係",
+  "noCharacters": "暫無人物，請先建立人物",
+  "noCharactersHint": "在「世界觀設定」中添加人物後，可以在此查看關係圖譜",
+  "addRelationTitle": "添加人物關係",
+  "editRelationTitle": "編輯關係",
+  "sourceCharacter": "源人物",
+  "targetCharacter": "目標人物",
+  "relationType": "關係類型",
+  "selectSource": "選擇源人物",
+  "selectTarget": "選擇目標人物",
+  "selectOrInputType": "選擇或輸入關係類型",
+  "cancel": "取消",
+  "confirm": "確定",
+  "save": "儲存",
+  "deleteRelation": "刪除關係",
+  "deleteConfirm": "確定刪除這條關係嗎？",
+  "contextMenu": {
+    "addFromSource": "從此節點添加關係",
+    "viewDetails": "查看詳情"
+  },
+  "relationTypes": {
+    "friend": "朋友",
+    "enemy": "敵人",
+    "lover": "戀人",
+    "family": "家人",
+    "colleague": "同事",
+    "superior": "上下級",
+    "teacher": "師生",
+    "brother": "兄弟",
+    "sister": "姐妹",
+    "rival": "競爭對手",
+    "partner": "合作夥伴",
+    "other": "其他"
+  },
+  "messages": {
+    "loadFailed": "載入數據失敗",
+    "relationUpdated": "關係已更新",
+    "updateFailed": "更新失敗",
+    "relationDeleted": "關係已刪除",
+    "deleteFailed": "刪除失敗",
+    "fillAllFields": "請填寫完整資訊",
+    "sameSourceTarget": "源和目標不能相同",
+    "relationAdded": "關係已添加",
+    "createFailed": "建立失敗"
+  }
+}

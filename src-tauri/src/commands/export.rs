@@ -404,7 +404,7 @@ fn process_list_items(inner: &str, prefix: &str) -> String {
 ///
 /// # 返回值
 /// 成功返回导出文件路径，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn export_txt(app_handle: AppHandle, project_id: i64) -> Result<String, String> {
     let export_dir = get_export_dir(&app_handle, project_id)?;
     let chapters = get_all_chapters(&app_handle, project_id)?;
@@ -444,7 +444,7 @@ pub async fn export_txt(app_handle: AppHandle, project_id: i64) -> Result<String
 ///
 /// # 返回值
 /// 成功返回导出文件路径，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn export_markdown(app_handle: AppHandle, project_id: i64) -> Result<String, String> {
     let export_dir = get_export_dir(&app_handle, project_id)?;
     let chapters = get_all_chapters(&app_handle, project_id)?;
@@ -474,7 +474,7 @@ pub async fn export_markdown(app_handle: AppHandle, project_id: i64) -> Result<S
 ///
 /// # 返回值
 /// 成功返回 Markdown 内容，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_export_content(app_handle: AppHandle, project_id: i64) -> Result<String, String> {
     let chapters = get_all_chapters(&app_handle, project_id)?;
     let mut md = String::new();
@@ -498,7 +498,7 @@ pub async fn get_export_content(app_handle: AppHandle, project_id: i64) -> Resul
 ///
 /// # 返回值
 /// 成功返回导出文件路径，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn export_html_for_print(
     app_handle: AppHandle,
     project_id: i64,
@@ -558,7 +558,7 @@ pub async fn export_html_for_print(
 ///
 /// # 返回值
 /// 成功返回导出文件路径，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn export_epub(app_handle: AppHandle, project_id: i64) -> Result<String, String> {
     let export_dir = get_export_dir(&app_handle, project_id)?;
     let project_path = get_project_folder_path(&app_handle, project_id)?;
@@ -645,7 +645,7 @@ pub async fn export_epub(app_handle: AppHandle, project_id: i64) -> Result<Strin
 ///
 /// # 返回值
 /// 成功返回目录路径字符串，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn get_exports_dir(app_handle: AppHandle, project_id: i64) -> Result<String, String> {
     let dir = get_export_dir(&app_handle, project_id)?;
     dir.to_str()
@@ -664,7 +664,7 @@ pub fn get_exports_dir(app_handle: AppHandle, project_id: i64) -> Result<String,
 ///
 /// # 返回值
 /// 成功返回 Ok(())，失败返回错误信息
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn open_folder_in_explorer(app_handle: AppHandle, project_id: i64) -> Result<(), String> {
     let dir = get_export_dir(&app_handle, project_id)?;
     #[cfg(target_os = "windows")]

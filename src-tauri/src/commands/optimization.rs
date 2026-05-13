@@ -6,13 +6,13 @@ use crate::optimization::{OptimizationEngine, PerformanceMonitor};
 use crate::settings::AppConfig;
 use crate::settings::SharedConfig;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_app_config(config: State<'_, SharedConfig>) -> Result<AppConfig, String> {
     let cfg = config.read().map_err(|e| format!("读取配置失败: {}", e))?;
     Ok(cfg.clone())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_app_config(
     new_config: AppConfig,
     config: State<'_, SharedConfig>,
@@ -35,7 +35,7 @@ pub async fn update_app_config(
     Ok(cfg.clone())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reset_app_config(
     config: State<'_, SharedConfig>,
     engine: State<'_, OptimizationEngine>,
@@ -52,28 +52,28 @@ pub async fn reset_app_config(
     Ok(cfg.clone())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_cache_stats(
     engine: State<'_, OptimizationEngine>,
 ) -> Result<crate::optimization::CacheStats, String> {
     Ok(engine.cache.lock().unwrap().get_stats())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn clear_cache(engine: State<'_, OptimizationEngine>) -> Result<(), String> {
     engine.cache.lock().unwrap().clear();
     info!("缓存已清空");
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_performance_report(
     engine: State<'_, OptimizationEngine>,
 ) -> Result<String, String> {
     Ok(engine.monitor.generate_report())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn clear_performance_metrics(
     engine: State<'_, OptimizationEngine>,
 ) -> Result<(), String> {
@@ -82,7 +82,7 @@ pub async fn clear_performance_metrics(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn test_gzip_compression(
     content: String,
     engine: State<'_, OptimizationEngine>,

@@ -1,4 +1,7 @@
 {
+  "app": {
+    "name": "小说工坊"
+  },
   "action": {
     "save": "保存",
     "cancel": "取消",

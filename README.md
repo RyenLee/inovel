@@ -55,6 +55,8 @@
 - **快捷键设置** — 自定义全局快捷键
 - **暗色模式**
 - **项目迁移** — 自动检测并迁移旧格式项目
+- **任务清单** — 创作任务管理，支持优先级、截止日期、导出/导入
+- **配置管理器** — 可视化配置编辑器，支持导入/导出/回滚配置
 
 ## 快速开始
 
@@ -81,8 +83,11 @@ inovel/
 │   │   └── vue.svg
 │   ├── components/               # 组件
 │   │   ├── BackupDialog.vue       # 备份对话框
+│   │   ├── CategoryTabs.vue       # 分类标签页
+│   │   ├── ConfigManager.vue      # 配置管理器
 │   │   ├── DeleteConfirmModal.vue # 删除确认弹窗
 │   │   ├── ExportDialog.vue       # 导出对话框
+│   │   ├── GlobalPasswordOverlay.vue # 全局密码覆盖层
 │   │   ├── HistoryDialog.vue      # 版本历史对话框
 │   │   ├── InspirationBoard.vue   # 灵感看板
 │   │   ├── MarkdownEditor.vue     # 核心编辑器
@@ -95,10 +100,12 @@ inovel/
 │   │   ├── SensitiveWordsManager.vue # 敏感词管理
 │   │   ├── ShortcutSettings.vue   # 快捷键设置
 │   │   ├── SmartSymbolsExtension.ts # 智能符号扩展
+│   │   ├── TaskChecklist.vue      # 任务清单
 │   │   ├── TemplateSelector.vue   # 模板选择器
 │   │   ├── TextImportDialog.vue   # 文本导入对话框
 │   │   ├── Timeline.vue           # 故事时间轴
 │   │   ├── TreeSidebar.vue        # 章节树侧栏
+│   │   ├── UserTemplateManager.vue # 用户模板管理
 │   │   └── WorldbuildingPanel.vue # 世界观管理
 │   ├── composables/              # 组合式函数
 │   │   ├── themeConfig.ts        # 主题配置
@@ -125,11 +132,14 @@ inovel/
 │   │   ├── pomodoro.ts           # 番茄钟类型
 │   │   └── template.ts           # 模板类型
 │   ├── views/                    # 页面
+│   │   ├── ConfigManagerPage.vue  # 配置管理页面
 │   │   ├── EditorPage.vue        # 主编辑器页面
 │   │   ├── ProjectSettingsPage.vue # 项目设置页面
 │   │   ├── ProjectStatsDashboard.vue # 项目统计面板
 │   │   ├── SettingsPage.vue      # 全局设置页面
 │   │   ├── StatsDashboard.vue    # 全局统计面板
+│   │   ├── TaskChecklistPage.vue # 任务清单页面
+│   │   ├── UserTemplatesPage.vue # 用户模板页面
 │   │   ├── WelcomePage.vue       # 欢迎页面
 │   │   └── WorldbuildingPage.vue # 世界观页面
 │   ├── App.vue                   # 根组件
@@ -146,6 +156,7 @@ inovel/
 │   │   ├── commands/             # Tauri 命令层
 │   │   │   ├── backup.rs         # 备份命令
 │   │   │   ├── chapter.rs        # 章节 CRUD 命令
+│   │   │   ├── config.rs        # 配置管理命令
 │   │   │   ├── encryption.rs     # 加密命令
 │   │   │   ├── export.rs         # 导出命令
 │   │   │   ├── file.rs           # 文件操作命令
@@ -316,6 +327,8 @@ src-tauri/src/
 
 - 获取/更新/重置应用配置
 - 配置文件路径
+- 配置历史/回滚
+- 配置导入/导出（TOML 格式）
 - 路径验证
 
 ### 性能优化

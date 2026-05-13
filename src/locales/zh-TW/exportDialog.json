@@ -1,0 +1,20 @@
+{
+  "title": "匯出文件",
+  "selectFormat": "選擇匯出格式",
+  "exporting": "匯出中...",
+  "startExport": "開始匯出",
+  "exportComplete": "匯出完成，檔案儲存在：",
+  "openFolder": "打開資料夾",
+  "formats": {
+    "txt": "純文字 (.txt)",
+    "markdown": "Markdown (.md)",
+    "epub": "EPUB 電子書 (.epub)",
+    "pdf": "PDF 文件 (.pdf)"
+  },
+  "messages": {
+    "selectAtLeastOne": "請至少選擇一種匯出格式",
+    "exportFailed": "匯出 {format} 失敗",
+    "exportSuccess": "匯出完成，成功 {success}/{total} 個檔案",
+    "cannotOpenFolder": "無法打開資料夾"
+  }
+}

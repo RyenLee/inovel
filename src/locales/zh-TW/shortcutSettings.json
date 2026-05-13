@@ -1,0 +1,25 @@
+{
+  "title": "快捷鍵設置",
+  "recording": "正在錄製快捷鍵...",
+  "pressKeys": "請按下組合鍵",
+  "waitingInput": "等待輸入...",
+  "cancel": "取消",
+  "save": "儲存",
+  "edit": "編輯",
+  "resetDefault": "恢復預設",
+  "resetAll": "恢復所有預設",
+  "import": "匯入",
+  "export": "匯出",
+  "close": "關閉",
+  "messages": {
+    "shortcutUpdated": "快捷鍵已更新",
+    "pressNewShortcut": "請按下新的快捷鍵組合...",
+    "resetDefaultConfirm": "確定要將「{name}」的快捷鍵恢復為預設嗎？",
+    "resetDefaultDone": "已恢復預設快捷鍵",
+    "resetAllConfirm": "確定要將所有快捷鍵恢復為預設值？",
+    "resetAllDone": "已恢復所有預設快捷鍵",
+    "exportSuccess": "快捷鍵配置已匯出",
+    "importSuccess": "快捷鍵配置已匯入",
+    "importFailed": "匯入失敗：檔案格式不正確"
+  }
+}

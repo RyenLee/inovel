@@ -57,7 +57,7 @@ fn read_item_from_row(row: &rusqlite::Row) -> rusqlite::Result<InspirationItem> 
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_inspiration_item(
     app_handle: AppHandle,
     params: CreateInspirationItemParams,
@@ -96,7 +96,7 @@ pub async fn create_inspiration_item(
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_inspiration_item(
     app_handle: AppHandle,
     item_id: i64,
@@ -123,7 +123,7 @@ pub async fn update_inspiration_item(
     Ok(item)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_inspiration_item(
     app_handle: AppHandle,
     item_id: i64,
@@ -142,7 +142,7 @@ pub struct ReorderItem {
     pub sort_order: i32,
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reorder_inspiration_items(
     app_handle: AppHandle,
     _project_id: i64,
@@ -169,7 +169,7 @@ pub async fn reorder_inspiration_items(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_inspiration_board(
     app_handle: AppHandle,
     project_id: i64,
@@ -226,7 +226,7 @@ pub async fn get_inspiration_board(
     Ok(BoardData { columns })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_inspiration_items(
     app_handle: AppHandle,
     project_id: i64,

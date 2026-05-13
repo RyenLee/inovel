@@ -1,0 +1,28 @@
+{
+  "title": "故事時間軸",
+  "eventCount": "{count}個事件",
+  "addEvent": "添加事件",
+  "emptyDescription": "暫無事件，點擊添加按鈕建立第一個事件",
+  "noChapter": "無關聯章節",
+  "editEvent": "編輯事件",
+  "addEventTitle": "添加事件",
+  "eventTitle": "事件標題",
+  "eventTitleRequired": "*",
+  "eventTitlePlaceholder": "輸入事件標題",
+  "storyTime": "故事時間",
+  "storyTimePlaceholder": "選擇故事發生的時間",
+  "eventDescription": "事件描述",
+  "eventDescriptionPlaceholder": "描述這個事件的內容...",
+  "relatedChapter": "關聯章節",
+  "relatedChapterPlaceholder": "選擇關聯的章節（可選）",
+  "deleteConfirm": "確定刪除這個事件嗎？",
+  "messages": {
+    "loadFailed": "載入數據失敗",
+    "titleRequired": "請輸入事件標題",
+    "eventUpdated": "事件已更新",
+    "eventCreated": "事件已建立",
+    "saveFailed": "儲存失敗",
+    "eventDeleted": "事件已刪除",
+    "deleteFailed": "刪除失敗"
+  }
+}

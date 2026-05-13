@@ -104,7 +104,7 @@ class ConfigService {
 
     public async saveConfig(config: Partial<TomlConfig>): Promise<void> {
         try {
-            await invoke('write_toml_config', { newConfig: config });
+            await invoke('write_toml_config', { new_config: config });
             this.config = { ...this.config, ...config };
             this.notifyListeners();
         } catch (error) {
