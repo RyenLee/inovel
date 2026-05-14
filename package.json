@@ -3,18 +3,18 @@
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-opener": "^2.5.4",
-    "@tiptap/core": "^3.23.1",
-    "@tiptap/extension-code-block": "^3.23.1",
-    "@tiptap/extension-mention": "^3.23.1",
-    "@tiptap/extension-placeholder": "^3.23.1",
-    "@tiptap/extension-table": "^3.23.1",
-    "@tiptap/extension-table-cell": "^3.23.1",
-    "@tiptap/extension-table-header": "^3.23.1",
-    "@tiptap/extension-table-row": "^3.23.1",
-    "@tiptap/pm": "^3.23.1",
-    "@tiptap/starter-kit": "^3.23.1",
-    "@tiptap/suggestion": "^3.23.1",
-    "@tiptap/vue-3": "^3.23.1",
+    "@tiptap/core": "^3.23.4",
+    "@tiptap/extension-code-block": "^3.23.4",
+    "@tiptap/extension-mention": "^3.23.4",
+    "@tiptap/extension-placeholder": "^3.23.4",
+    "@tiptap/extension-table": "^3.23.4",
+    "@tiptap/extension-table-cell": "^3.23.4",
+    "@tiptap/extension-table-header": "^3.23.4",
+    "@tiptap/extension-table-row": "^3.23.4",
+    "@tiptap/pm": "^3.23.4",
+    "@tiptap/starter-kit": "^3.23.4",
+    "@tiptap/suggestion": "^3.23.4",
+    "@tiptap/vue-3": "^3.23.4",
     "@vue-flow/background": "^1.3.2",
     "@vue-flow/controls": "^1.1.3",
     "@vue-flow/core": "^1.48.2",
@@ -27,7 +27,7 @@
     "sortablejs": "^1.15.7",
     "vue": "^3.5.34",
     "vue-i18n": "^11.4.2",
-    "vue-router": "^5.0.6",
+    "vue-router": "^5.0.7",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
@@ -45,9 +45,9 @@
     "postcss": "^8.5.14",
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.3",
-    "vite": "^8.0.11",
-    "vitest": "^4.1.5",
-    "vue-tsc": "~3.2.8"
+    "vite": "^8.0.12",
+    "vitest": "^4.1.6",
+    "vue-tsc": "~3.2.9"
   },
   "name": "inovel",
   "private": true,
@@ -60,5 +60,5 @@
     "test:run": "vitest run"
   },
   "type": "module",
-  "version": "1.1.2"
+  "version": "1.1.3"
 }
